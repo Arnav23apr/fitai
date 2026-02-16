@@ -54,7 +54,7 @@ class BattleViewModel {
                 photo: pPhoto,
                 overallScore: playerResult.overallScore,
                 muscleScores: playerResult.muscleScores,
-                bodyFatEstimate: playerResult.bodyFatEstimate,
+                potentialRating: playerResult.potentialRating,
                 visibleMuscleGroups: playerResult.visibleMuscleGroups,
                 strongPoints: playerResult.strongPoints,
                 weakPoints: playerResult.weakPoints
@@ -65,7 +65,7 @@ class BattleViewModel {
                 photo: oPhoto,
                 overallScore: opponentResult.overallScore,
                 muscleScores: opponentResult.muscleScores,
-                bodyFatEstimate: opponentResult.bodyFatEstimate,
+                potentialRating: opponentResult.potentialRating,
                 visibleMuscleGroups: opponentResult.visibleMuscleGroups,
                 strongPoints: opponentResult.strongPoints,
                 weakPoints: opponentResult.weakPoints
@@ -104,7 +104,9 @@ class BattleViewModel {
         IMPORTANT: Determine which muscle groups are actually VISIBLE in the photo. Only include groups you can clearly see. \
         For visibleMuscleGroups, use these exact values: "chest", "shoulders", "back", "arms", "legs", "core". \
         Only include a muscle group if it is clearly visible. Set muscleScores to 0 for non-visible groups. \
-        Score visible muscle groups from 1-10 each.
+        Score visible muscle groups from 1-10 each. \
+        For potentialRating, rate from 1-10 how much genetic/frame potential this person has. \
+        Consider bone structure, frame width, muscle insertions, proportions. Be generous — most people score 7+.
         """
 
         let userPrompt = "Analyze this physique photo for a 1v1 physique battle comparison. Be precise with scores."
@@ -126,7 +128,10 @@ class BattleViewModel {
 
         let strong = (json["strongPoints"] as? [String]) ?? []
         let weak = (json["weakPoints"] as? [String]) ?? []
-        let bf = (json["bodyFatEstimate"] as? String) ?? "N/A"
+        let pr: Double
+        if let p = json["potentialRating"] as? Double { pr = p }
+        else if let p = json["potentialRating"] as? Int { pr = Double(p) }
+        else { pr = 8.0 }
         let visible = (json["visibleMuscleGroups"] as? [String]) ?? []
 
         let scores: MuscleScores
@@ -146,7 +151,7 @@ class BattleViewModel {
         return AnalysisResult(
             overallScore: score,
             muscleScores: scores,
-            bodyFatEstimate: bf,
+            potentialRating: pr,
             visibleMuscleGroups: visible,
             strongPoints: strong,
             weakPoints: weak
@@ -163,7 +168,7 @@ class BattleViewModel {
 struct AnalysisResult {
     let overallScore: Double
     let muscleScores: MuscleScores
-    let bodyFatEstimate: String
+    let potentialRating: Double
     let visibleMuscleGroups: [String]
     let strongPoints: [String]
     let weakPoints: [String]
