@@ -8,8 +8,7 @@ struct GenderView: View {
 
     private let options: [(icon: String, label: String)] = [
         ("figure.stand", "Male"),
-        ("figure.stand.dress", "Female"),
-        ("figure.2", "Other")
+        ("figure.stand.dress", "Female")
     ]
 
     var body: some View {
