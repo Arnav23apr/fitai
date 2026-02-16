@@ -16,6 +16,7 @@ nonisolated struct UserProfile: Codable, Sendable {
     var heightCm: Double = 175
     var weightKg: Double = 75
     var usesMetric: Bool = false
+    var selectedLanguage: String = "English"
     var referralCode: String = ""
     var isPremium: Bool = false
     var spinDiscount: Int? = nil

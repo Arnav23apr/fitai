@@ -1,6 +1,7 @@
 import Foundation
 
 enum OnboardingStep: Int, CaseIterable {
+    case language
     case welcome
     case gender
     case workoutsPerWeek

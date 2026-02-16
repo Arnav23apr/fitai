@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OnboardingContainerView: View {
     @Environment(AppState.self) private var appState
-    @State private var currentStep: OnboardingStep = .welcome
+    @State private var currentStep: OnboardingStep = .language
     @State private var paywallSkipped: Bool = false
 
     var body: some View {
@@ -11,6 +11,8 @@ struct OnboardingContainerView: View {
 
             Group {
                 switch currentStep {
+                case .language:
+                    LanguageSelectionView(onContinue: { advance() })
                 case .welcome:
                     WelcomeView(onContinue: { advance() })
                 case .gender:
