@@ -7,7 +7,7 @@ struct OnboardingContainerView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
 
             Group {
                 switch currentStep {

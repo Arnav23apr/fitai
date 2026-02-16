@@ -3,103 +3,127 @@ import AuthenticationServices
 
 struct SignUpView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var appeared: Bool = false
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: onContinue) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 30, height: 30)
+                        .background(Color(.tertiarySystemFill))
+                        .clipShape(Circle())
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+
+            Text("Sign In")
+                .font(.system(.title2, design: .default, weight: .bold))
+                .foregroundStyle(.primary)
+                .padding(.top, 8)
+
             Spacer()
 
-            VStack(spacing: 32) {
-                VStack(spacing: 12) {
-                    Text("Create Your Account")
-                        .font(.system(.title, design: .default, weight: .bold))
-                        .foregroundStyle(.white)
-                    Text("Sign up to save your progress")
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.6))
-                }
-
-                VStack(spacing: 14) {
-                    SignInWithAppleButton(.continue) { request in
-                        request.requestedScopes = [.fullName, .email]
-                    } onCompletion: { result in
-                        switch result {
-                        case .success(let auth):
-                            if let credential = auth.credential as? ASAuthorizationAppleIDCredential {
-                                let name = [credential.fullName?.givenName, credential.fullName?.familyName]
-                                    .compactMap { $0 }
-                                    .joined(separator: " ")
-                                if !name.isEmpty { appState.profile.name = name }
-                                if let email = credential.email { appState.profile.email = email }
-                            }
-                            onContinue()
-                        case .failure:
-                            break
+            VStack(spacing: 14) {
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.fullName, .email]
+                } onCompletion: { result in
+                    switch result {
+                    case .success(let auth):
+                        if let credential = auth.credential as? ASAuthorizationAppleIDCredential {
+                            let name = [credential.fullName?.givenName, credential.fullName?.familyName]
+                                .compactMap { $0 }
+                                .joined(separator: " ")
+                            if !name.isEmpty { appState.profile.name = name }
+                            if let email = credential.email { appState.profile.email = email }
                         }
-                    }
-                    .signInWithAppleButtonStyle(.white)
-                    .frame(height: 56)
-                    .clipShape(.rect(cornerRadius: 16))
-
-                    Button(action: {
-                        appState.profile.name = "Athlete"
                         onContinue()
-                    }) {
-                        Text("Continue with Google")
-                            .font(.headline)
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.white)
-                            .clipShape(.rect(cornerRadius: 16))
-                            .overlay(alignment: .leading) {
-                                GoogleLogo()
-                                    .frame(width: 20, height: 20)
-                                    .padding(.leading, 20)
-                                    .allowsHitTesting(false)
-                            }
-                    }
-
-                    Button(action: {
-                        appState.profile.name = "Athlete"
-                        onContinue()
-                    }) {
-                        Text("Continue with Email")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(Color.white.opacity(0.12))
-                            .clipShape(.rect(cornerRadius: 16))
-                            .overlay(alignment: .leading) {
-                                Image(systemName: "envelope.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.white)
-                                    .padding(.leading, 20)
-                                    .allowsHitTesting(false)
-                            }
+                    case .failure:
+                        break
                     }
                 }
-                .padding(.horizontal, 24)
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(height: 56)
+                .clipShape(.rect(cornerRadius: 28))
+
+                Button(action: {
+                    appState.profile.name = "Athlete"
+                    onContinue()
+                }) {
+                    HStack(spacing: 10) {
+                        GoogleLogo()
+                            .frame(width: 20, height: 20)
+                        Text("Sign in with Google")
+                            .font(.system(size: 19, weight: .medium))
+                    }
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color(.systemBackground))
+                    .clipShape(.rect(cornerRadius: 28))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28)
+                            .strokeBorder(Color(.systemGray4), lineWidth: 1)
+                    )
+                }
+
+                Button(action: {
+                    appState.profile.name = "Athlete"
+                    onContinue()
+                }) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "envelope")
+                            .font(.system(size: 18, weight: .medium))
+                        Text("Continue with email")
+                            .font(.system(size: 19, weight: .medium))
+                    }
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 56)
+                    .background(Color(.systemBackground))
+                    .clipShape(.rect(cornerRadius: 28))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 28)
+                            .strokeBorder(Color(.systemGray4), lineWidth: 1)
+                    )
+                }
             }
+            .padding(.horizontal, 24)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
 
             Spacer()
-            Spacer()
 
-            Button(action: onContinue) {
-                Text("Existing user? Log in")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
-                    .underline()
+            VStack(spacing: 0) {
+                Text("By continuing you agree to Fit AI's")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Button("Terms and Conditions") {}
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .underline()
+                    Text("and")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                    Button("Privacy Policy") {}
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .underline()
+                }
             }
-            .padding(.bottom, 16)
+            .padding(.bottom, 24)
             .opacity(appeared ? 1 : 0)
         }
+        .background(Color(.systemGroupedBackground))
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
+            withAnimation(.easeOut(duration: 0.5)) {
                 appeared = true
             }
         }
