@@ -78,8 +78,6 @@ struct PlanView: View {
                         focusAreasSection
                     }
 
-                    aiCoachSection
-
                     competeIntegrationCard
 
                     weeklyPlanSection
@@ -94,6 +92,9 @@ struct PlanView: View {
                 .opacity(appeared ? 1 : 0)
             }
             .background(Color.black)
+            .overlay(alignment: .bottomTrailing) {
+                aiFloatingButton
+            }
             .navigationTitle("Plan")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
@@ -642,108 +643,54 @@ struct PlanView: View {
         .clipShape(.rect(cornerRadius: 18))
     }
 
-    // MARK: - AI Coach (Enhanced)
+    // MARK: - AI Coach Floating Button
 
-    private var aiCoachSection: some View {
-        VStack(spacing: 14) {
-            Button(action: { showCoach = true }) {
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+    private var aiFloatingButton: some View {
+        Button(action: { showCoach = true }) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
-                            .frame(width: 44, height: 44)
-                        Image(systemName: "brain.head.profile.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.white)
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("AI Coach")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                        Text("Your personal fitness advisor")
-                            .font(.caption)
-                            .foregroundStyle(.white.opacity(0.4))
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.3))
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: "quote.opening")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.blue.opacity(0.6))
-                    Text("Daily Insight")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white.opacity(0.3))
-                        .textCase(.uppercase)
+                        )
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "brain.head.profile.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(.white)
                 }
 
-                Text(dailyCoachMessage)
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.6))
-                    .fixedSize(horizontal: false, vertical: true)
+                Text("Ask me anything")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
             }
-            .padding(14)
+            .padding(.leading, 4)
+            .padding(.trailing, 18)
+            .padding(.vertical, 4)
             .background(
-                LinearGradient(
-                    colors: [.blue.opacity(0.06), .purple.opacity(0.04)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .shadow(color: .blue.opacity(0.3), radius: 16, y: 6)
+                    .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
             )
-            .clipShape(.rect(cornerRadius: 12))
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(suggestedQuestions, id: \.self) { question in
-                        Button(action: { showCoach = true }) {
-                            Text(question)
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.6))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color.white.opacity(0.06))
-                                .clipShape(.capsule)
-                        }
-                    }
-                }
-            }
-            .contentMargins(.horizontal, 0)
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [.blue.opacity(0.3), .purple.opacity(0.2)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
         }
-        .padding(16)
-        .background(
-            LinearGradient(
-                colors: [Color.blue.opacity(0.05), Color.purple.opacity(0.03)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(.rect(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [.blue.opacity(0.1), .purple.opacity(0.08)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    ),
-                    lineWidth: 1
-                )
-        )
-        .sensoryFeedback(.selection, trigger: showCoach)
+        .padding(.trailing, 20)
+        .padding(.bottom, 24)
+        .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
     }
 
     private var dailyCoachMessage: String {
