@@ -6,7 +6,7 @@ struct PrimaryGoalView: View {
     @State private var selected: String = ""
     @State private var appeared: Bool = false
 
-    private let options: [(icon: String, labelKey: String, descKey: String)] = [
+    private let options: [(icon: String, label: String, desc: String)] = [
         ("figure.strengthtraining.traditional", "Build Muscle", "Gain size and strength"),
         ("flame.fill", "Lose Fat", "Lean down and cut body fat"),
         ("arrow.triangle.2.circlepath", "Recomp", "Build muscle while losing fat")
@@ -15,13 +15,13 @@ struct PrimaryGoalView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text(appState.t("Primary"))
+                Text("Primary")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text(appState.t("Goal"))
+                Text("Goal")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text(appState.t("What's your #1 focus right now?"))
+                Text("What's your #1 focus right now?")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -31,26 +31,25 @@ struct PrimaryGoalView: View {
             Spacer()
 
             VStack(spacing: 14) {
-                ForEach(options, id: \.labelKey) { option in
-                    let isSelected = selected == option.labelKey
+                ForEach(options, id: \.label) { option in
                     Button {
-                        selected = option.labelKey
+                        selected = option.label
                     } label: {
                         HStack(spacing: 16) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 24))
-                                .foregroundStyle(isSelected ? .black : .white.opacity(0.5))
+                                .foregroundStyle(selected == option.label ? .black : .white.opacity(0.5))
                                 .frame(width: 40)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(appState.t(option.labelKey))
+                                Text(option.label)
                                     .font(.headline)
-                                    .foregroundStyle(isSelected ? .black : .white)
-                                Text(appState.t(option.descKey))
+                                    .foregroundStyle(selected == option.label ? .black : .white)
+                                Text(option.desc)
                                     .font(.caption)
-                                    .foregroundStyle(isSelected ? .black.opacity(0.6) : .white.opacity(0.4))
+                                    .foregroundStyle(selected == option.label ? .black.opacity(0.6) : .white.opacity(0.4))
                             }
                             Spacer()
-                            if isSelected {
+                            if selected == option.label {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 22))
                                     .foregroundStyle(.black)
@@ -58,7 +57,7 @@ struct PrimaryGoalView: View {
                         }
                         .padding(.horizontal, 20)
                         .frame(height: 72)
-                        .background(isSelected ? Color.white : Color.white.opacity(0.06))
+                        .background(selected == option.label ? Color.white : Color.white.opacity(0.06))
                         .clipShape(.rect(cornerRadius: 16))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -74,7 +73,7 @@ struct PrimaryGoalView: View {
                 appState.profile.primaryGoal = selected
                 onContinue()
             }) {
-                Text(appState.t("Continue"))
+                Text("Continue")
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

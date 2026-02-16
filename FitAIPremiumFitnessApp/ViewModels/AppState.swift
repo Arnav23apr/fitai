@@ -8,10 +8,6 @@ class AppState {
     var showSplash: Bool = true
     var profile: UserProfile = AppState.loadProfile()
 
-    func t(_ key: String) -> String {
-        LocalizationService.translate(key, language: profile.selectedLanguage)
-    }
-
     func saveProfile() {
         if let data = try? JSONEncoder().encode(profile) {
             UserDefaults.standard.set(data, forKey: "userProfile")
