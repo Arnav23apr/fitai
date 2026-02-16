@@ -64,17 +64,17 @@ struct WelcomeView: View {
                     .offset(y: appeared ? 0 : 20)
 
                 VStack(spacing: 12) {
-                    Text("Transform Your")
+                    Text(appState.t("Transform Your"))
                         .font(.system(.largeTitle, design: .default, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("Physique with AI")
+                    Text(appState.t("Physique with AI"))
                         .font(.system(.largeTitle, design: .default, weight: .bold))
                         .foregroundStyle(.white)
                 }
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 20)
 
-                Text("Your personal AI fitness coach.\nScan, plan, and compete.")
+                Text(appState.t("Your personal AI fitness coach.\nScan, plan, and compete."))
                     .font(.body)
                     .foregroundStyle(.white.opacity(0.6))
                     .multilineTextAlignment(.center)
@@ -87,7 +87,7 @@ struct WelcomeView: View {
 
             VStack(spacing: 12) {
                 Button(action: onContinue) {
-                    Text("Get Started")
+                    Text(appState.t("Get Started"))
                         .font(.headline)
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -97,7 +97,7 @@ struct WelcomeView: View {
                 }
 
                 Button(action: { onLogin?() ?? onContinue() }) {
-                    Text("Existing user? Log in")
+                    Text(appState.t("Existing user? Log in"))
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.white.opacity(0.6))
                 }
@@ -108,16 +108,16 @@ struct WelcomeView: View {
             .offset(y: appeared ? 0 : 30)
 
             HStack(spacing: 4) {
-                Text("By continuing you agree to our")
+                Text(appState.t("By continuing you agree to our"))
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.3))
-                Button("Terms") {}
+                Button(appState.t("Terms")) {}
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
-                Text("and")
+                Text(appState.t("and"))
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.3))
-                Button("Privacy Policy") {}
+                Button(appState.t("Privacy Policy")) {}
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -151,6 +151,7 @@ struct WelcomeView: View {
                         Button {
                             withAnimation(.snappy(duration: 0.25)) {
                                 appState.profile.selectedLanguage = language.name
+                                appState.saveProfile()
                             }
                         } label: {
                             HStack(spacing: 14) {
@@ -190,7 +191,7 @@ struct WelcomeView: View {
                 .padding(.horizontal, 16)
             }
             .scrollIndicators(.hidden)
-            .navigationTitle("Language")
+            .navigationTitle(appState.t("Language"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

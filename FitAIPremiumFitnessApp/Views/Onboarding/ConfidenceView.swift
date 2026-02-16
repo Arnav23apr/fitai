@@ -9,13 +9,13 @@ struct ConfidenceView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Training")
+                Text(appState.t("Training"))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Confidence")
+                Text(appState.t("Confidence"))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("How experienced are you?")
+                Text(appState.t("How experienced are you?"))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -66,7 +66,7 @@ struct ConfidenceView: View {
                 appState.profile.trainingConfidence = selectedValue
                 onContinue()
             }) {
-                Text("Continue")
+                Text(appState.t("Continue"))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
@@ -87,20 +87,20 @@ struct ConfidenceView: View {
 
     private var confidenceLabel: String {
         switch selectedValue {
-        case 1...3: return "Beginner"
-        case 4...6: return "Intermediate"
-        case 7...9: return "Advanced"
-        case 10: return "Expert"
+        case 1...3: return appState.t("Beginner")
+        case 4...6: return appState.t("Intermediate")
+        case 7...9: return appState.t("Advanced")
+        case 10: return appState.t("Expert")
         default: return ""
         }
     }
 
     private var confidenceDescription: String {
         switch selectedValue {
-        case 1...3: return "Just getting started"
-        case 4...6: return "Know the basics well"
-        case 7...9: return "Years of experience"
-        case 10: return "Competitive athlete level"
+        case 1...3: return appState.t("Just getting started")
+        case 4...6: return appState.t("Know the basics well")
+        case 7...9: return appState.t("Years of experience")
+        case 10: return appState.t("Competitive athlete level")
         default: return ""
         }
     }
