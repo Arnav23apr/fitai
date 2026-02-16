@@ -3,14 +3,13 @@ import SwiftUI
 struct BattleShareSheet: View {
     let battle: PhysiqueBattle
     @Environment(\.dismiss) private var dismiss
-    @State private var shareImage: UIImage? = nil
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
+                VStack(spacing: 24) {
                     BattleShareCardView(battle: battle)
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 16)
 
                     Button {
                         renderAndShare()
@@ -26,7 +25,7 @@ struct BattleShareSheet: View {
                         .background(Color.red)
                         .clipShape(.rect(cornerRadius: 14))
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                 }
                 .padding(.top, 16)
                 .padding(.bottom, 40)
@@ -47,7 +46,7 @@ struct BattleShareSheet: View {
     @MainActor
     private func renderAndShare() {
         let card = BattleShareCardView(battle: battle)
-            .frame(width: 380)
+            .frame(width: 400)
         let renderer = ImageRenderer(content: card)
         renderer.scale = 3.0
         guard let image = renderer.uiImage else { return }
@@ -78,171 +77,210 @@ struct BattleShareCardView: View {
         return allMuscles.filter { visible.contains($0.key) }
     }
 
+    private var gridRows: [[(key: String, label: String)]] {
+        var rows: [[(key: String, label: String)]] = []
+        let items = sharedVisibleGroups
+        var i = 0
+        while i < items.count {
+            if i + 1 < items.count {
+                rows.append([items[i], items[i + 1]])
+                i += 2
+            } else {
+                rows.append([items[i]])
+                i += 1
+            }
+        }
+        return rows
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 16) {
-                Text("PHYSIQUE BATTLE")
-                    .font(.system(.caption, design: .rounded, weight: .black))
-                    .tracking(3)
-                    .foregroundStyle(.red)
-                    .padding(.top, 20)
+            Text("PHYSIQUE BATTLE")
+                .font(.system(size: 11, weight: .black, design: .rounded))
+                .tracking(4)
+                .foregroundStyle(.red)
+                .padding(.top, 20)
+                .padding(.bottom, 6)
 
-                HStack(spacing: 0) {
-                    ZStack {
-                        Image(uiImage: battle.player.photo)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 220)
-                            .clipped()
-
-                        if !battle.playerWins {
-                            moggedStamp
-                        }
-
-                        VStack {
-                            Spacer()
-                            HStack {
-                                nameTag(name: battle.player.name, score: battle.player.overallScore, isWinner: battle.playerWins, alignment: .leading)
-                                Spacer()
-                            }
-                            .padding(6)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .clipShape(.rect(cornerRadii: .init(topLeading: 12, bottomLeading: 12)))
-
-                    Rectangle()
-                        .fill(Color.red)
-                        .frame(width: 2)
-
-                    ZStack {
-                        Image(uiImage: battle.opponent.photo)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 220)
-                            .clipped()
-
-                        if battle.playerWins {
-                            moggedStamp
-                        }
-
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Spacer()
-                                nameTag(name: battle.opponent.name, score: battle.opponent.overallScore, isWinner: !battle.playerWins, alignment: .trailing)
-                            }
-                            .padding(6)
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .clipShape(.rect(cornerRadii: .init(bottomTrailing: 12, topTrailing: 12)))
-                }
-                .frame(height: 220)
-                .padding(.horizontal, 16)
-
-                HStack(spacing: 6) {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.yellow)
-                    Text("\(battle.winner.name) wins!")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 12)
-                .background(Color.white.opacity(0.08))
-                .clipShape(Capsule())
-
-                VStack(spacing: 8) {
-                    ForEach(sharedVisibleGroups, id: \.key) { muscle in
-                        shareComparisonRow(
-                            label: muscle.label,
-                            leftScore: scoreForMuscle(muscle.key, scores: battle.player.muscleScores),
-                            rightScore: scoreForMuscle(muscle.key, scores: battle.opponent.muscleScores)
-                        )
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 16)
+            HStack(spacing: 6) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.yellow)
+                Text("\(battle.winner.name) wins by \(String(format: "%.1f", battle.scoreDifference))!")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
             }
+            .padding(.bottom, 16)
+
+            HStack(spacing: 10) {
+                contestantCard(
+                    contestant: battle.player,
+                    isWinner: battle.playerWins,
+                    isMogged: !battle.playerWins
+                )
+
+                Text("VS")
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+                    .foregroundStyle(.red)
+
+                contestantCard(
+                    contestant: battle.opponent,
+                    isWinner: !battle.playerWins,
+                    isMogged: battle.playerWins
+                )
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 16)
 
             HStack(spacing: 6) {
                 Image(systemName: "sparkle")
                     .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.25))
+                    .foregroundStyle(.white.opacity(0.2))
                 Text("Fit AI")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.25))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.2))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(Color.white.opacity(0.03))
+            .padding(.vertical, 10)
+            .background(Color.white.opacity(0.02))
         }
-        .background(Color(red: 0.07, green: 0.07, blue: 0.08))
-        .clipShape(.rect(cornerRadius: 20))
+        .background(Color(red: 0.06, green: 0.06, blue: 0.07))
+        .clipShape(.rect(cornerRadius: 22))
     }
 
-    private var moggedStamp: some View {
-        Text("MOGGED")
-            .font(.system(size: 24, weight: .black, design: .rounded))
-            .foregroundStyle(.red)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                    .strokeBorder(.red, lineWidth: 2.5)
-            )
-            .rotationEffect(.degrees(-12))
-    }
+    private func contestantCard(contestant: BattleContestant, isWinner: Bool, isMogged: Bool) -> some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Image(uiImage: contestant.photo)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 72, height: 72)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .strokeBorder(
+                                isWinner
+                                    ? LinearGradient(colors: [.green, .mint], startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(colors: [.red.opacity(0.5), .red.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                                lineWidth: 2.5
+                            )
+                    )
 
-    private func nameTag(name: String, score: Double, isWinner: Bool, alignment: HorizontalAlignment) -> some View {
-        VStack(alignment: alignment, spacing: 1) {
-            Text(name)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white)
-            Text("\(Int(round(score * 10)))")
-                .font(.system(.title3, design: .rounded, weight: .black))
-                .foregroundStyle(isWinner ? .green : .red)
-        }
-        .padding(6)
-        .background(.ultraThinMaterial.opacity(0.85))
-        .clipShape(.rect(cornerRadius: 8))
-    }
-
-    private func shareComparisonRow(label: String, leftScore: Double, rightScore: Double) -> some View {
-        HStack(spacing: 8) {
-            Text("\(Int(round(leftScore * 10)))")
-                .font(.system(.caption, design: .rounded, weight: .bold))
-                .foregroundStyle(leftScore >= rightScore ? .green : .white.opacity(0.4))
-                .frame(width: 28, alignment: .trailing)
-
-            GeometryReader { geo in
-                let total = max(leftScore + rightScore, 0.1)
-                let leftW = max(geo.size.width * (leftScore / total), 3)
-                let rightW = max(geo.size.width * (rightScore / total), 3)
-
-                HStack(spacing: 1) {
-                    Capsule()
-                        .fill(leftScore >= rightScore ? Color.green.opacity(0.7) : Color.white.opacity(0.1))
-                        .frame(width: leftW, height: 6)
-                    Capsule()
-                        .fill(rightScore > leftScore ? Color.red.opacity(0.7) : Color.white.opacity(0.1))
-                        .frame(width: rightW, height: 6)
+                if isMogged {
+                    Text("MOGGED")
+                        .font(.system(size: 11, weight: .black, design: .rounded))
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(.black.opacity(0.7))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3)
+                                .strokeBorder(.red, lineWidth: 1.5)
+                        )
+                        .clipShape(.rect(cornerRadius: 3))
+                        .rotationEffect(.degrees(-12))
+                        .offset(y: 20)
                 }
             }
-            .frame(height: 6)
+            .padding(.top, 16)
+            .padding(.bottom, isMogged ? 14 : 8)
 
-            Text("\(Int(round(rightScore * 10)))")
-                .font(.system(.caption, design: .rounded, weight: .bold))
-                .foregroundStyle(rightScore > leftScore ? .red : .white.opacity(0.4))
-                .frame(width: 28, alignment: .leading)
+            Text(contestant.name)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.white.opacity(0.6))
+                .lineLimit(1)
+
+            Text(overallText(contestant.overallScore))
+                .font(.system(size: 36, weight: .bold, design: .rounded))
+                .foregroundStyle(isWinner ? .green : .white)
+                .padding(.top, 2)
+
+            scoreBar(value: contestant.overallScore, isWinner: isWinner)
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 14)
+
+            VStack(spacing: 10) {
+                ForEach(Array(gridRows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: 8) {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, muscle in
+                            let score = scoreForMuscle(muscle.key, scores: contestant.muscleScores)
+                            miniScoreCell(label: muscle.label, score: score, isWinner: isWinner)
+                        }
+                        if row.count == 1 {
+                            Color.clear.frame(maxWidth: .infinity)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 16)
         }
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 16))
         .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    isWinner ? Color.green.opacity(0.15) : Color.white.opacity(0.04),
+                    lineWidth: 1
+                )
+        )
+    }
+
+    private func miniScoreCell(label: String, score: Double, isWinner: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
             Text(label)
                 .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.white.opacity(0.3))
-        )
+                .foregroundStyle(.white.opacity(0.4))
+            Text(scoreText(score))
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+            miniBar(value: score, isWinner: isWinner)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func miniBar(value: Double, isWinner: Bool) -> some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 4)
+                Capsule()
+                    .fill(barColor(value, isWinner: isWinner))
+                    .frame(width: max(0, geo.size.width * (value / 10)), height: 4)
+            }
+        }
+        .frame(height: 4)
+    }
+
+    private func scoreBar(value: Double, isWinner: Bool) -> some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 5)
+                Capsule()
+                    .fill(isWinner ? Color.green : Color.white.opacity(0.25))
+                    .frame(width: max(0, geo.size.width * (value / 10)), height: 5)
+            }
+        }
+        .frame(height: 5)
+    }
+
+    private func barColor(_ score: Double, isWinner: Bool) -> Color {
+        if score >= 7 { return .green }
+        if score >= 5 { return Color(red: 0.85, green: 0.75, blue: 0.1) }
+        return .orange
+    }
+
+    private func overallText(_ score: Double) -> String {
+        "\(Int(round(score * 10)))"
+    }
+
+    private func scoreText(_ score: Double) -> String {
+        "\(Int(round(score * 10)))"
     }
 
     private func scoreForMuscle(_ key: String, scores: MuscleScores) -> Double {
