@@ -12,7 +12,7 @@ struct OnboardingContainerView: View {
             Group {
                 switch currentStep {
                 case .welcome:
-                    WelcomeView(onContinue: { advance() })
+                    WelcomeView(onContinue: { advance() }, onLogin: { currentStep = .signUp })
                 case .gender:
                     GenderView(onContinue: { advance() })
                 case .workoutsPerWeek:

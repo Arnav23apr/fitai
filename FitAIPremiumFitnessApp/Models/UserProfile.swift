@@ -32,4 +32,5 @@ nonisolated struct UserProfile: Codable, Sendable {
     var workoutLogs: [WorkoutLog] = []
     var completedDaysThisWeek: [String] = []
     var weekStartDate: Date? = nil
+    var customPhotoData: Data? = nil
 }

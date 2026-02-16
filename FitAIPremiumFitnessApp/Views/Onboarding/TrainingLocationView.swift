@@ -5,12 +5,23 @@ struct TrainingLocationView: View {
     var onContinue: () -> Void
     @State private var selected: String = ""
     @State private var appeared: Bool = false
+    @State private var selectedEquipment: Set<String> = []
 
     private let options: [(icon: String, label: String, desc: String)] = [
         ("building.2", "Gym", "Full equipment access"),
         ("house", "Home", "Bodyweight & minimal gear"),
         ("figure.mixed.cardio", "Both", "Mix of gym and home")
     ]
+
+    private let equipmentOptions: [(icon: String, label: String)] = [
+        ("dumbbell.fill", "Dumbbells"),
+        ("figure.strengthtraining.traditional", "Pull-up Bar"),
+        ("figure.walk", "Bodyweight Only")
+    ]
+
+    private var showEquipment: Bool {
+        selected == "Home" || selected == "Both"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -30,7 +41,12 @@ struct TrainingLocationView: View {
             VStack(spacing: 14) {
                 ForEach(options, id: \.label) { option in
                     Button {
-                        selected = option.label
+                        withAnimation(.snappy(duration: 0.3)) {
+                            selected = option.label
+                            if option.label == "Gym" {
+                                selectedEquipment = []
+                            }
+                        }
                     } label: {
                         VStack(spacing: 12) {
                             Image(systemName: option.icon)
@@ -49,6 +65,51 @@ struct TrainingLocationView: View {
                         .clipShape(.rect(cornerRadius: 20))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
+                }
+
+                if showEquipment {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Available equipment")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.5))
+                            .padding(.leading, 4)
+
+                        HStack(spacing: 10) {
+                            ForEach(equipmentOptions, id: \.label) { eq in
+                                let isSelected = selectedEquipment.contains(eq.label)
+                                Button {
+                                    withAnimation(.snappy(duration: 0.2)) {
+                                        if isSelected {
+                                            selectedEquipment.remove(eq.label)
+                                        } else {
+                                            selectedEquipment.insert(eq.label)
+                                        }
+                                    }
+                                } label: {
+                                    VStack(spacing: 8) {
+                                        Image(systemName: eq.icon)
+                                            .font(.system(size: 20))
+                                            .foregroundStyle(isSelected ? .black : .white.opacity(0.6))
+                                        Text(eq.label)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundStyle(isSelected ? .black : .white.opacity(0.7))
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(2)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 80)
+                                    .background(isSelected ? Color.white : Color.white.opacity(0.06))
+                                    .clipShape(.rect(cornerRadius: 14))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .strokeBorder(isSelected ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
+                                    )
+                                }
+                                .sensoryFeedback(.selection, trigger: selectedEquipment)
+                            }
+                        }
+                    }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
             .padding(.horizontal, 24)

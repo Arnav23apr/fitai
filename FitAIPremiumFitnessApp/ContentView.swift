@@ -14,15 +14,17 @@ struct ContentView: View {
                     }
                 }
                 .transition(.opacity)
+                .preferredColorScheme(nil)
             } else if !appState.hasCompletedOnboarding {
                 OnboardingContainerView()
                     .transition(.opacity)
+                    .preferredColorScheme(.dark)
             } else {
                 MainTabView()
                     .transition(.opacity)
+                    .preferredColorScheme(.dark)
             }
         }
-        .preferredColorScheme(.dark)
         .animation(.easeInOut(duration: 0.4), value: appState.showSplash)
         .animation(.easeInOut(duration: 0.4), value: appState.hasCompletedOnboarding)
     }
