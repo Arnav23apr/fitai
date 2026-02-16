@@ -4,6 +4,9 @@ struct PlanView: View {
     @Environment(AppState.self) private var appState
     @State private var showCoach: Bool = false
     @State private var selectedDay: WorkoutDay? = nil
+    @State private var selectedFocusItem: FocusAreaItem? = nil
+    @State private var appeared: Bool = false
+    @State private var coachQuestionSent: String? = nil
 
     private var workoutPlan: [WorkoutDay] {
         generatePersonalizedPlan()
@@ -14,10 +17,57 @@ struct PlanView: View {
         return (weekday + 5) % 7
     }
 
+    private var todayWorkout: WorkoutDay? {
+        workoutPlan[safe: todayIndex]
+    }
+
+    private var completedCount: Int {
+        appState.workoutsThisWeek
+    }
+
+    private var weeklyXP: Int {
+        appState.profile.workoutLogs
+            .filter {
+                Calendar.current.isDate($0.date, equalTo: Date(), toGranularity: .weekOfYear)
+            }
+            .reduce(0) { $0 + 100 + ($1.exercisesCompleted * 10) }
+    }
+
+    private var nextTierPoints: Int {
+        let pts = appState.profile.points
+        if pts < 500 { return 500 }
+        if pts < 2000 { return 2000 }
+        if pts < 5000 { return 5000 }
+        if pts < 10000 { return 10000 }
+        return pts
+    }
+
+    private var nextTierName: String {
+        let pts = appState.profile.points
+        if pts < 500 { return "Silver" }
+        if pts < 2000 { return "Gold" }
+        if pts < 5000 { return "Platinum" }
+        if pts < 10000 { return "Diamond" }
+        return "Diamond"
+    }
+
+    private var daysSinceLastScan: Int? {
+        guard let lastScan = appState.profile.lastScanDate else { return nil }
+        return Calendar.current.dateComponents([.day], from: lastScan, to: Date()).day
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
+                    planSummaryCard
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+
+                    todayGoalHero
+                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+
+                    weeklyStreakSection
+
                     if appState.profile.latestScore != nil {
                         scanInsightCard
                     } else {
@@ -28,17 +78,20 @@ struct PlanView: View {
                         focusAreasSection
                     }
 
-                    weeklyProgressBar
+                    aiCoachSection
 
-                    coachCard
+                    competeIntegrationCard
 
                     weeklyPlanSection
 
-                    todaysWorkoutDetail
+                    nextScanReminderCard
+
+                    weeklySummaryCard
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
                 .padding(.bottom, 100)
+                .opacity(appeared ? 1 : 0)
             }
             .background(Color.black)
             .navigationTitle("Plan")
@@ -50,30 +103,359 @@ struct PlanView: View {
             .sheet(item: $selectedDay) { day in
                 WorkoutDetailSheet(workout: day)
             }
+            .sheet(item: $selectedFocusItem) { item in
+                FocusAreaDetailSheet(
+                    area: item.area,
+                    priority: focusAreaPriority(item.area),
+                    score: focusAreaScore(item.area),
+                    exercises: focusAreaExercises(item.area)
+                )
+            }
+            .onAppear {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    appeared = true
+                }
+            }
         }
     }
 
-    private var scanInsightCard: some View {
+    // MARK: - Plan Builder Summary
+
+    private var planSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "brain.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.cyan)
+                Text("Your Plan is based on")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.5))
+                Spacer()
+            }
+
+            let items = planBasisItems
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                    HStack(spacing: 8) {
+                        Image(systemName: item.icon)
+                            .font(.system(size: 10))
+                            .foregroundStyle(item.color)
+                            .frame(width: 20)
+                        Text(item.text)
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .lineLimit(1)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.white.opacity(0.04))
+                    .clipShape(.rect(cornerRadius: 8))
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color.cyan.opacity(0.05), Color.white.opacity(0.02)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.cyan.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    private var planBasisItems: [(icon: String, text: String, color: Color)] {
+        var items: [(icon: String, text: String, color: Color)] = []
+        if let score = appState.profile.latestScore {
+            items.append(("chart.bar.fill", "Score: \(String(format: "%.1f", score))", .green))
+        }
+        if !appState.profile.primaryGoal.isEmpty {
+            items.append(("target", appState.profile.primaryGoal, .orange))
+        }
+        items.append(("calendar", "\(appState.profile.workoutsPerWeek)x/week", .blue))
+        if !appState.profile.weakPoints.isEmpty {
+            let focus = appState.profile.weakPoints.prefix(2).joined(separator: " + ")
+            items.append(("flame.fill", focus, .red))
+        }
+        if !appState.profile.trainingLocation.isEmpty {
+            items.append(("building.2.fill", appState.profile.trainingLocation, .purple))
+        }
+        return items
+    }
+
+    // MARK: - Today's Goal Hero
+
+    private var todayGoalHero: some View {
+        Group {
+            if let workout = todayWorkout {
+                let isCompleted = appState.isDayCompleted(workout.dayLabel)
+                let accentColor = workoutAccentColor(workout)
+
+                VStack(spacing: 0) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(spacing: 6) {
+                                Text("TODAY'S GOAL")
+                                    .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                    .foregroundStyle(accentColor)
+                                    .tracking(1.2)
+                                if isCompleted {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.green)
+                                }
+                            }
+
+                            Text(workout.isRestDay ? "Rest & Recover" : workout.name)
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(.white)
+
+                            if !workout.isRestDay {
+                                HStack(spacing: 12) {
+                                    Label("\(estimatedMinutes(workout))min", systemImage: "clock")
+                                    Label(workoutDifficulty(workout), systemImage: "flame")
+                                    Label("\(workout.exercises.count)", systemImage: "list.bullet")
+                                }
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.4))
+                            }
+                        }
+
+                        Spacer()
+
+                        if !workout.isRestDay {
+                            ZStack {
+                                Circle()
+                                    .stroke(Color.white.opacity(0.06), lineWidth: 5)
+                                    .frame(width: 60, height: 60)
+
+                                let exercisesDone = isCompleted ? workout.exercises.count : 0
+                                let progress = workout.exercises.isEmpty ? 0.0 : Double(exercisesDone) / Double(workout.exercises.count)
+                                Circle()
+                                    .trim(from: 0, to: progress)
+                                    .stroke(
+                                        accentColor,
+                                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                                    )
+                                    .frame(width: 60, height: 60)
+                                    .rotationEffect(.degrees(-90))
+
+                                Image(systemName: isCompleted ? "checkmark" : workout.icon)
+                                    .font(.system(size: isCompleted ? 18 : 20))
+                                    .foregroundStyle(isCompleted ? .green : accentColor)
+                            }
+                        }
+                    }
+
+                    if !workout.isRestDay {
+                        Divider()
+                            .background(Color.white.opacity(0.06))
+                            .padding(.vertical, 14)
+
+                        HStack(spacing: 0) {
+                            VStack(spacing: 2) {
+                                Text(isCompleted ? "✓" : "+\(100 + workout.exercises.count * 10)")
+                                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                    .foregroundStyle(isCompleted ? .green : .yellow)
+                                Text("XP Reward")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.3))
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            Rectangle()
+                                .fill(Color.white.opacity(0.06))
+                                .frame(width: 1, height: 28)
+
+                            VStack(spacing: 2) {
+                                Text("\(nextTierPoints - appState.profile.points)")
+                                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                    .foregroundStyle(.cyan)
+                                Text("to \(nextTierName)")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.3))
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            Rectangle()
+                                .fill(Color.white.opacity(0.06))
+                                .frame(width: 1, height: 28)
+
+                            VStack(spacing: 2) {
+                                Text(workout.focusAreas.first ?? "–")
+                                    .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .lineLimit(1)
+                                Text("Target")
+                                    .font(.caption2)
+                                    .foregroundStyle(.white.opacity(0.3))
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+
+                        if !isCompleted {
+                            Button(action: { selectedDay = workout }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 12))
+                                    Text("Start Workout")
+                                        .font(.subheadline.weight(.bold))
+                                }
+                                .foregroundStyle(.black)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 48)
+                                .background(accentColor)
+                                .clipShape(.rect(cornerRadius: 14))
+                            }
+                            .padding(.top, 14)
+                            .sensoryFeedback(.impact(weight: .medium), trigger: selectedDay?.id)
+                        }
+                    }
+                }
+                .padding(20)
+                .background(
+                    LinearGradient(
+                        colors: [accentColor.opacity(0.08), Color.white.opacity(0.02)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(.rect(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
+                )
+            }
+        }
+    }
+
+    // MARK: - Weekly Streak
+
+    private var weeklyStreakSection: some View {
         VStack(spacing: 14) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.orange)
+                    Text("Weekly Streak")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+                Spacer()
+                Text("\(completedCount)/\(appState.profile.workoutsPerWeek)")
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.12))
+                    .clipShape(.capsule)
+            }
+
+            let dayLabels = ["M", "T", "W", "T", "F", "S", "S"]
+            let fullLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+
+            HStack(spacing: 0) {
+                ForEach(Array(dayLabels.enumerated()), id: \.offset) { index, label in
+                    let completed = appState.isDayCompleted(fullLabels[index])
+                    let isToday = index == todayIndex
+
+                    VStack(spacing: 8) {
+                        Text(label)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(isToday ? .white : .white.opacity(0.35))
+
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    completed ? Color.green :
+                                    isToday ? Color.white.opacity(0.12) :
+                                    Color.white.opacity(0.05)
+                                )
+                                .frame(width: 34, height: 34)
+
+                            if completed {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.black)
+                            } else if isToday {
+                                Circle()
+                                    .fill(Color.white.opacity(0.4))
+                                    .frame(width: 6, height: 6)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+
+            HStack(spacing: 16) {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                    Text("Streak: \(appState.profile.currentStreak) days")
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+
+                if completedCount >= appState.profile.workoutsPerWeek {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.yellow)
+                        Text("Perfect Week!")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.yellow)
+                    }
+                }
+
+                Spacer()
+            }
+        }
+        .padding(18)
+        .background(Color.white.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 18))
+    }
+
+    // MARK: - Scan Insight (Enhanced)
+
+    private var scanInsightCard: some View {
+        VStack(spacing: 16) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: 14))
                             .foregroundStyle(.green)
                         Text("Scan Insight")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
                     }
-                    Text("Your plan targets weak areas identified in your latest scan.")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.35))
-                        .fixedSize(horizontal: false, vertical: true)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        insightBullet(icon: "target", text: "Focus on \(appState.profile.weakPoints.prefix(2).joined(separator: " & "))", color: .orange)
+
+                        if !appState.profile.strongPoints.isEmpty {
+                            insightBullet(icon: "checkmark.seal.fill", text: "\(appState.profile.strongPoints.first ?? "") looking strong", color: .green)
+                        }
+
+                        if let days = daysSinceLastScan {
+                            insightBullet(icon: "clock.fill", text: "Scanned \(days) days ago", color: .blue)
+                        }
+                    }
                 }
+
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
+
+                VStack(alignment: .trailing, spacing: 4) {
                     Text(String(format: "%.1f", appState.profile.latestScore ?? 0))
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Text("Score")
                         .font(.caption2)
@@ -81,22 +463,36 @@ struct PlanView: View {
                 }
             }
 
-            if !appState.profile.strongPoints.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.green.opacity(0.7))
-                    Text("Strong: \(appState.profile.strongPoints.joined(separator: ", "))")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
-                    Spacer()
+            HStack {
+                bodyDiagramView
+
+                Spacer()
+
+                if let days = daysSinceLastScan {
+                    VStack(alignment: .trailing, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: days <= 14 ? "arrow.up.right" : "arrow.down.right")
+                                .font(.system(size: 10, weight: .bold))
+                            Text(days <= 14 ? "On Track" : "Scan Overdue")
+                                .font(.caption2.weight(.bold))
+                        }
+                        .foregroundStyle(days <= 14 ? .green : .orange)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background((days <= 14 ? Color.green : Color.orange).opacity(0.12))
+                        .clipShape(.capsule)
+
+                        Text("Consistency: \(min(100, appState.profile.totalScans * 25))%")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.3))
+                    }
                 }
             }
         }
         .padding(18)
         .background(
             LinearGradient(
-                colors: [Color.green.opacity(0.08), Color.white.opacity(0.03)],
+                colors: [Color.green.opacity(0.06), Color.white.opacity(0.02)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -106,6 +502,53 @@ struct PlanView: View {
             RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(Color.green.opacity(0.1), lineWidth: 1)
         )
+    }
+
+    private func insightBullet(icon: String, text: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundStyle(color.opacity(0.7))
+                .frame(width: 16)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.5))
+                .lineLimit(1)
+        }
+    }
+
+    private var bodyDiagramView: some View {
+        HStack(spacing: 3) {
+            let weakLower = appState.profile.weakPoints.lowercased()
+            VStack(spacing: 2) {
+                Circle()
+                    .fill(Color.white.opacity(0.15))
+                    .frame(width: 14, height: 14)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(weakLower.contains(where: { "chest,back,core,ab".contains($0) }) ? Color.orange.opacity(0.5) : Color.white.opacity(0.12))
+                    .frame(width: 18, height: 22)
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.white.opacity(0.12))
+                        .frame(width: 7, height: 24)
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.white.opacity(0.12))
+                        .frame(width: 7, height: 24)
+                }
+            }
+
+            VStack(spacing: 4) {
+                ForEach(appState.profile.weakPoints.prefix(3), id: \.self) { point in
+                    Text(point)
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.orange.opacity(0.15))
+                        .clipShape(.rect(cornerRadius: 3))
+                }
+            }
+        }
     }
 
     private var promptScanCard: some View {
@@ -130,6 +573,8 @@ struct PlanView: View {
         .clipShape(.rect(cornerRadius: 18))
     }
 
+    // MARK: - Focus Areas (Interactive)
+
     private var focusAreasSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
@@ -142,171 +587,297 @@ struct PlanView: View {
                 Spacer()
             }
 
+            ForEach(appState.profile.weakPoints.prefix(4), id: \.self) { point in
+                let priority = focusAreaPriority(point)
+                Button(action: { selectedFocusItem = FocusAreaItem(area: point) }) {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            Circle()
+                                .fill(priority.color.opacity(0.12))
+                                .frame(width: 44, height: 44)
+
+                            Image(systemName: muscleGroupIcon(point))
+                                .font(.system(size: 18))
+                                .foregroundStyle(priority.color)
+                                .symbolRenderingMode(.hierarchical)
+                        }
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(point)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.white)
+                            Text(focusAreaSubtitle(point))
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.35))
+                                .lineLimit(1)
+                        }
+
+                        Spacer()
+
+                        HStack(spacing: 6) {
+                            Image(systemName: priority.icon)
+                                .font(.system(size: 9))
+                            Text(priority.label)
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(priority.color)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(priority.color.opacity(0.12))
+                        .clipShape(.capsule)
+
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.white.opacity(0.15))
+                    }
+                    .padding(14)
+                    .background(Color.white.opacity(0.04))
+                    .clipShape(.rect(cornerRadius: 14))
+                }
+                .sensoryFeedback(.selection, trigger: selectedFocusItem?.id)
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.03))
+        .clipShape(.rect(cornerRadius: 18))
+    }
+
+    // MARK: - AI Coach (Enhanced)
+
+    private var aiCoachSection: some View {
+        VStack(spacing: 14) {
+            Button(action: { showCoach = true }) {
+                HStack(spacing: 14) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.blue, .purple],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "brain.head.profile.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("AI Coach")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Your personal fitness advisor")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.3))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "quote.opening")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.blue.opacity(0.6))
+                    Text("Daily Insight")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.white.opacity(0.3))
+                        .textCase(.uppercase)
+                }
+
+                Text(dailyCoachMessage)
+                    .font(.subheadline)
+                    .foregroundStyle(.white.opacity(0.6))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [.blue.opacity(0.06), .purple.opacity(0.04)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 12))
+
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(appState.profile.weakPoints, id: \.self) { point in
-                        focusAreaCard(point)
+                HStack(spacing: 8) {
+                    ForEach(suggestedQuestions, id: \.self) { question in
+                        Button(action: { showCoach = true }) {
+                            Text(question)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.white.opacity(0.06))
+                                .clipShape(.capsule)
+                        }
                     }
                 }
             }
             .contentMargins(.horizontal, 0)
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 16))
+        .background(
+            LinearGradient(
+                colors: [Color.blue.opacity(0.05), Color.purple.opacity(0.03)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(.rect(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.blue.opacity(0.1), .purple.opacity(0.08)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .sensoryFeedback(.selection, trigger: showCoach)
     }
 
-    private func focusAreaCard(_ area: String) -> some View {
-        VStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.orange.opacity(0.15), Color.orange.opacity(0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(width: 56, height: 56)
+    private var dailyCoachMessage: String {
+        let score = appState.profile.latestScore ?? 0
+        let streak = appState.profile.currentStreak
+        let weakPoints = appState.profile.weakPoints
 
-                Image(systemName: muscleGroupIcon(area))
-                    .font(.system(size: 22))
-                    .foregroundStyle(.orange)
-                    .symbolRenderingMode(.hierarchical)
-            }
-
-            Text(area)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.white.opacity(0.8))
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(width: 80)
+        if streak >= 7 {
+            return "Incredible streak! \(streak) days strong. Your discipline is building real results. Keep pushing through plateaus."
         }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
+        if score >= 7 {
+            return "Your physique is trending upward. Stay consistent this week and focus on progressive overload for continued gains."
+        }
+        if !weakPoints.isEmpty {
+            return "Your plan targets \(weakPoints.prefix(2).joined(separator: " and ")). Prioritize these areas with proper form and mind-muscle connection."
+        }
+        if streak >= 3 {
+            return "Nice momentum with \(streak) consecutive days! Recovery is equally important — make sure you're sleeping 7-8 hours."
+        }
+        return "Consistency beats intensity. Show up today and your future self will thank you. Every rep counts toward your goal."
     }
 
-    private func muscleGroupIcon(_ area: String) -> String {
-        let lower = area.lowercased()
-        if lower.contains("chest") { return "figure.strengthtraining.traditional" }
-        if lower.contains("shoulder") || lower.contains("delt") { return "figure.boxing" }
-        if lower.contains("back") || lower.contains("lat") { return "figure.rowing" }
-        if lower.contains("arm") || lower.contains("bicep") || lower.contains("tricep") { return "figure.arms.open" }
-        if lower.contains("leg") || lower.contains("quad") || lower.contains("hamstring") || lower.contains("calf") || lower.contains("calves") { return "figure.run" }
-        if lower.contains("glute") { return "figure.stairs" }
-        if lower.contains("core") || lower.contains("ab") { return "figure.core.training" }
-        if lower.contains("body fat") || lower.contains("fat") { return "flame.fill" }
-        if lower.contains("definition") || lower.contains("muscle") { return "figure.highintensity.intervaltraining" }
-        return "figure.mixed.cardio"
+    private var suggestedQuestions: [String] {
+        var questions = ["What should I eat today?"]
+        if !appState.profile.weakPoints.isEmpty {
+            questions.append("How do I improve \(appState.profile.weakPoints.first ?? "weak areas")?")
+        }
+        questions.append("Fix my weak core")
+        questions.append("Best shoulder exercises?")
+        return questions
     }
 
-    private var weeklyProgressBar: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Text("Weekly Progress")
+    // MARK: - Compete Integration
+
+    private var competeIntegrationCard: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "trophy.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.yellow)
+                Text("Compete Bonus")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
-                Text("\(appState.workoutsThisWeek)/\(appState.profile.workoutsPerWeek)")
+                Text(appState.profile.tier)
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(.cyan)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.cyan.opacity(0.12))
+                    .clipShape(.capsule)
             }
 
-            GeometryReader { geo in
-                let progress = min(Double(appState.workoutsThisWeek) / max(Double(appState.profile.workoutsPerWeek), 1), 1.0)
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.08))
-                        .frame(height: 6)
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [.green, .green.opacity(0.7)],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .frame(width: max(geo.size.width * progress, 0), height: 6)
+            if let workout = todayWorkout, !workout.isRestDay {
+                HStack(spacing: 8) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.yellow)
+                    Text("Complete \(workout.name) to earn +\(100 + workout.exercises.count * 10) Compete points")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.5))
+                    Spacer()
                 }
+                .padding(10)
+                .background(Color.yellow.opacity(0.06))
+                .clipShape(.rect(cornerRadius: 10))
             }
-            .frame(height: 6)
 
-            HStack(spacing: 6) {
-                ForEach(["M", "T", "W", "T", "F", "S", "S"], id: \.self) { label in
-                    let dayLabels = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
-                    let shortLabels = ["M", "T", "W", "T", "F", "S", "S"]
-                    let idx = shortLabels.firstIndex(of: label) ?? 0
-                    let dayLabel = dayLabels[idx]
-                    let completed = appState.isDayCompleted(dayLabel)
-                    Circle()
-                        .fill(completed ? Color.green : Color.white.opacity(0.1))
-                        .frame(width: 8, height: 8)
+            HStack(spacing: 0) {
+                VStack(spacing: 2) {
+                    Text("\(appState.profile.points)")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("Points")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.3))
                 }
-                Spacer()
+                .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 1, height: 28)
+
+                VStack(spacing: 2) {
+                    Text("\(appState.profile.currentStreak)")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .foregroundStyle(.orange)
+                    Text("Streak")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.3))
+                }
+                .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: 1, height: 28)
+
+                VStack(spacing: 2) {
+                    Text("#\(leaderboardPosition)")
+                        .font(.system(.headline, design: .rounded, weight: .bold))
+                        .foregroundStyle(.green)
+                    Text("Rank")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.3))
+                }
+                .frame(maxWidth: .infinity)
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
+        .background(
+            LinearGradient(
+                colors: [Color.yellow.opacity(0.04), Color.white.opacity(0.02)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.yellow.opacity(0.08), lineWidth: 1)
+        )
     }
 
-    private var coachCard: some View {
-        Button(action: { showCoach = true }) {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "brain.head.profile.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("AI Coach")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                    Text("Ask anything about fitness, nutrition, or your plan")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.3))
-            }
-            .padding(14)
-            .background(
-                LinearGradient(
-                    colors: [Color.blue.opacity(0.08), Color.purple.opacity(0.06)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [.blue.opacity(0.15), .purple.opacity(0.1)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-        }
-        .sensoryFeedback(.selection, trigger: showCoach)
+    private var leaderboardPosition: Int {
+        let pts = appState.profile.points
+        if pts >= 12000 { return 1 }
+        if pts >= 9000 { return 3 }
+        if pts >= 5000 { return 8 }
+        if pts >= 2000 { return 14 }
+        if pts >= 500 { return 24 }
+        return 42
     }
+
+    // MARK: - Weekly Plan
 
     private var weeklyPlanSection: some View {
         VStack(spacing: 14) {
@@ -340,6 +911,8 @@ struct PlanView: View {
 
     private func workoutRow(_ workout: WorkoutDay, isToday: Bool) -> some View {
         let completed = appState.isDayCompleted(workout.dayLabel)
+        let accentColor = workoutAccentColor(workout)
+
         return HStack(spacing: 14) {
             VStack(spacing: 2) {
                 Text(workout.dayLabel)
@@ -347,7 +920,7 @@ struct PlanView: View {
                     .foregroundStyle(isToday ? .white : .white.opacity(0.35))
                 if isToday {
                     Circle()
-                        .fill(.green)
+                        .fill(accentColor)
                         .frame(width: 4, height: 4)
                 }
             }
@@ -358,14 +931,12 @@ struct PlanView: View {
                     .font(.system(size: 16))
                     .foregroundStyle(
                         completed ? .green :
-                        workout.isRestDay ? .white.opacity(0.2) :
-                        workout.isWeakPointFocus ? .orange : .white.opacity(0.6)
+                        workout.isRestDay ? .white.opacity(0.2) : accentColor
                     )
                     .frame(width: 38, height: 38)
                     .background(
                         completed ? Color.green.opacity(0.12) :
-                        workout.isWeakPointFocus ?
-                        Color.orange.opacity(0.1) : Color.white.opacity(0.06)
+                        accentColor.opacity(0.12)
                     )
                     .clipShape(Circle())
 
@@ -404,18 +975,36 @@ struct PlanView: View {
                             .clipShape(.capsule)
                     }
                 }
-                Text(workout.focusAreas.joined(separator: " · "))
+
+                if !workout.isRestDay {
+                    HStack(spacing: 8) {
+                        Text(workout.focusAreas.joined(separator: " · "))
+                            .lineLimit(1)
+                        Text("·")
+                        Text("\(estimatedMinutes(workout))min")
+                    }
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(.white.opacity(0.3))
                     .lineLimit(1)
+                } else {
+                    Text(workout.focusAreas.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.3))
+                        .lineLimit(1)
+                }
             }
 
             Spacer()
 
             if !workout.isRestDay {
-                Text("\(workout.exercises.count)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.3))
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(workout.exercises.count)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.3))
+                    Text(workoutDifficulty(workout))
+                        .font(.system(size: 9))
+                        .foregroundStyle(accentColor.opacity(0.6))
+                }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
                     .foregroundStyle(.white.opacity(0.15))
@@ -424,78 +1013,238 @@ struct PlanView: View {
         .padding(13)
         .background(
             completed ? Color.green.opacity(0.04) :
-            isToday ? Color.white.opacity(0.07) : Color.white.opacity(0.04)
+            isToday ? accentColor.opacity(0.06) : Color.white.opacity(0.04)
         )
         .clipShape(.rect(cornerRadius: 14))
         .overlay(
             isToday && !completed ?
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.white.opacity(0.1), lineWidth: 1) : nil
+                .strokeBorder(accentColor.opacity(0.15), lineWidth: 1) : nil
         )
     }
 
-    private var todaysWorkoutDetail: some View {
-        Group {
-            let todayWorkout = workoutPlan[safe: todayIndex]
-            if let workout = todayWorkout, !workout.isRestDay {
-                VStack(spacing: 14) {
-                    HStack {
-                        Text("Today's Exercises")
-                            .font(.title3.weight(.semibold))
+    // MARK: - Next Scan Reminder
+
+    private var nextScanReminderCard: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color.purple.opacity(0.12))
+                        .frame(width: 40, height: 40)
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.purple)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    if let days = daysSinceLastScan {
+                        let remaining = max(14 - days, 0)
+                        Text(remaining > 0 ? "Next scan in \(remaining) days" : "Time for a new scan!")
+                            .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.white)
-                        Spacer()
-                        Button(action: {
-                            selectedDay = workout
-                        }) {
-                            Text(appState.isDayCompleted(workout.dayLabel) ? "Review" : "Start")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.green)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 5)
-                                .background(Color.green.opacity(0.12))
-                                .clipShape(.capsule)
-                        }
-                    }
-
-                    ForEach(workout.exercises.prefix(4)) { exercise in
-                        HStack(spacing: 14) {
-                            Image(systemName: exerciseIcon(exercise.muscleGroup))
-                                .font(.system(size: 13))
-                                .foregroundStyle(.white.opacity(0.4))
-                                .frame(width: 32, height: 32)
-                                .background(Color.white.opacity(0.06))
-                                .clipShape(.rect(cornerRadius: 8))
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(exercise.name)
-                                    .font(.subheadline.weight(.medium))
-                                    .foregroundStyle(.white)
-                                Text("\(exercise.sets) sets · \(exercise.reps) reps")
-                                    .font(.caption)
-                                    .foregroundStyle(.white.opacity(0.3))
-                            }
-
-                            Spacer()
-
-                            Text(exercise.muscleGroup)
-                                .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.25))
-                        }
-                        .padding(.vertical, 4)
-                    }
-
-                    if workout.exercises.count > 4 {
-                        Text("+\(workout.exercises.count - 4) more exercises")
+                        Text("Keep consistent for best accuracy")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.white.opacity(0.35))
+                    } else {
+                        Text("Complete your first scan")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                        Text("Track progress with regular scans")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.35))
                     }
                 }
-                .padding(16)
-                .background(Color.white.opacity(0.04))
-                .clipShape(.rect(cornerRadius: 16))
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.15))
             }
         }
+        .padding(16)
+        .background(
+            LinearGradient(
+                colors: [Color.purple.opacity(0.06), Color.white.opacity(0.02)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .clipShape(.rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.purple.opacity(0.08), lineWidth: 1)
+        )
     }
+
+    // MARK: - Weekly Summary
+
+    private var weeklySummaryCard: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.bar.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.mint)
+                Text("This Week")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Spacer()
+            }
+
+            HStack(spacing: 0) {
+                summaryItem(
+                    value: "\(completedCount)/\(appState.profile.workoutsPerWeek)",
+                    label: "Workouts",
+                    color: .green
+                )
+                summaryDivider
+                summaryItem(
+                    value: "\(appState.profile.currentStreak)",
+                    label: "Day Streak",
+                    color: .orange
+                )
+                summaryDivider
+                summaryItem(
+                    value: "\(weeklyXP)",
+                    label: "XP Earned",
+                    color: .yellow
+                )
+            }
+
+            if !appState.profile.weakPoints.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.cyan)
+                    Text("Improvement areas: \(appState.profile.weakPoints.prefix(2).joined(separator: " + "))")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.4))
+                    Spacer()
+                }
+                .padding(10)
+                .background(Color.cyan.opacity(0.05))
+                .clipShape(.rect(cornerRadius: 10))
+            }
+        }
+        .padding(16)
+        .background(Color.white.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private func summaryItem(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(.headline, design: .rounded, weight: .bold))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.35))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var summaryDivider: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.06))
+            .frame(width: 1, height: 28)
+    }
+
+    // MARK: - Helpers
+
+    private func workoutAccentColor(_ workout: WorkoutDay) -> Color {
+        if workout.isRestDay { return .gray }
+        let name = workout.name.lowercased()
+        if name.contains("push") { return .red }
+        if name.contains("pull") { return .indigo }
+        if name.contains("leg") { return .purple }
+        if name.contains("upper") { return .cyan }
+        if name.contains("lower") || name.contains("core") { return .orange }
+        if name.contains("recovery") { return .teal }
+        if name.contains("weak") || name.contains("focus") { return .orange }
+        if name.contains("full") { return .green }
+        return .blue
+    }
+
+    private func estimatedMinutes(_ workout: WorkoutDay) -> Int {
+        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets }
+        return max(totalSets * 3, 15)
+    }
+
+    private func workoutDifficulty(_ workout: WorkoutDay) -> String {
+        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets }
+        if totalSets >= 20 { return "Hard" }
+        if totalSets >= 12 { return "Medium" }
+        return "Easy"
+    }
+
+    private func muscleGroupIcon(_ area: String) -> String {
+        let lower = area.lowercased()
+        if lower.contains("chest") { return "figure.strengthtraining.traditional" }
+        if lower.contains("shoulder") || lower.contains("delt") { return "figure.boxing" }
+        if lower.contains("back") || lower.contains("lat") { return "figure.rowing" }
+        if lower.contains("arm") || lower.contains("bicep") || lower.contains("tricep") { return "figure.arms.open" }
+        if lower.contains("leg") || lower.contains("quad") || lower.contains("hamstring") || lower.contains("calf") || lower.contains("calves") { return "figure.run" }
+        if lower.contains("glute") { return "figure.stairs" }
+        if lower.contains("core") || lower.contains("ab") { return "figure.core.training" }
+        if lower.contains("body fat") || lower.contains("fat") { return "flame.fill" }
+        if lower.contains("definition") || lower.contains("muscle") { return "figure.highintensity.intervaltraining" }
+        return "figure.mixed.cardio"
+    }
+
+    private func focusAreaPriority(_ area: String) -> FocusAreaPriority {
+        let weakPoints = appState.profile.weakPoints
+        guard let index = weakPoints.firstIndex(of: area) else { return .maintaining }
+        if index == 0 { return .high }
+        if index <= 1 { return .moderate }
+        return .maintaining
+    }
+
+    private func focusAreaScore(_ area: String) -> Double {
+        let base = appState.profile.latestScore ?? 5.0
+        let priority = focusAreaPriority(area)
+        switch priority {
+        case .high: return max(base - 2.0, 1.0)
+        case .moderate: return max(base - 1.0, 2.0)
+        case .maintaining: return base
+        }
+    }
+
+    private func focusAreaSubtitle(_ area: String) -> String {
+        let lower = area.lowercased()
+        if lower.contains("shoulder") { return "Wider frame, better posture" }
+        if lower.contains("chest") { return "Upper body pressing power" }
+        if lower.contains("back") { return "V-taper and posture" }
+        if lower.contains("arm") { return "Complete physique" }
+        if lower.contains("leg") { return "Foundation of strength" }
+        if lower.contains("glute") { return "Hip power and stability" }
+        if lower.contains("core") || lower.contains("ab") { return "Stability and protection" }
+        if lower.contains("calf") { return "Lower body completion" }
+        return "Targeted improvement area"
+    }
+
+    private func focusAreaExercises(_ area: String) -> [String] {
+        let lower = area.lowercased()
+        let isGym = appState.profile.trainingLocation.lowercased().contains("gym")
+        if lower.contains("shoulder") {
+            return isGym ? ["Overhead Press", "Lateral Raises", "Face Pulls", "Arnold Press", "Rear Delt Flyes"] : ["Pike Push-Ups", "Lateral Raises", "Band Pull-Aparts", "Handstand Progression"]
+        }
+        if lower.contains("chest") {
+            return isGym ? ["Bench Press", "Incline DB Press", "Cable Flyes", "Dips", "Push-Ups"] : ["Push-Ups", "Decline Push-Ups", "Wide Push-Ups", "Dips"]
+        }
+        if lower.contains("back") {
+            return isGym ? ["Barbell Rows", "Lat Pulldown", "Cable Row", "Face Pulls", "Deadlift"] : ["Pull-Ups", "Inverted Rows", "Superman Hold", "Band Rows"]
+        }
+        if lower.contains("leg") {
+            return isGym ? ["Squats", "Romanian Deadlift", "Leg Press", "Lunges", "Calf Raises"] : ["Bulgarian Split Squats", "Pistol Squats", "Jump Squats", "Wall Sits"]
+        }
+        if lower.contains("core") || lower.contains("ab") {
+            return ["Planks", "Hanging Leg Raises", "Cable Crunches", "Bicycle Crunches", "Ab Wheel"]
+        }
+        return ["Targeted Volume Work", "Progressive Overload", "Mind-Muscle Connection"]
+    }
+
+    // MARK: - Exercises helpers
 
     private func exerciseIcon(_ muscleGroup: String) -> String {
         let lower = muscleGroup.lowercased()
@@ -515,6 +1264,8 @@ struct PlanView: View {
         if lower.contains("full body") { return "figure.mixed.cardio" }
         return "dumbbell.fill"
     }
+
+    // MARK: - Plan Generation (unchanged logic)
 
     private func generatePersonalizedPlan() -> [WorkoutDay] {
         let weakPoints = appState.profile.weakPoints
@@ -735,6 +1486,22 @@ struct PlanView: View {
             Exercise(name: "Cat-Cow Stretch", sets: 2, reps: "10", muscleGroup: "Spine"),
             Exercise(name: "Light Walk", sets: 1, reps: "20min", muscleGroup: "Cardio"),
         ]
+    }
+}
+
+nonisolated struct FocusAreaItem: Identifiable, Sendable {
+    let id: String
+    let area: String
+
+    init(area: String) {
+        self.id = area
+        self.area = area
+    }
+}
+
+extension Array where Element == String {
+    func lowercased() -> String {
+        self.joined(separator: ",").lowercased()
     }
 }
 
