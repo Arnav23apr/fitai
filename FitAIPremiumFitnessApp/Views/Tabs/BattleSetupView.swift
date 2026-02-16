@@ -53,6 +53,14 @@ struct BattleSetupView: View {
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
+            .overlay {
+                if viewModel.isAnalyzing {
+                    AnalyzingOverlayView()
+                        .transition(.opacity)
+                        .ignoresSafeArea()
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
             .onChange(of: viewModel.playerPickerItem) { _, _ in
                 Task { await viewModel.loadPlayerPhoto() }
             }
