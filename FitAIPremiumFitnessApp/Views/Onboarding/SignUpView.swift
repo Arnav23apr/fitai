@@ -12,10 +12,10 @@ struct SignUpView: View {
 
             VStack(spacing: 32) {
                 VStack(spacing: 12) {
-                    Text("Create Your Account")
+                    Text(appState.t("Create Your Account"))
                         .font(.system(.title, design: .default, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("Sign up to save your progress")
+                    Text(appState.t("Sign up to save your progress"))
                         .font(.body)
                         .foregroundStyle(.white.opacity(0.6))
                 }
@@ -46,11 +46,12 @@ struct SignUpView: View {
                         appState.profile.name = "Athlete"
                         onContinue()
                     }) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 0) {
                             GoogleLogo()
-                                .frame(width: 20, height: 20)
-                            Text("Continue with Google")
-                                .font(.headline)
+                                .frame(width: 18, height: 18)
+                                .padding(.trailing, 8)
+                            Text(appState.t("Continue with Google"))
+                                .font(.system(size: 19, weight: .semibold))
                         }
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -63,11 +64,12 @@ struct SignUpView: View {
                         appState.profile.name = "Athlete"
                         onContinue()
                     }) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 0) {
                             Image(systemName: "envelope.fill")
-                                .font(.system(size: 18))
-                            Text("Continue with Email")
-                                .font(.headline)
+                                .font(.system(size: 16))
+                                .padding(.trailing, 8)
+                            Text(appState.t("Continue with Email"))
+                                .font(.system(size: 19, weight: .semibold))
                         }
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -85,7 +87,7 @@ struct SignUpView: View {
             Spacer()
 
             Button(action: onContinue) {
-                Text("Existing user? Log in")
+                Text(appState.t("Existing user? Log in"))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                     .underline()

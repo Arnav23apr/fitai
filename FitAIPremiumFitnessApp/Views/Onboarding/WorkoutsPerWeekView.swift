@@ -6,7 +6,7 @@ struct WorkoutsPerWeekView: View {
     @State private var selected: Int = 3
     @State private var appeared: Bool = false
 
-    private let options: [(count: Int, label: String)] = [
+    private let options: [(count: Int, labelKey: String)] = [
         (1, "Just starting"),
         (2, "Casual"),
         (3, "Moderate"),
@@ -19,13 +19,13 @@ struct WorkoutsPerWeekView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("How many times")
+                Text(appState.t("How many times"))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("per week?")
+                Text(appState.t("per week?"))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("How often do you want to train")
+                Text(appState.t("How often do you want to train"))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -41,7 +41,7 @@ struct WorkoutsPerWeekView: View {
                     .contentTransition(.numericText(value: Double(selected)))
                     .animation(.snappy, value: selected)
 
-                Text(options.first(where: { $0.count == selected })?.label ?? "")
+                Text(appState.t(options.first(where: { $0.count == selected })?.labelKey ?? ""))
                     .font(.headline)
                     .foregroundStyle(.white.opacity(0.6))
                     .animation(.easeInOut(duration: 0.2), value: selected)
@@ -72,7 +72,7 @@ struct WorkoutsPerWeekView: View {
                 appState.profile.workoutsPerWeek = selected
                 onContinue()
             }) {
-                Text("Continue")
+                Text(appState.t("Continue"))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

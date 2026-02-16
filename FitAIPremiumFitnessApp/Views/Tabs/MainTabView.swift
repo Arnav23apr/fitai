@@ -1,21 +1,22 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @Environment(AppState.self) private var appState
     @State private var selectedTab: Int = 0
     @State private var appeared: Bool = false
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Scan", systemImage: "camera.viewfinder", value: 0) {
+            Tab(appState.t("Scan"), systemImage: "camera.viewfinder", value: 0) {
                 ScanView()
             }
-            Tab("Plan", systemImage: "calendar.badge.clock", value: 1) {
+            Tab(appState.t("Plan"), systemImage: "calendar.badge.clock", value: 1) {
                 PlanView()
             }
-            Tab("Compete", systemImage: "trophy.fill", value: 2) {
+            Tab(appState.t("Compete"), systemImage: "trophy.fill", value: 2) {
                 CompeteView()
             }
-            Tab("Profile", systemImage: "person.fill", value: 3) {
+            Tab(appState.t("Profile"), systemImage: "person.fill", value: 3) {
                 ProfileView()
             }
         }
