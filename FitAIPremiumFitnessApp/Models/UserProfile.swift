@@ -28,4 +28,7 @@ nonisolated struct UserProfile: Codable, Sendable {
     var lastScanDate: Date? = nil
     var weakPoints: [String] = []
     var strongPoints: [String] = []
+    var workoutLogs: [WorkoutLog] = []
+    var completedDaysThisWeek: [String] = []
+    var weekStartDate: Date? = nil
 }

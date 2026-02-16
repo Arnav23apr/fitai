@@ -37,3 +37,23 @@ nonisolated struct Exercise: Identifiable, Sendable {
         self.muscleGroup = muscleGroup
     }
 }
+
+nonisolated struct WorkoutLog: Codable, Identifiable, Sendable {
+    let id: String
+    let date: Date
+    let dayName: String
+    let exercisesCompleted: Int
+    let totalExercises: Int
+    let durationMinutes: Int
+    let completedExerciseNames: [String]
+
+    init(id: String = UUID().uuidString, date: Date = Date(), dayName: String, exercisesCompleted: Int, totalExercises: Int, durationMinutes: Int, completedExerciseNames: [String] = []) {
+        self.id = id
+        self.date = date
+        self.dayName = dayName
+        self.exercisesCompleted = exercisesCompleted
+        self.totalExercises = totalExercises
+        self.durationMinutes = durationMinutes
+        self.completedExerciseNames = completedExerciseNames
+    }
+}
