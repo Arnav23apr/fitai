@@ -50,7 +50,10 @@ class ScanViewModel {
             IMPORTANT: Determine which muscle groups are actually VISIBLE in the photo. Only include groups you can clearly see. \
             For visibleMuscleGroups, use these exact values: "chest", "shoulders", "back", "arms", "legs", "core". \
             Only include a muscle group if it is clearly visible. Set muscleScores to 0 for non-visible groups. \
-            Score visible muscle groups from 1-10 each.
+            Score visible muscle groups from 1-10 each. \
+            For potentialRating, rate from 1-10 how much genetic/frame potential this person has to build an amazing physique. \
+            Consider bone structure, frame width, muscle insertion points, and overall proportions. \
+            Be generous and motivating — most people should score 7+. This is about their POTENTIAL, not current state.
             """
 
             var userPrompt = "Analyze this physique photo. "
@@ -145,7 +148,10 @@ class ScanViewModel {
         let weak = (json["weakPoints"] as? [String]) ?? ["Core"]
         let summary = (json["summary"] as? String) ?? "Analysis complete."
         let recs = (json["recommendations"] as? [String]) ?? ["Focus on weak areas"]
-        let bf = (json["bodyFatEstimate"] as? String) ?? "N/A"
+        let pr: Double
+        if let p = json["potentialRating"] as? Double { pr = p }
+        else if let p = json["potentialRating"] as? Int { pr = Double(p) }
+        else { pr = 8.0 }
         let mm = (json["muscleMassRating"] as? String) ?? "Average"
         let visible = (json["visibleMuscleGroups"] as? [String]) ?? []
 
@@ -170,7 +176,7 @@ class ScanViewModel {
             weakPoints: weak,
             summary: summary,
             recommendations: recs,
-            bodyFatEstimate: bf,
+            potentialRating: pr,
             muscleMassRating: mm,
             muscleScores: scores,
             visibleMuscleGroups: visible,

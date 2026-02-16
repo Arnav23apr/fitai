@@ -245,7 +245,7 @@ class AIService {
                 "weakPoints": ["type": "array", "items": ["type": "string"]],
                 "summary": ["type": "string"],
                 "recommendations": ["type": "array", "items": ["type": "string"]],
-                "bodyFatEstimate": ["type": "string"],
+                "potentialRating": ["type": "number"],
                 "muscleMassRating": ["type": "string"],
                 "visibleMuscleGroups": ["type": "array", "items": ["type": "string"]],
                 "muscleScores": ["type": "object", "properties": [
@@ -263,7 +263,7 @@ class AIService {
                 "weakPoints",
                 "summary",
                 "recommendations",
-                "bodyFatEstimate",
+                "potentialRating",
                 "muscleMassRating",
                 "visibleMuscleGroups",
                 "muscleScores"

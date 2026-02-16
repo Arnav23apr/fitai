@@ -6,7 +6,7 @@ struct BattleContestant {
     let photo: UIImage
     let overallScore: Double
     let muscleScores: MuscleScores
-    let bodyFatEstimate: String
+    let potentialRating: Double
     let visibleMuscleGroups: [String]
     let strongPoints: [String]
     let weakPoints: [String]

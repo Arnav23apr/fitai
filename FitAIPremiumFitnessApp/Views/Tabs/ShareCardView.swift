@@ -106,15 +106,15 @@ struct ShareCardView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Body Fat")
+                Text("Potential")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
-                Text(result.bodyFatEstimate)
+                Text(potentialText(result.potentialRating))
                     .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(potentialColor(result.potentialRating))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                bodyFatBar()
+                scoreBar(value: result.potentialRating, color: potentialColor(result.potentialRating))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -133,32 +133,14 @@ struct ShareCardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var bodyFatValue: Double {
-        let numbers = result.bodyFatEstimate
-            .components(separatedBy: CharacterSet.decimalDigits.inverted)
-            .compactMap { Double($0) }
-        if numbers.count >= 2 {
-            return (numbers[0] + numbers[1]) / 2.0
-        } else if let first = numbers.first {
-            return first
-        }
-        return 15
+    private func potentialText(_ score: Double) -> String {
+        "\(Int(round(score * 10)))"
     }
 
-    private func bodyFatBar() -> some View {
-        let normalizedValue = min(max(bodyFatValue, 0), 40) / 40.0
-        let color: Color = bodyFatValue <= 12 ? .green : bodyFatValue <= 20 ? Color(red: 0.85, green: 0.75, blue: 0.1) : .orange
-        return GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(height: 5)
-                Capsule()
-                    .fill(color)
-                    .frame(width: max(0, geo.size.width * normalizedValue), height: 5)
-            }
-        }
-        .frame(height: 5)
+    private func potentialColor(_ score: Double) -> Color {
+        if score >= 8 { return .cyan }
+        if score >= 6 { return .green }
+        return Color(red: 0.85, green: 0.75, blue: 0.1)
     }
 
     private func scoreBar(value: Double, color: Color) -> some View {

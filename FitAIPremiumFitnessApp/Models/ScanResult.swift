@@ -18,7 +18,7 @@ struct ScanResult: Identifiable {
     let weakPoints: [String]
     let summary: String
     let recommendations: [String]
-    let bodyFatEstimate: String
+    let potentialRating: Double
     let muscleMassRating: String
     let muscleScores: MuscleScores
     let visibleMuscleGroups: [String]

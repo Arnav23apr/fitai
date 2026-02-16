@@ -569,7 +569,7 @@ struct ScanResultsSheet: View {
 
     private func bodyCompositionSection(_ result: ScanResult) -> some View {
         HStack(spacing: 12) {
-            statCard(title: "Body Fat", value: result.bodyFatEstimate, icon: "percent", color: .orange)
+            statCard(title: "Potential", value: String(format: "%.1f/10", result.potentialRating), icon: "star.fill", color: .cyan)
             statCard(title: "Muscle Mass", value: result.muscleMassRating, icon: "figure.strengthtraining.traditional", color: .blue)
         }
     }
