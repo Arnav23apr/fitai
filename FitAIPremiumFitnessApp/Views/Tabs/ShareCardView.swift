@@ -110,11 +110,11 @@ struct ShareCardView: View {
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
                 Text(result.bodyFatEstimate)
-                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Spacer().frame(height: 4)
+                bodyFatBar()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -131,6 +131,34 @@ struct ShareCardView: View {
             scoreBar(value: score, color: barColor(score))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var bodyFatValue: Double {
+        let numbers = result.bodyFatEstimate
+            .components(separatedBy: CharacterSet.decimalDigits.inverted)
+            .compactMap { Double($0) }
+        if numbers.count >= 2 {
+            return (numbers[0] + numbers[1]) / 2.0
+        } else if let first = numbers.first {
+            return first
+        }
+        return 15
+    }
+
+    private func bodyFatBar() -> some View {
+        let normalizedValue = min(max(bodyFatValue, 0), 40) / 40.0
+        let color: Color = bodyFatValue <= 12 ? .green : bodyFatValue <= 20 ? Color(red: 0.85, green: 0.75, blue: 0.1) : .orange
+        return GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.08))
+                    .frame(height: 5)
+                Capsule()
+                    .fill(color)
+                    .frame(width: max(0, geo.size.width * normalizedValue), height: 5)
+            }
+        }
+        .frame(height: 5)
     }
 
     private func scoreBar(value: Double, color: Color) -> some View {
