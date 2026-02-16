@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CompeteView: View {
     @Environment(AppState.self) private var appState
+    @State private var showBattleSetup: Bool = false
 
     private let leaderboard: [(rank: Int, name: String, points: Int, tier: String)] = [
         (1, "Alex M.", 12450, "Diamond"),
@@ -17,6 +18,8 @@ struct CompeteView: View {
                 VStack(spacing: 24) {
                     statsHeader
 
+                    battleSection
+
                     weeklyStatsCard
 
                     challengesSection
@@ -31,7 +34,81 @@ struct CompeteView: View {
             .navigationTitle("Compete")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .sheet(isPresented: $showBattleSetup) {
+                BattleSetupView()
+            }
         }
+    }
+
+    private var battleSection: some View {
+        Button {
+            showBattleSetup = true
+        } label: {
+            VStack(spacing: 0) {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [.red.opacity(0.35), .red.opacity(0.08), .clear],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: 30
+                                )
+                            )
+                            .frame(width: 56, height: 56)
+
+                        Image(systemName: "figure.mixed.cardio")
+                            .font(.system(size: 22))
+                            .foregroundStyle(.red)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("1v1 Physique Battle")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(.white)
+                        Text("Compare physiques with a friend")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.4))
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.2))
+                }
+                .padding(16)
+
+                HStack(spacing: 8) {
+                    ForEach(["Upload Photos", "AI Analyzes", "Get Mogged 💀"], id: \.self) { step in
+                        Text(step)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.3))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.04))
+                            .clipShape(Capsule())
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
+            }
+            .background(
+                LinearGradient(
+                    colors: [Color.red.opacity(0.08), Color.white.opacity(0.03)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 18))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18)
+                    .strokeBorder(Color.red.opacity(0.12), lineWidth: 1)
+            )
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: showBattleSetup)
     }
 
     private var statsHeader: some View {
