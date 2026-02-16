@@ -55,7 +55,7 @@ struct BattleSetupView: View {
             }
             .overlay {
                 if viewModel.isAnalyzing {
-                    AnalyzingOverlayView()
+                    AnalyzingOverlayView(mode: .battle)
                         .transition(.opacity)
                         .ignoresSafeArea()
                 }

@@ -1,6 +1,17 @@
 import SwiftUI
 
+nonisolated enum AnalyzingMode {
+    case scan
+    case battle
+}
+
 struct AnalyzingOverlayView: View {
+    let mode: AnalyzingMode
+
+    init(mode: AnalyzingMode = .scan) {
+        self.mode = mode
+    }
+
     @State private var currentIndex: Int = 0
     @State private var textOpacity: Double = 1.0
     @State private var textOffset: Double = 0
@@ -8,20 +19,36 @@ struct AnalyzingOverlayView: View {
     @State private var pulseScale: Double = 1.0
     @State private var iconRotation: Double = 0
 
-    private let phrases: [AnalyzingPhrase] = [
-        AnalyzingPhrase(text: "Analyzing chesticles", icon: "figure.strengthtraining.traditional"),
-        AnalyzingPhrase(text: "Twink or nah", icon: "eye.fill"),
+    private static let scanPhrases: [AnalyzingPhrase] = [
+        AnalyzingPhrase(text: "Be honest… did you skip legs?", icon: "figure.walk"),
+        AnalyzingPhrase(text: "Natty or not…?", icon: "syringe.fill"),
+        AnalyzingPhrase(text: "Consulting the aesthetic council", icon: "person.3.fill"),
+        AnalyzingPhrase(text: "Detecting possible sleeper build", icon: "eye.fill"),
         AnalyzingPhrase(text: "Checking for chicken legs", icon: "bird.fill"),
-        AnalyzingPhrase(text: "V taper?", icon: "triangle.fill"),
-        AnalyzingPhrase(text: "Measuring natty or not", icon: "syringe.fill"),
         AnalyzingPhrase(text: "Rating the gains", icon: "star.fill"),
+        AnalyzingPhrase(text: "V taper?", icon: "triangle.fill"),
         AnalyzingPhrase(text: "Counting abs... if any", icon: "rectangle.split.3x3"),
         AnalyzingPhrase(text: "Boulder shoulders?", icon: "circle.fill"),
-        AnalyzingPhrase(text: "Checking symmetry", icon: "arrow.left.and.right"),
         AnalyzingPhrase(text: "Mog potential loading", icon: "bolt.fill"),
-        AnalyzingPhrase(text: "Rear delts exist?", icon: "questionmark.circle.fill"),
-        AnalyzingPhrase(text: "Calves... we'll skip those", icon: "forward.fill"),
     ]
+
+    private static let battlePhrases: [AnalyzingPhrase] = [
+        AnalyzingPhrase(text: "Running side-by-side mog analysis", icon: "person.2.fill"),
+        AnalyzingPhrase(text: "Calculating aura differential", icon: "sparkles"),
+        AnalyzingPhrase(text: "Checking who skipped legs first", icon: "figure.walk"),
+        AnalyzingPhrase(text: "Comparing dominance levels", icon: "bolt.fill"),
+        AnalyzingPhrase(text: "Evaluating genetic lottery odds", icon: "dice.fill"),
+        AnalyzingPhrase(text: "Measuring mog distance", icon: "ruler.fill"),
+        AnalyzingPhrase(text: "Analyzing power levels", icon: "flame.fill"),
+        AnalyzingPhrase(text: "Judging the physique showdown", icon: "trophy.fill"),
+    ]
+
+    private var phrases: [AnalyzingPhrase] {
+        switch mode {
+        case .scan: return Self.scanPhrases
+        case .battle: return Self.battlePhrases
+        }
+    }
 
     var body: some View {
         VStack(spacing: 28) {
