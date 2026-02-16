@@ -3,6 +3,7 @@ import SwiftUI
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState
     var onContinue: () -> Void
+    var onLogin: (() -> Void)?
     @State private var appeared: Bool = false
     @State private var showLanguagePicker: Bool = false
 
@@ -22,7 +23,9 @@ struct WelcomeView: View {
         ("Hindi", "🇮🇳", "हिन्दी"),
         ("Turkish", "🇹🇷", "Türkçe"),
         ("Polish", "🇵🇱", "Polski"),
-        ("Swedish", "🇸🇪", "Svenska")
+        ("Swedish", "🇸🇪", "Svenska"),
+        ("Romanian", "🇷🇴", "Română"),
+        ("Hebrew", "🇮🇱", "עברית")
     ]
 
     var body: some View {
@@ -82,19 +85,45 @@ struct WelcomeView: View {
             Spacer()
             Spacer()
 
-            Button(action: onContinue) {
-                Text("Get Started")
-                    .font(.headline)
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(.white)
-                    .clipShape(.rect(cornerRadius: 16))
+            VStack(spacing: 12) {
+                Button(action: onContinue) {
+                    Text("Get Started")
+                        .font(.headline)
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(.white)
+                        .clipShape(.rect(cornerRadius: 16))
+                }
+
+                Button(action: { onLogin?() ?? onContinue() }) {
+                    Text("Existing user? Log in")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+                .padding(.top, 4)
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 16)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 30)
+
+            HStack(spacing: 4) {
+                Text("By continuing you agree to our")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.3))
+                Button("Terms") {}
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                Text("and")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.3))
+                Button("Privacy Policy") {}
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+            }
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+            .opacity(appeared ? 1 : 0)
         }
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {

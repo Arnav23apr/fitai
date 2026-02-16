@@ -22,7 +22,9 @@ struct LanguageSelectionView: View {
         ("Hindi", "🇮🇳", "हिन्दी"),
         ("Turkish", "🇹🇷", "Türkçe"),
         ("Polish", "🇵🇱", "Polski"),
-        ("Swedish", "🇸🇪", "Svenska")
+        ("Swedish", "🇸🇪", "Svenska"),
+        ("Romanian", "🇷🇴", "Română"),
+        ("Hebrew", "🇮🇱", "עברית")
     ]
 
     var body: some View {

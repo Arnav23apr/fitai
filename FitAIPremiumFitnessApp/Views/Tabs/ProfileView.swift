@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @Environment(AppState.self) private var appState
@@ -61,12 +62,23 @@ struct ProfileView: View {
 
     private var userCard: some View {
         HStack(spacing: 16) {
-            Image(systemName: appState.profile.avatarSystemName)
-                .font(.system(size: 44))
-                .foregroundStyle(.white.opacity(0.6))
-                .frame(width: 64, height: 64)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Circle())
+            Group {
+                if let photoData = appState.profile.customPhotoData,
+                   let uiImage = UIImage(data: photoData) {
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 64, height: 64)
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: appState.profile.avatarSystemName)
+                        .font(.system(size: 44))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .frame(width: 64, height: 64)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(Circle())
+                }
+            }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(appState.profile.name.isEmpty ? "Athlete" : appState.profile.name)
@@ -269,7 +281,7 @@ struct ProfileView: View {
                 .foregroundStyle(.white)
             Spacer()
             Toggle("", isOn: isOn)
-                .tint(.white.opacity(0.3))
+                .tint(.green)
                 .labelsHidden()
         }
         .padding(.horizontal, 16)
@@ -302,6 +314,8 @@ struct EditProfileSheet: View {
     @Environment(AppState.self) private var appState
     @State private var name: String = ""
     @State private var bio: String = ""
+    @State private var selectedPhotoItem: PhotosPickerItem? = nil
+    @State private var customPhotoData: Data? = nil
 
     private let avatarOptions = [
         "person.crop.circle.fill",
@@ -319,22 +333,59 @@ struct EditProfileSheet: View {
             ScrollView {
                 VStack(spacing: 28) {
                     VStack(spacing: 16) {
-                        Image(systemName: selectedAvatar)
-                            .font(.system(size: 56))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .frame(width: 88, height: 88)
-                            .background(Color.white.opacity(0.08))
-                            .clipShape(Circle())
+                        ZStack(alignment: .bottomTrailing) {
+                            if let photoData = customPhotoData,
+                               let uiImage = UIImage(data: photoData) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 88, height: 88)
+                                    .clipShape(Circle())
+                            } else {
+                                Image(systemName: selectedAvatar)
+                                    .font(.system(size: 56))
+                                    .foregroundStyle(.white.opacity(0.6))
+                                    .frame(width: 88, height: 88)
+                                    .background(Color.white.opacity(0.08))
+                                    .clipShape(Circle())
+                            }
+
+                            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 28, height: 28)
+                                    .background(Color.white)
+                                    .clipShape(Circle())
+                                    .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
+                            }
+                            .offset(x: 2, y: 2)
+                        }
+
+                        if customPhotoData != nil {
+                            Button("Remove Photo") {
+                                withAnimation {
+                                    customPhotoData = nil
+                                    selectedPhotoItem = nil
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.red.opacity(0.7))
+                        }
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(avatarOptions, id: \.self) { avatar in
-                                    Button(action: { selectedAvatar = avatar }) {
+                                    Button(action: {
+                                        selectedAvatar = avatar
+                                        customPhotoData = nil
+                                        selectedPhotoItem = nil
+                                    }) {
                                         Image(systemName: avatar)
                                             .font(.system(size: 22))
-                                            .foregroundStyle(selectedAvatar == avatar ? .black : .white.opacity(0.5))
+                                            .foregroundStyle(selectedAvatar == avatar && customPhotoData == nil ? .black : .white.opacity(0.5))
                                             .frame(width: 44, height: 44)
-                                            .background(selectedAvatar == avatar ? Color.white : Color.white.opacity(0.06))
+                                            .background(selectedAvatar == avatar && customPhotoData == nil ? Color.white : Color.white.opacity(0.06))
                                             .clipShape(Circle())
                                     }
                                 }
@@ -377,10 +428,19 @@ struct EditProfileSheet: View {
                         appState.profile.name = name
                         appState.profile.bio = bio
                         appState.profile.avatarSystemName = selectedAvatar
+                        appState.profile.customPhotoData = customPhotoData
                         appState.saveProfile()
                         dismiss()
                     }
                     .fontWeight(.semibold)
+                }
+            }
+            .onChange(of: selectedPhotoItem) { _, newValue in
+                guard let item = newValue else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        customPhotoData = data
+                    }
                 }
             }
         }
@@ -389,6 +449,7 @@ struct EditProfileSheet: View {
             name = appState.profile.name
             bio = appState.profile.bio
             selectedAvatar = appState.profile.avatarSystemName
+            customPhotoData = appState.profile.customPhotoData
         }
     }
 }
