@@ -9,7 +9,7 @@ struct SpinWheelView: View {
     @State private var hasSpun: Bool = false
     @State private var resultDiscount: Int = 0
 
-    private let segments: [Int] = [10, 20, 30, 15, 50, 25, 40, 20]
+    private let segments: [Int] = [10, 20, 80, 15, 50, 25, 40, 20]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -173,7 +173,7 @@ struct SpinWheelView: View {
         guard !isSpinning else { return }
         isSpinning = true
 
-        let selectedIndex = Int.random(in: 0..<segments.count)
+        let selectedIndex = 2
         resultDiscount = segments[selectedIndex]
 
         let segmentAngle = 360.0 / Double(segments.count)
