@@ -17,13 +17,13 @@ struct HoldingBackView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text(appState.t("What's holding"))
+                Text("What's holding")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text(appState.t("you back?"))
+                Text("you back?")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text(appState.t("Select all that apply"))
+                Text("Select all that apply")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -50,7 +50,7 @@ struct HoldingBackView: View {
                 appState.profile.holdingBack = Array(selected)
                 onContinue()
             }) {
-                Text(appState.t("Continue"))
+                Text("Continue")
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
@@ -70,23 +70,22 @@ struct HoldingBackView: View {
         }
     }
 
-    private func chipButton(_ key: String) -> some View {
-        let isSelected = selected.contains(key)
-        return Button {
-            if isSelected {
-                selected.remove(key)
+    private func chipButton(_ title: String) -> some View {
+        Button {
+            if selected.contains(title) {
+                selected.remove(title)
             } else {
-                selected.insert(key)
+                selected.insert(title)
             }
         } label: {
-            Text(appState.t(key))
+            Text(title)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(isSelected ? .black : .white.opacity(0.8))
+                .foregroundStyle(selected.contains(title) ? .black : .white.opacity(0.8))
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
-                .background(isSelected ? Color.white : Color.white.opacity(0.08))
+                .background(selected.contains(title) ? Color.white : Color.white.opacity(0.08))
                 .clipShape(.rect(cornerRadius: 24))
         }
-        .sensoryFeedback(.selection, trigger: isSelected)
+        .sensoryFeedback(.selection, trigger: selected.contains(title))
     }
 }

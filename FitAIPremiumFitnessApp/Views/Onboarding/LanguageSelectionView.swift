@@ -35,7 +35,7 @@ struct LanguageSelectionView: View {
                     .opacity(appeared ? 1 : 0)
                     .scaleEffect(appeared ? 1 : 0.5)
 
-                Text(appState.t("Choose Your Language"))
+                Text("Choose Your Language")
                     .font(.system(.title2, design: .default, weight: .bold))
                     .foregroundStyle(.white)
                     .opacity(appeared ? 1 : 0)
@@ -100,10 +100,9 @@ struct LanguageSelectionView: View {
 
             Button {
                 appState.profile.selectedLanguage = selectedLanguage
-                appState.saveProfile()
                 onContinue()
             } label: {
-                Text(appState.t("Continue"))
+                Text("Continue")
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

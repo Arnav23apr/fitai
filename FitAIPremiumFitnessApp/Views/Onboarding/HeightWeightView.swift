@@ -14,10 +14,10 @@ struct HeightWeightView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text(appState.t("Your Body"))
+                Text("Your Body")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text(appState.t("Measurements"))
+                Text("Measurements")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
             }
@@ -25,8 +25,8 @@ struct HeightWeightView: View {
             .opacity(appeared ? 1 : 0)
 
             Picker("Unit", selection: $usesMetric) {
-                Text(appState.t("Imperial")).tag(false)
-                Text(appState.t("Metric")).tag(true)
+                Text("Imperial").tag(false)
+                Text("Metric").tag(true)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
@@ -35,7 +35,7 @@ struct HeightWeightView: View {
 
             HStack(spacing: 24) {
                 VStack(spacing: 8) {
-                    Text(appState.t("HEIGHT"))
+                    Text("HEIGHT")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.4))
                         .tracking(1)
@@ -78,7 +78,7 @@ struct HeightWeightView: View {
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: 8) {
-                    Text(appState.t("WEIGHT"))
+                    Text("WEIGHT")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.4))
                         .tracking(1)
@@ -126,7 +126,7 @@ struct HeightWeightView: View {
                 appState.profile.usesMetric = usesMetric
                 onContinue()
             }) {
-                Text(appState.t("Continue"))
+                Text("Continue")
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

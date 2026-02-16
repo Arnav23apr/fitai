@@ -5,30 +5,8 @@ struct ProfileView: View {
     @Environment(AppState.self) private var appState
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
-    @State private var showLanguagePicker: Bool = false
     @State private var notificationsEnabled: Bool = true
     @State private var darkModeEnabled: Bool = true
-
-    private let languages: [(name: String, flag: String, native: String)] = [
-        ("English", "🇺🇸", "English"),
-        ("Spanish", "🇪🇸", "Español"),
-        ("French", "🇫🇷", "Français"),
-        ("German", "🇩🇪", "Deutsch"),
-        ("Portuguese", "🇧🇷", "Português"),
-        ("Italian", "🇮🇹", "Italiano"),
-        ("Dutch", "🇳🇱", "Nederlands"),
-        ("Russian", "🇷🇺", "Русский"),
-        ("Japanese", "🇯🇵", "日本語"),
-        ("Korean", "🇰🇷", "한국어"),
-        ("Chinese", "🇨🇳", "中文"),
-        ("Arabic", "🇸🇦", "العربية"),
-        ("Hindi", "🇮🇳", "हिन्दी"),
-        ("Turkish", "🇹🇷", "Türkçe"),
-        ("Polish", "🇵🇱", "Polski"),
-        ("Swedish", "🇸🇪", "Svenska"),
-        ("Romanian", "🇷🇴", "Română"),
-        ("Hebrew", "🇮🇱", "עברית")
-    ]
 
     var body: some View {
         NavigationStack {
@@ -51,7 +29,7 @@ struct ProfileView: View {
                 .padding(.bottom, 32)
             }
             .background(Color.black)
-            .navigationTitle(appState.t("Profile"))
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
@@ -79,17 +57,7 @@ struct ProfileView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
             }
-            .sheet(isPresented: $showLanguagePicker) {
-                languagePickerSheet
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                    .presentationContentInteraction(.scrolls)
-            }
         }
-    }
-
-    private var currentFlag: String {
-        languages.first(where: { $0.name == appState.profile.selectedLanguage })?.flag ?? "🇺🇸"
     }
 
     private var userCard: some View {
@@ -113,7 +81,7 @@ struct ProfileView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(appState.profile.name.isEmpty ? appState.t("Athlete") : appState.profile.name)
+                Text(appState.profile.name.isEmpty ? "Athlete" : appState.profile.name)
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
 
@@ -148,11 +116,11 @@ struct ProfileView: View {
 
     private var statsCard: some View {
         HStack(spacing: 0) {
-            profileStat(value: "\(appState.profile.totalScans)", label: appState.t("Scans"))
+            profileStat(value: "\(appState.profile.totalScans)", label: "Scans")
             profileDivider
-            profileStat(value: "\(appState.profile.totalWorkouts)", label: appState.t("Workouts"))
+            profileStat(value: "\(appState.profile.totalWorkouts)", label: "Workouts")
             profileDivider
-            profileStat(value: "\(appState.profile.currentStreak)", label: appState.t("Streak"))
+            profileStat(value: "\(appState.profile.currentStreak)", label: "Streak")
         }
         .padding(20)
         .background(Color.white.opacity(0.04))
@@ -184,11 +152,11 @@ struct ProfileView: View {
                     .font(.title2)
                     .foregroundStyle(.yellow)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(appState.t("Limited Offer"))
+                    Text("Limited Offer")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
                     if let discount = appState.profile.spinDiscount {
-                        Text("\(discount)% \(appState.t("off Pro — Claim now"))")
+                        Text("\(discount)% off Pro — Claim now")
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -217,7 +185,7 @@ struct ProfileView: View {
     private var scanHistorySection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text(appState.t("Scan History"))
+                Text("Scan History")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -228,7 +196,7 @@ struct ProfileView: View {
                     Image(systemName: "chart.bar")
                         .font(.title2)
                         .foregroundStyle(.white.opacity(0.2))
-                    Text(appState.t("No scans yet"))
+                    Text("No scans yet")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.3))
                 }
@@ -261,27 +229,25 @@ struct ProfileView: View {
     private var settingsSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text(appState.t("Settings"))
+                Text("Settings")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
             }
 
             VStack(spacing: 0) {
-                settingsToggle(title: appState.t("Notifications"), icon: "bell.fill", isOn: $notificationsEnabled)
+                settingsToggle(title: "Notifications", icon: "bell.fill", isOn: $notificationsEnabled)
                 Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsToggle(title: appState.t("Dark Mode"), icon: "moon.fill", isOn: $darkModeEnabled)
+                settingsToggle(title: "Dark Mode", icon: "moon.fill", isOn: $darkModeEnabled)
                 Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                languageRow
+                settingsRow(title: "Apple Health", icon: "heart.fill", iconColor: .pink) {}
                 Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: appState.t("Apple Health"), icon: "heart.fill", iconColor: .pink) {}
-                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: appState.t("Restore Purchases"), icon: "arrow.clockwise") {
+                settingsRow(title: "Restore Purchases", icon: "arrow.clockwise") {
                     appState.profile.isPremium = true
                     appState.saveProfile()
                 }
                 Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: appState.t("Terms & Privacy"), icon: "doc.text") {}
+                settingsRow(title: "Terms & Privacy", icon: "doc.text") {}
             }
             .background(Color.white.opacity(0.04))
             .clipShape(.rect(cornerRadius: 16))
@@ -292,7 +258,7 @@ struct ProfileView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 14))
-                    Text(appState.t("Log Out"))
+                    Text("Log Out")
                         .font(.subheadline)
                 }
                 .foregroundStyle(.red.opacity(0.8))
@@ -300,95 +266,6 @@ struct ProfileView: View {
                 .padding(16)
                 .background(Color.white.opacity(0.04))
                 .clipShape(.rect(cornerRadius: 16))
-            }
-        }
-    }
-
-    private var languageRow: some View {
-        Button(action: { showLanguagePicker = true }) {
-            HStack(spacing: 14) {
-                Image(systemName: "globe")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .frame(width: 28)
-                Text(appState.t("Language"))
-                    .font(.subheadline)
-                    .foregroundStyle(.white)
-                Spacer()
-                HStack(spacing: 6) {
-                    Text(currentFlag)
-                        .font(.system(size: 16))
-                    Text(appState.profile.selectedLanguage)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
-                }
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.2))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-    }
-
-    private var languagePickerSheet: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 4) {
-                    ForEach(languages, id: \.name) { language in
-                        let isSelected = appState.profile.selectedLanguage == language.name
-                        Button {
-                            withAnimation(.snappy(duration: 0.25)) {
-                                appState.profile.selectedLanguage = language.name
-                                appState.saveProfile()
-                            }
-                        } label: {
-                            HStack(spacing: 14) {
-                                Text(language.flag)
-                                    .font(.system(size: 28))
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(language.native)
-                                        .font(.system(.body, weight: .semibold))
-                                        .foregroundStyle(.primary)
-
-                                    if language.native != language.name {
-                                        Text(language.name)
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-
-                                Spacer()
-
-                                if isSelected {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.title3)
-                                        .foregroundStyle(.green)
-                                        .transition(.scale.combined(with: .opacity))
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(isSelected ? Color(.systemGray5) : Color.clear)
-                            )
-                        }
-                    }
-                }
-                .padding(.horizontal, 16)
-            }
-            .scrollIndicators(.hidden)
-            .navigationTitle(appState.t("Language"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showLanguagePicker = false
-                    }
-                    .fontWeight(.semibold)
-                }
             }
         }
     }
@@ -486,7 +363,7 @@ struct EditProfileSheet: View {
                         }
 
                         if customPhotoData != nil {
-                            Button(appState.t("Remove Photo")) {
+                            Button("Remove Photo") {
                                 withAnimation {
                                     customPhotoData = nil
                                     selectedPhotoItem = nil
@@ -519,14 +396,14 @@ struct EditProfileSheet: View {
                     }
 
                     VStack(spacing: 14) {
-                        TextField(appState.t("Name"), text: $name)
+                        TextField("Name", text: $name)
                             .font(.body)
                             .foregroundStyle(.white)
                             .padding(16)
                             .background(Color.white.opacity(0.06))
                             .clipShape(.rect(cornerRadius: 12))
 
-                        TextField(appState.t("Short bio (optional)"), text: $bio)
+                        TextField("Short bio (optional)", text: $bio)
                             .font(.body)
                             .foregroundStyle(.white)
                             .padding(16)
@@ -538,16 +415,16 @@ struct EditProfileSheet: View {
                 .padding(.top, 24)
             }
             .background(Color.black)
-            .navigationTitle(appState.t("Edit Profile"))
+            .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(appState.t("Cancel")) { dismiss() }
+                    Button("Cancel") { dismiss() }
                         .foregroundStyle(.white.opacity(0.5))
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(appState.t("Save")) {
+                    Button("Save") {
                         appState.profile.name = name
                         appState.profile.bio = bio
                         appState.profile.avatarSystemName = selectedAvatar

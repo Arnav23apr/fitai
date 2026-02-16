@@ -9,10 +9,10 @@ struct ReferralCodeView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text(appState.t("Referral Code"))
+                Text("Referral Code")
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text(appState.t("Got a code from a friend?"))
+                Text("Got a code from a friend?")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -26,7 +26,7 @@ struct ReferralCodeView: View {
                     .font(.system(size: 48))
                     .foregroundStyle(.white.opacity(0.3))
 
-                TextField("", text: $code, prompt: Text(appState.t("Enter code")).foregroundStyle(.white.opacity(0.3)))
+                TextField("", text: $code, prompt: Text("Enter code").foregroundStyle(.white.opacity(0.3)))
                     .font(.system(.title3, design: .monospaced, weight: .semibold))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
@@ -52,7 +52,7 @@ struct ReferralCodeView: View {
                     appState.profile.referralCode = code
                     onContinue()
                 }) {
-                    Text(code.isEmpty ? appState.t("Continue") : appState.t("Apply & Continue"))
+                    Text(code.isEmpty ? "Continue" : "Apply & Continue")
                         .font(.headline)
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -63,7 +63,7 @@ struct ReferralCodeView: View {
 
                 if code.isEmpty {
                     Button(action: onContinue) {
-                        Text(appState.t("I don't have a code"))
+                        Text("I don't have a code")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.4))
                     }
