@@ -24,6 +24,14 @@ struct ScanView: View {
             }
             .background(Color.black)
             .toolbar(.hidden, for: .navigationBar)
+            .overlay {
+                if viewModel.isAnalyzing {
+                    AnalyzingOverlayView()
+                        .transition(.opacity)
+                        .ignoresSafeArea()
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
             }
