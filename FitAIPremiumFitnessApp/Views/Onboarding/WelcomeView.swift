@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     var onLogin: (() -> Void)?
     @State private var appeared: Bool = false
@@ -28,6 +29,8 @@ struct WelcomeView: View {
         ("Hebrew", "🇮🇱", "עברית")
     ]
 
+    private var isDark: Bool { colorScheme == .dark }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -43,10 +46,10 @@ struct WelcomeView: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(.white.opacity(0.1))
+                    .background(isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
                     .clipShape(Capsule())
                 }
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(isDark ? .white.opacity(0.8) : .black.opacity(0.6))
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -55,7 +58,7 @@ struct WelcomeView: View {
             Spacer()
 
             VStack(spacing: 24) {
-                Image("FitAILogo")
+                Image(isDark ? "FitAILogoWhite" : "FitAILogo")
                     .resizable()
                     .scaledToFit()
                     .frame(width: 100, height: 100)
@@ -66,17 +69,16 @@ struct WelcomeView: View {
                 VStack(spacing: 12) {
                     Text("Transform Your")
                         .font(.system(.largeTitle, design: .default, weight: .bold))
-                        .foregroundStyle(.white)
                     Text("Physique with AI")
                         .font(.system(.largeTitle, design: .default, weight: .bold))
-                        .foregroundStyle(.white)
                 }
+                .foregroundStyle(.primary)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 20)
 
                 Text("Your personal AI fitness coach.\nScan, plan, and compete.")
                     .font(.body)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 15)
@@ -88,18 +90,23 @@ struct WelcomeView: View {
             VStack(spacing: 12) {
                 Button(action: onContinue) {
                     Text("Get Started")
-                        .font(.headline)
-                        .foregroundStyle(.black)
+                        .font(.system(.headline, design: .default, weight: .bold))
+                        .foregroundStyle(isDark ? .black : .white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(.white)
-                        .clipShape(.rect(cornerRadius: 16))
+                        .background(isDark ? Color.white : Color.black)
+                        .clipShape(.rect(cornerRadius: 28))
                 }
 
                 Button(action: { onLogin?() ?? onContinue() }) {
-                    Text("Existing user? Log in")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.6))
+                    HStack(spacing: 4) {
+                        Text("Already have an account?")
+                            .foregroundStyle(.secondary)
+                        Text("Sign In")
+                            .fontWeight(.bold)
+                            .foregroundStyle(.primary)
+                    }
+                    .font(.subheadline)
                 }
                 .padding(.top, 4)
             }
@@ -110,16 +117,16 @@ struct WelcomeView: View {
             HStack(spacing: 4) {
                 Text("By continuing you agree to our")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
                 Button("Terms") {}
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
                 Text("and")
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
                 Button("Privacy Policy") {}
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
             }
             .padding(.top, 12)
             .padding(.bottom, 16)
