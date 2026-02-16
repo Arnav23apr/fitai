@@ -13,10 +13,10 @@ struct TrainingLocationView: View {
         ("figure.mixed.cardio", "Both", "Mix of gym and home")
     ]
 
-    private let equipmentOptions: [(icon: String, label: String)] = [
-        ("dumbbell.fill", "Dumbbells"),
-        ("figure.strengthtraining.traditional", "Pull-up Bar"),
-        ("figure.walk", "Bodyweight Only")
+    private let equipmentOptions: [(icon: String, label: String, useCustomIcon: Bool)] = [
+        ("dumbbell.fill", "Dumbbells", false),
+        ("", "Pull-up Bar", true),
+        ("figure.walk", "Bodyweight Only", false)
     ]
 
     private var showEquipment: Bool {
@@ -87,9 +87,14 @@ struct TrainingLocationView: View {
                                     }
                                 } label: {
                                     VStack(spacing: 8) {
-                                        Image(systemName: eq.icon)
-                                            .font(.system(size: 20))
-                                            .foregroundStyle(isSelected ? .black : .white.opacity(0.6))
+                                        if eq.useCustomIcon {
+                                            PullUpBarIcon(color: isSelected ? .black : .white.opacity(0.6))
+                                                .frame(width: 28, height: 24)
+                                        } else {
+                                            Image(systemName: eq.icon)
+                                                .font(.system(size: 20))
+                                                .foregroundStyle(isSelected ? .black : .white.opacity(0.6))
+                                        }
                                         Text(eq.label)
                                             .font(.system(size: 11, weight: .medium))
                                             .foregroundStyle(isSelected ? .black : .white.opacity(0.7))

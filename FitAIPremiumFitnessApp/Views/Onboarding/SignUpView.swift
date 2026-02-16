@@ -46,34 +46,39 @@ struct SignUpView: View {
                         appState.profile.name = "Athlete"
                         onContinue()
                     }) {
-                        HStack(spacing: 10) {
-                            GoogleLogo()
-                                .frame(width: 20, height: 20)
-                            Text("Continue with Google")
-                                .font(.headline)
-                        }
-                        .foregroundStyle(.black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.white)
-                        .clipShape(.rect(cornerRadius: 16))
+                        Text("Continue with Google")
+                            .font(.headline)
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Color.white)
+                            .clipShape(.rect(cornerRadius: 16))
+                            .overlay(alignment: .leading) {
+                                GoogleLogo()
+                                    .frame(width: 20, height: 20)
+                                    .padding(.leading, 20)
+                                    .allowsHitTesting(false)
+                            }
                     }
 
                     Button(action: {
                         appState.profile.name = "Athlete"
                         onContinue()
                     }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "envelope.fill")
-                                .font(.system(size: 18))
-                            Text("Continue with Email")
-                                .font(.headline)
-                        }
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.white.opacity(0.12))
-                        .clipShape(.rect(cornerRadius: 16))
+                        Text("Continue with Email")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 56)
+                            .background(Color.white.opacity(0.12))
+                            .clipShape(.rect(cornerRadius: 16))
+                            .overlay(alignment: .leading) {
+                                Image(systemName: "envelope.fill")
+                                    .font(.system(size: 18))
+                                    .foregroundStyle(.white)
+                                    .padding(.leading, 20)
+                                    .allowsHitTesting(false)
+                            }
                     }
                 }
                 .padding(.horizontal, 24)

@@ -5,6 +5,7 @@ struct ProfileView: View {
     @Environment(AppState.self) private var appState
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
+    @State private var showLanguagePicker: Bool = false
     @State private var notificationsEnabled: Bool = true
     @State private var darkModeEnabled: Bool = true
 
@@ -56,6 +57,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
+            }
+            .sheet(isPresented: $showLanguagePicker) {
+                LanguagePickerSheet()
             }
         }
     }
@@ -247,6 +251,10 @@ struct ProfileView: View {
                     appState.saveProfile()
                 }
                 Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
+                settingsRow(title: "Language", icon: "globe", trailing: appState.profile.selectedLanguage) {
+                    showLanguagePicker = true
+                }
+                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
                 settingsRow(title: "Terms & Privacy", icon: "doc.text") {}
             }
             .background(Color.white.opacity(0.04))
@@ -288,7 +296,7 @@ struct ProfileView: View {
         .padding(.vertical, 12)
     }
 
-    private func settingsRow(title: String, icon: String, iconColor: Color = .white.opacity(0.6), action: @escaping () -> Void) -> some View {
+    private func settingsRow(title: String, icon: String, iconColor: Color = .white.opacity(0.6), trailing: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
@@ -299,6 +307,11 @@ struct ProfileView: View {
                     .font(.subheadline)
                     .foregroundStyle(.white)
                 Spacer()
+                if let trailing {
+                    Text(trailing)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.4))
+                }
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.2))
@@ -450,6 +463,91 @@ struct EditProfileSheet: View {
             bio = appState.profile.bio
             selectedAvatar = appState.profile.avatarSystemName
             customPhotoData = appState.profile.customPhotoData
+        }
+    }
+}
+
+struct LanguagePickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
+    @State private var selectedLanguage: String = "English"
+
+    private let languages: [(name: String, flag: String, native: String)] = [
+        ("English", "🇺🇸", "English"),
+        ("Spanish", "🇪🇸", "Español"),
+        ("French", "🇫🇷", "Français"),
+        ("German", "🇩🇪", "Deutsch"),
+        ("Portuguese", "🇧🇷", "Português"),
+        ("Italian", "🇮🇹", "Italiano"),
+        ("Dutch", "🇳🇱", "Nederlands"),
+        ("Russian", "🇷🇺", "Русский"),
+        ("Japanese", "🇯🇵", "日本語"),
+        ("Korean", "🇰🇷", "한국어"),
+        ("Chinese", "🇨🇳", "中文"),
+        ("Arabic", "🇸🇦", "العربية"),
+        ("Hindi", "🇮🇳", "हिन्दी"),
+        ("Turkish", "🇹🇷", "Türkçe"),
+        ("Polish", "🇵🇱", "Polski"),
+        ("Swedish", "🇸🇪", "Svenska"),
+        ("Romanian", "🇷🇴", "Română"),
+        ("Hebrew", "🇮🇱", "עברית")
+    ]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(languages, id: \.name) { language in
+                    Button {
+                        selectedLanguage = language.name
+                    } label: {
+                        HStack(spacing: 14) {
+                            Text(language.flag)
+                                .font(.system(size: 24))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(language.native)
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(.white)
+                                if language.native != language.name {
+                                    Text(language.name)
+                                        .font(.caption)
+                                        .foregroundStyle(.white.opacity(0.5))
+                                }
+                            }
+                            Spacer()
+                            if selectedLanguage == language.name {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(.green)
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.white.opacity(0.04))
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(Color.black)
+            .navigationTitle("Language")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        appState.profile.selectedLanguage = selectedLanguage
+                        appState.saveProfile()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .preferredColorScheme(.dark)
+        .onAppear {
+            selectedLanguage = appState.profile.selectedLanguage
         }
     }
 }
