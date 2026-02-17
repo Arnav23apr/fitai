@@ -21,31 +21,41 @@ struct CoachView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                messagesArea
+            ZStack(alignment: .bottom) {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
 
-                if let error = viewModel.errorMessage {
-                    errorBanner(error)
+                VStack(spacing: 0) {
+                    messagesArea
+                        .padding(.bottom, 60)
+
+                    if let error = viewModel.errorMessage {
+                        errorBanner(error)
+                    }
                 }
 
                 inputBar
             }
-            .background(Color(.systemBackground))
             .navigationTitle(L.t("aiCoach", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .medium))
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(.secondary)
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     if !viewModel.messages.isEmpty {
-                        Button(action: { viewModel.clearChat() }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 13))
+                        Button(action: {
+                            withAnimation(.spring(duration: 0.3)) {
+                                viewModel.clearChat()
+                            }
+                        }) {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -57,27 +67,35 @@ struct CoachView: View {
     private var messagesArea: some View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
-                LazyVStack(spacing: 16) {
+                LazyVStack(spacing: 2) {
                     if viewModel.messages.isEmpty {
                         welcomeSection
                     }
 
-                    ForEach(viewModel.messages) { message in
-                        messageBubble(message)
+                    ForEach(Array(viewModel.messages.enumerated()), id: \.element.id) { index, message in
+                        let showTail = isLastInGroup(index: index)
+                        messageBubble(message, showTail: showTail)
                             .id(message.id)
+                            .transition(.asymmetric(
+                                insertion: .scale(scale: 0.95, anchor: message.role == .user ? .bottomTrailing : .bottomLeading)
+                                    .combined(with: .opacity),
+                                removal: .opacity
+                            ))
                     }
 
                     if viewModel.isLoading {
                         typingIndicator
                             .id("typing")
+                            .transition(.scale(scale: 0.8, anchor: .bottomLeading).combined(with: .opacity))
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
+                .padding(.horizontal, 10)
+                .padding(.top, 8)
                 .padding(.bottom, 16)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.messages.count) { _, _ in
-                withAnimation(.easeOut(duration: 0.3)) {
+                withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
                     if viewModel.isLoading {
                         proxy.scrollTo("typing", anchor: .bottom)
                     } else if let lastMessage = viewModel.messages.last {
@@ -87,7 +105,7 @@ struct CoachView: View {
             }
             .onChange(of: viewModel.isLoading) { _, newValue in
                 if newValue {
-                    withAnimation(.easeOut(duration: 0.3)) {
+                    withAnimation(.spring(duration: 0.35, bounce: 0.1)) {
                         proxy.scrollTo("typing", anchor: .bottom)
                     }
                 }
@@ -95,26 +113,34 @@ struct CoachView: View {
         }
     }
 
+    private func isLastInGroup(index: Int) -> Bool {
+        let messages = viewModel.messages
+        if index == messages.count - 1 { return true }
+        return messages[index].role != messages[index + 1].role
+    }
+
     private var welcomeSection: some View {
-        VStack(spacing: 24) {
-            Spacer().frame(height: 30)
+        VStack(spacing: 28) {
+            Spacer().frame(height: 40)
 
             ZStack {
                 Circle()
                     .fill(
                         LinearGradient(
-                            colors: [.blue.opacity(0.3), .purple.opacity(0.2)],
+                            colors: [.blue, .purple.opacity(0.8)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
                     )
-                    .frame(width: 80, height: 80)
+                    .frame(width: 72, height: 72)
+                    .shadow(color: .blue.opacity(0.3), radius: 16, y: 6)
+
                 Image(systemName: "brain.head.profile.fill")
-                    .font(.system(size: 36))
+                    .font(.system(size: 32))
                     .foregroundStyle(.white)
             }
 
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Text(L.t("yourAICoach", lang))
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.primary)
@@ -124,11 +150,13 @@ struct CoachView: View {
                     .multilineTextAlignment(.center)
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(L.t("tryAsking", lang))
-                    .font(.caption.weight(.medium))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
-                    .padding(.leading, 4)
+                    .textCase(.uppercase)
+                    .padding(.leading, 6)
+                    .padding(.bottom, 2)
 
                 ForEach(quickQuestions, id: \.key) { q in
                     Button(action: {
@@ -136,118 +164,120 @@ struct CoachView: View {
                     }) {
                         HStack(spacing: 10) {
                             Image(systemName: "sparkles")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.blue.opacity(0.6))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.blue)
                             Text(L.t(q.key, lang))
                                 .font(.subheadline)
-                                .foregroundStyle(.primary.opacity(0.7))
+                                .foregroundStyle(.primary)
                                 .multilineTextAlignment(.leading)
                             Spacer()
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.tertiary)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.quaternary)
                         }
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(.rect(cornerRadius: 12))
+                        .padding(.vertical, 13)
+                        .background(.ultraThinMaterial)
+                        .clipShape(.rect(cornerRadius: 14))
                     }
+                    .sensoryFeedback(.impact(flexibility: .soft), trigger: viewModel.messages.count)
                 }
             }
+            .padding(.horizontal, 6)
 
             Spacer().frame(height: 20)
         }
     }
 
-    private func messageBubble(_ message: ChatMessage) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            if message.role == .assistant {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 28, height: 28)
-                    .overlay(
-                        Image(systemName: "brain.head.profile.fill")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white)
-                    )
+    private func messageBubble(_ message: ChatMessage, showTail: Bool) -> some View {
+        let isUser = message.role == .user
+
+        return HStack(alignment: .bottom, spacing: 6) {
+            if isUser { Spacer(minLength: 60) }
+
+            if !isUser {
+                if showTail {
+                    coachAvatar
+                } else {
+                    Color.clear.frame(width: 28, height: 28)
+                }
             }
 
-            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
+            VStack(alignment: isUser ? .trailing : .leading, spacing: 2) {
                 Group {
                     if message.role == .assistant {
                         MarkdownText(text: message.content)
                             .foregroundStyle(.primary)
                     } else {
                         Text(message.content)
-                            .font(.subheadline)
-                            .foregroundStyle(Color(.systemBackground))
+                            .font(.body)
+                            .foregroundStyle(.white)
                     }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(
-                    message.role == .user ?
-                    AnyShapeStyle(Color(.label)) :
+                    isUser ?
+                    AnyShapeStyle(
+                        LinearGradient(
+                            colors: [Color.blue, Color.blue.opacity(0.85)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    ) :
                     AnyShapeStyle(Color(.secondarySystemGroupedBackground))
                 )
-                .clipShape(
-                    .rect(
-                        topLeadingRadius: message.role == .user ? 18 : 4,
-                        bottomLeadingRadius: 18,
-                        bottomTrailingRadius: message.role == .user ? 4 : 18,
-                        topTrailingRadius: 18
-                    )
-                )
-                .textSelection(.enabled)
+                .clipShape(ChatBubbleShape(isUser: isUser, showTail: showTail))
 
-                Text(message.timestamp, format: .dateTime.hour().minute())
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                if showTail {
+                    Text(message.timestamp, format: .dateTime.hour().minute())
+                        .font(.system(size: 10))
+                        .foregroundStyle(.quaternary)
+                        .padding(.horizontal, 8)
+                        .padding(.top, 1)
+                }
             }
-            .frame(maxWidth: 300, alignment: message.role == .user ? .trailing : .leading)
+            .textSelection(.enabled)
 
-            if message.role == .user {
-                Spacer(minLength: 0)
-            }
+            if !isUser { Spacer(minLength: 60) }
         }
-        .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+        .padding(.top, showTail && viewModel.messages.first?.id != message.id ? 8 : 0)
+    }
+
+    private var coachAvatar: some View {
+        Circle()
+            .fill(
+                LinearGradient(
+                    colors: [.blue, .purple],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .frame(width: 28, height: 28)
+            .overlay(
+                Image(systemName: "brain.head.profile.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white)
+            )
     }
 
     private var typingIndicator: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [.blue, .purple],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 28, height: 28)
-                .overlay(
-                    Image(systemName: "brain.head.profile.fill")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white)
-                )
+        HStack(alignment: .bottom, spacing: 6) {
+            coachAvatar
 
-            HStack(spacing: 5) {
+            HStack(spacing: 4) {
                 ForEach(0..<3, id: \.self) { index in
-                    TypingDot(delay: Double(index) * 0.2)
+                    TypingDot(delay: Double(index) * 0.15)
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.vertical, 12)
             .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(.rect(cornerRadius: 18))
+            .clipShape(ChatBubbleShape(isUser: false, showTail: true))
 
             Spacer()
         }
+        .padding(.top, 8)
     }
 
     private func errorBanner(_ message: String) -> some View {
@@ -268,40 +298,93 @@ struct CoachView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(Color.red.opacity(0.1))
+        .background(.red.opacity(0.08))
     }
 
     private var inputBar: some View {
         VStack(spacing: 0) {
-            Divider()
-
-            HStack(spacing: 12) {
+            HStack(alignment: .bottom, spacing: 10) {
                 TextField(L.t("askYourCoach", lang), text: $viewModel.inputText, axis: .vertical)
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.primary)
-                    .lineLimit(1...4)
+                    .lineLimit(1...5)
                     .focused($isInputFocused)
-                    .submitLabel(.send)
-                    .onSubmit {
-                        viewModel.sendMessage(profile: appState.profile)
-                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.tertiarySystemGroupedBackground))
+                    .clipShape(.capsule)
 
                 Button(action: {
                     viewModel.sendMessage(profile: appState.profile)
                 }) {
                     Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
+                        .font(.system(size: 34))
+                        .symbolRenderingMode(.palette)
                         .foregroundStyle(
-                            viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?
-                            Color.primary.opacity(0.15) : Color.primary
+                            .white,
+                            canSend ? Color.blue : Color(.systemGray4)
                         )
+                        .scaleEffect(canSend ? 1.0 : 0.9)
+                        .animation(.spring(duration: 0.2), value: canSend)
                 }
-                .disabled(viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+                .disabled(!canSend)
+                .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.messages.count)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
         }
-        .background(Color(.systemBackground))
+        .background(
+            .ultraThinMaterial
+                .shadow(.drop(color: .black.opacity(0.06), radius: 8, y: -4))
+        )
+    }
+
+    private var canSend: Bool {
+        !viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !viewModel.isLoading
+    }
+}
+
+struct ChatBubbleShape: Shape {
+    let isUser: Bool
+    let showTail: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let radius: CGFloat = 18
+        let tailRadius: CGFloat = 6
+
+        if showTail {
+            if isUser {
+                return Path(roundedRect: rect, cornerRadii: .init(
+                    topLeading: radius,
+                    bottomLeading: radius,
+                    bottomTrailing: tailRadius,
+                    topTrailing: radius
+                ))
+            } else {
+                return Path(roundedRect: rect, cornerRadii: .init(
+                    topLeading: tailRadius,
+                    bottomLeading: radius,
+                    bottomTrailing: radius,
+                    topTrailing: radius
+                ))
+            }
+        } else {
+            if isUser {
+                return Path(roundedRect: rect, cornerRadii: .init(
+                    topLeading: radius,
+                    bottomLeading: radius,
+                    bottomTrailing: radius,
+                    topTrailing: radius
+                ))
+            } else {
+                return Path(roundedRect: rect, cornerRadii: .init(
+                    topLeading: radius,
+                    bottomLeading: radius,
+                    bottomTrailing: radius,
+                    topTrailing: radius
+                ))
+            }
+        }
     }
 }
 
@@ -311,11 +394,11 @@ struct TypingDot: View {
 
     var body: some View {
         Circle()
-            .fill(.secondary)
-            .frame(width: 6, height: 6)
-            .offset(y: isAnimating ? -5 : 3)
+            .fill(.secondary.opacity(0.6))
+            .frame(width: 7, height: 7)
+            .offset(y: isAnimating ? -4 : 2)
             .animation(
-                .easeInOut(duration: 0.5)
+                .easeInOut(duration: 0.45)
                 .repeatForever(autoreverses: true)
                 .delay(delay),
                 value: isAnimating
