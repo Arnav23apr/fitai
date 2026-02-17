@@ -2,10 +2,13 @@ import SwiftUI
 
 struct FocusAreaDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     let area: String
     let priority: FocusAreaPriority
     let score: Double
     let exercises: [String]
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -25,7 +28,7 @@ struct FocusAreaDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
             }
@@ -60,7 +63,7 @@ struct FocusAreaDetailSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: priority.icon)
                         .font(.system(size: 11))
-                    Text(priority.label)
+                    Text(priority.localizedLabel(lang))
                         .font(.caption.weight(.bold))
                 }
                 .foregroundStyle(priority.color)
@@ -77,7 +80,7 @@ struct FocusAreaDetailSheet: View {
     private var scoreSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Current Score")
+                Text(L.t("currentScore", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -115,7 +118,7 @@ struct FocusAreaDetailSheet: View {
                 Image(systemName: "info.circle.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.blue)
-                Text("Why This Matters")
+                Text(L.t("whyThisMatters", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
@@ -137,7 +140,7 @@ struct FocusAreaDetailSheet: View {
                 Image(systemName: "dumbbell.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.green)
-                Text("Recommended Exercises")
+                Text(L.t("recommendedExercises", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
@@ -217,10 +220,14 @@ enum FocusAreaPriority {
     case maintaining
 
     var label: String {
+        localizedLabel("English")
+    }
+
+    func localizedLabel(_ lang: String) -> String {
         switch self {
-        case .high: return "High Priority"
-        case .moderate: return "Moderate"
-        case .maintaining: return "Maintaining"
+        case .high: return L.t("highPriority", lang)
+        case .moderate: return L.t("moderateLabel", lang)
+        case .maintaining: return L.t("maintainingLabel", lang)
         }
     }
 
