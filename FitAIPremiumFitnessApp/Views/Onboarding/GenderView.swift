@@ -6,19 +6,23 @@ struct GenderView: View {
     @State private var selected: String = ""
     @State private var appeared: Bool = false
 
-    private let options: [(icon: String, label: String)] = [
-        ("figure.stand", "Male"),
-        ("figure.stand.dress", "Female"),
-        ("dumbbell.fill", "GymRat")
-    ]
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var options: [(icon: String, key: String, value: String)] {
+        [
+            ("figure.stand", "male", "Male"),
+            ("figure.stand.dress", "female", "Female"),
+            ("dumbbell.fill", "gymRat", "GymRat")
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("What's your")
+                Text(L.t("whatsYourGender", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("gender?")
+                Text(L.t("gender", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
             }
@@ -28,20 +32,20 @@ struct GenderView: View {
             Spacer()
 
             VStack(spacing: 14) {
-                ForEach(options, id: \.label) { option in
+                ForEach(options, id: \.value) { option in
                     Button {
-                        selected = option.label
+                        selected = option.value
                     } label: {
                         HStack(spacing: 16) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 22))
-                                .foregroundStyle(selected == option.label ? .black : .white.opacity(0.6))
+                                .foregroundStyle(selected == option.value ? .black : .white.opacity(0.6))
                                 .frame(width: 32)
-                            Text(option.label)
+                            Text(L.t(option.key, lang))
                                 .font(.headline)
-                                .foregroundStyle(selected == option.label ? .black : .white)
+                                .foregroundStyle(selected == option.value ? .black : .white)
                             Spacer()
-                            if selected == option.label {
+                            if selected == option.value {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundStyle(.black)
@@ -49,7 +53,7 @@ struct GenderView: View {
                         }
                         .padding(.horizontal, 20)
                         .frame(height: 60)
-                        .background(selected == option.label ? Color.white : Color.white.opacity(0.06))
+                        .background(selected == option.value ? Color.white : Color.white.opacity(0.06))
                         .clipShape(.rect(cornerRadius: 16))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -65,7 +69,7 @@ struct GenderView: View {
                 appState.profile.gender = selected
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

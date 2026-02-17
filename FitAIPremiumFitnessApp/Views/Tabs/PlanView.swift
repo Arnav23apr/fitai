@@ -2,6 +2,8 @@ import SwiftUI
 
 struct PlanView: View {
     @Environment(AppState.self) private var appState
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var showCoach: Bool = false
     @State private var selectedDay: WorkoutDay? = nil
     @State private var selectedFocusItem: FocusAreaItem? = nil
@@ -95,7 +97,7 @@ struct PlanView: View {
             .overlay(alignment: .bottomTrailing) {
                 aiFloatingButton
             }
-            .navigationTitle("Plan")
+            .navigationTitle(L.t("plan", lang))
             .navigationBarTitleDisplayMode(.large)
                         .sheet(isPresented: $showCoach) {
                 CoachView()
@@ -127,7 +129,7 @@ struct PlanView: View {
                 Image(systemName: "brain.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(.cyan)
-                Text("Your Plan is based on")
+                Text(L.t("yourPlanBasedOn", lang))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -200,7 +202,7 @@ struct PlanView: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(spacing: 6) {
-                                Text("TODAY'S GOAL")
+                                Text(L.t("todaysGoal", lang))
                                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                                     .foregroundStyle(accentColor)
                                     .tracking(1.2)
@@ -211,7 +213,7 @@ struct PlanView: View {
                                 }
                             }
 
-                            Text(workout.isRestDay ? "Rest & Recover" : workout.name)
+                            Text(workout.isRestDay ? L.t("restAndRecover", lang) : workout.name)
                                 .font(.title2.weight(.bold))
                                 .foregroundStyle(.primary)
 
@@ -262,7 +264,7 @@ struct PlanView: View {
                                 Text(isCompleted ? "✓" : "+\(100 + workout.exercises.count * 10)")
                                     .font(.system(.subheadline, design: .rounded, weight: .bold))
                                     .foregroundStyle(isCompleted ? .green : .yellow)
-                                Text("XP Reward")
+                                Text(L.t("xpReward", lang))
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
@@ -291,7 +293,7 @@ struct PlanView: View {
                                     .font(.system(.subheadline, design: .rounded, weight: .bold))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
-                                Text("Target")
+                                Text(L.t("target", lang))
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
@@ -303,7 +305,7 @@ struct PlanView: View {
                                 HStack(spacing: 8) {
                                     Image(systemName: "play.fill")
                                         .font(.system(size: 12))
-                                    Text("Start Workout")
+                                    Text(L.t("startWorkout", lang))
                                         .font(.subheadline.weight(.bold))
                                 }
                                 .foregroundStyle(.black)
@@ -343,7 +345,7 @@ struct PlanView: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(.orange)
-                    Text("Weekly Streak")
+                    Text(L.t("weeklyStreak", lang))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                 }
@@ -409,7 +411,7 @@ struct PlanView: View {
                         Image(systemName: "star.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(.yellow)
-                        Text("Perfect Week!")
+                        Text(L.t("perfectWeek", lang))
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.yellow)
                     }
@@ -433,7 +435,7 @@ struct PlanView: View {
                         Image(systemName: "waveform.path.ecg")
                             .font(.system(size: 14))
                             .foregroundStyle(.green)
-                        Text("Scan Insight")
+                        Text(L.t("scanInsight", lang))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
                     }
@@ -457,7 +459,7 @@ struct PlanView: View {
                     Text(String(format: "%.1f", appState.profile.latestScore ?? 0))
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
-                    Text("Score")
+                    Text(L.t("score", lang))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -473,7 +475,7 @@ struct PlanView: View {
                         HStack(spacing: 4) {
                             Image(systemName: days <= 14 ? "arrow.up.right" : "arrow.down.right")
                                 .font(.system(size: 10, weight: .bold))
-                            Text(days <= 14 ? "On Track" : "Scan Overdue")
+                            Text(days <= 14 ? L.t("onTrack", lang) : L.t("scanOverdue", lang))
                                 .font(.caption2.weight(.bold))
                         }
                         .foregroundStyle(days <= 14 ? .green : .orange)
@@ -558,10 +560,10 @@ struct PlanView: View {
                 .foregroundStyle(.tertiary)
 
             VStack(spacing: 4) {
-                Text("Scan to Personalize")
+                Text(L.t("scanToPersonalize", lang))
                     .font(.headline)
                     .foregroundStyle(.primary)
-                Text("Complete a body scan to get a workout plan\ntailored to your weak points")
+                Text(L.t("completeScanForPlan", lang))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -581,7 +583,7 @@ struct PlanView: View {
                 Image(systemName: "target")
                     .font(.system(size: 13))
                     .foregroundStyle(.orange)
-                Text("Focus Areas")
+                Text(L.t("focusAreas", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -706,7 +708,7 @@ struct PlanView: View {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.yellow)
-                Text("Compete Bonus")
+                Text(L.t("competeBonus", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -739,7 +741,7 @@ struct PlanView: View {
                     Text("\(appState.profile.points)")
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(.primary)
-                    Text("Points")
+                    Text(L.t("points", lang))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -753,7 +755,7 @@ struct PlanView: View {
                     Text("\(appState.profile.currentStreak)")
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(.orange)
-                    Text("Streak")
+                    Text(L.t("streak", lang))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -767,7 +769,7 @@ struct PlanView: View {
                     Text("#\(leaderboardPosition)")
                         .font(.system(.headline, design: .rounded, weight: .bold))
                         .foregroundStyle(.green)
-                    Text("Rank")
+                    Text(L.t("rank", lang))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -804,7 +806,7 @@ struct PlanView: View {
     private var weeklyPlanSection: some View {
         VStack(spacing: 14) {
             HStack {
-                Text("This Week")
+                Text(L.t("thisWeek", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -880,7 +882,7 @@ struct PlanView: View {
                             workout.isRestDay ? .white.opacity(0.3) : .white
                         )
                     if completed {
-                        Text("DONE")
+                        Text(L.t("doneLabel", lang))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.green)
                             .padding(.horizontal, 5)
@@ -888,7 +890,7 @@ struct PlanView: View {
                             .background(Color.green.opacity(0.15))
                             .clipShape(.capsule)
                     } else if workout.isWeakPointFocus {
-                        Text("FOCUS")
+                        Text(L.t("focusLabel", lang))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.orange)
                             .padding(.horizontal, 5)
@@ -962,17 +964,17 @@ struct PlanView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     if let days = daysSinceLastScan {
                         let remaining = max(14 - days, 0)
-                        Text(remaining > 0 ? "Next scan in \(remaining) days" : "Time for a new scan!")
+                        Text(remaining > 0 ? L.t("nextScanDays", lang).replacingOccurrences(of: "%@", with: "\(remaining)") : L.t("timeForNewScan", lang))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
-                        Text("Keep consistent for best accuracy")
+                        Text(L.t("keepConsistent", lang))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("Complete your first scan")
+                        Text(L.t("completeFirstScan", lang))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.primary)
-                        Text("Track progress with regular scans")
+                        Text(L.t("trackProgress", lang))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -1008,7 +1010,7 @@ struct PlanView: View {
                 Image(systemName: "chart.bar.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.mint)
-                Text("This Week")
+                Text(L.t("thisWeek", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -1017,19 +1019,19 @@ struct PlanView: View {
             HStack(spacing: 0) {
                 summaryItem(
                     value: "\(completedCount)/\(appState.profile.workoutsPerWeek)",
-                    label: "Workouts",
+                    label: L.t("workouts", lang),
                     color: .green
                 )
                 summaryDivider
                 summaryItem(
                     value: "\(appState.profile.currentStreak)",
-                    label: "Day Streak",
+                    label: L.t("dayStreak", lang),
                     color: .orange
                 )
                 summaryDivider
                 summaryItem(
                     value: "\(weeklyXP)",
-                    label: "XP Earned",
+                    label: L.t("xpEarned", lang),
                     color: .yellow
                 )
             }
@@ -1039,7 +1041,7 @@ struct PlanView: View {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.cyan)
-                    Text("Improvement areas: \(appState.profile.weakPoints.prefix(2).joined(separator: " + "))")
+                    Text("\(L.t("improvementAreas", lang)): \(appState.profile.weakPoints.prefix(2).joined(separator: " + "))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()

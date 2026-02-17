@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct ResultsGraphView: View {
+    @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     @State private var appeared: Bool = false
     @State private var fitAIProgress: CGFloat = 0
@@ -27,9 +30,9 @@ struct ResultsGraphView: View {
             .padding(.top, 16)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Fit AI creates")
+                Text(L.t("fitAICreates", lang))
                     .font(.system(.largeTitle, design: .default, weight: .bold))
-                Text("long-term results")
+                Text(L.t("longTermResults", lang))
                     .font(.system(.largeTitle, design: .default, weight: .bold))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -49,7 +52,7 @@ struct ResultsGraphView: View {
             Spacer()
 
             Button(action: onContinue) {
-                Text("Next")
+                Text(L.t("next", lang))
                     .font(.system(.headline, design: .default, weight: .bold))
                     .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
@@ -76,7 +79,7 @@ struct ResultsGraphView: View {
 
     private var graphCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Your Physique")
+            Text(L.t("yourPhysique", lang))
                 .font(.system(.subheadline, design: .default, weight: .semibold))
                 .foregroundStyle(.primary)
                 .padding(.leading, 4)
@@ -90,17 +93,17 @@ struct ResultsGraphView: View {
                 .opacity(showLabels ? 1 : 0)
 
             HStack {
-                Text("Month 1")
+                Text(L.t("month1", lang))
                     .font(.system(.caption, design: .default, weight: .medium))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("Month 6")
+                Text(L.t("month6", lang))
                     .font(.system(.caption, design: .default, weight: .medium))
                     .foregroundStyle(.secondary)
             }
             .opacity(showLabels ? 1 : 0)
 
-            Text("80% of Fit AI users maintain their\nphysique gains even 6 months later")
+            Text(L.t("usersMainGains", lang))
                 .font(.system(.footnote, design: .default, weight: .medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -208,7 +211,7 @@ struct ResultsGraphView: View {
                 Image(systemName: "dumbbell.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(.primary)
-                Text("Fit AI Training")
+                Text(L.t("fitAITraining", lang))
                     .font(.system(.caption, design: .default, weight: .medium))
                     .foregroundStyle(.primary)
             }
@@ -217,7 +220,7 @@ struct ResultsGraphView: View {
                 Circle()
                     .fill(Color.blue.opacity(0.7))
                     .frame(width: 8, height: 8)
-                Text("Traditional Training")
+                Text(L.t("traditionalTraining", lang))
                     .font(.system(.caption, design: .default, weight: .medium))
                     .foregroundStyle(.secondary)
             }

@@ -8,15 +8,17 @@ struct ReferralCodeView: View {
     @State private var appeared: Bool = false
     @State private var isFocused: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private var isDark: Bool { colorScheme == .dark }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Referral Code")
+                Text(L.t("referralCode", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.primary)
-                Text("Got a code from a friend? Enter it below.")
+                Text(L.t("gotCodeFriend", lang))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
@@ -36,7 +38,7 @@ struct ReferralCodeView: View {
                 }
 
                 VStack(spacing: 8) {
-                    TextField("", text: $code, prompt: Text("Enter code").foregroundStyle(.tertiary))
+                    TextField("", text: $code, prompt: Text(L.t("enterCode", lang)).foregroundStyle(.tertiary))
                         .font(.system(.title3, design: .monospaced, weight: .semibold))
                         .foregroundStyle(.primary)
                         .multilineTextAlignment(.center)
@@ -56,7 +58,7 @@ struct ReferralCodeView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.green)
-                            Text("Code entered")
+                            Text(L.t("codeEntered", lang))
                                 .font(.caption)
                                 .foregroundStyle(.green)
                         }
@@ -76,7 +78,7 @@ struct ReferralCodeView: View {
                     appState.profile.referralCode = code
                     onContinue()
                 }) {
-                    Text(code.isEmpty ? "Continue" : "Apply & Continue")
+                    Text(code.isEmpty ? L.t("continue", lang) : L.t("applyAndContinue", lang))
                         .font(.headline)
                         .foregroundStyle(isDark ? .black : .white)
                         .frame(maxWidth: .infinity)
@@ -87,7 +89,7 @@ struct ReferralCodeView: View {
 
                 if code.isEmpty {
                     Button(action: onContinue) {
-                        Text("I don't have a code")
+                        Text(L.t("noCode", lang))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }

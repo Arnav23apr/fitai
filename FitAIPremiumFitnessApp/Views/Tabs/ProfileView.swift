@@ -122,11 +122,11 @@ struct ProfileView: View {
 
     private var statsCard: some View {
         HStack(spacing: 0) {
-            profileStat(value: "\(appState.profile.totalScans)", label: "Scans")
+            profileStat(value: "\(appState.profile.totalScans)", label: L.t("scans", lang))
             profileDivider
-            profileStat(value: "\(appState.profile.totalWorkouts)", label: "Workouts")
+            profileStat(value: "\(appState.profile.totalWorkouts)", label: L.t("workouts", lang))
             profileDivider
-            profileStat(value: "\(appState.profile.currentStreak)", label: "Streak")
+            profileStat(value: "\(appState.profile.currentStreak)", label: L.t("streak", lang))
         }
         .padding(20)
         .background(Color(.secondarySystemGroupedBackground))
@@ -158,7 +158,7 @@ struct ProfileView: View {
                     .font(.title2)
                     .foregroundStyle(.yellow)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Limited Offer")
+                    Text(L.t("limitedOffer", lang))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     if let discount = appState.profile.spinDiscount {
@@ -378,7 +378,7 @@ struct EditProfileSheet: View {
                         }
 
                         if customPhotoData != nil {
-                            Button("Remove Photo") {
+                            Button(L.t("removePhoto", appState.profile.selectedLanguage)) {
                                 withAnimation {
                                     customPhotoData = nil
                                     selectedPhotoItem = nil
@@ -411,14 +411,14 @@ struct EditProfileSheet: View {
                     }
 
                     VStack(spacing: 14) {
-                        TextField("Name", text: $name)
+                        TextField(L.t("name", appState.profile.selectedLanguage), text: $name)
                             .font(.body)
                             .foregroundStyle(.primary)
                             .padding(16)
                             .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
 
-                        TextField("Short bio (optional)", text: $bio)
+                        TextField(L.t("shortBio", appState.profile.selectedLanguage), text: $bio)
                             .font(.body)
                             .foregroundStyle(.primary)
                             .padding(16)
@@ -430,14 +430,14 @@ struct EditProfileSheet: View {
                 .padding(.top, 24)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Edit Profile")
+            .navigationTitle(L.t("editProfile", appState.profile.selectedLanguage))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.t("cancel", appState.profile.selectedLanguage)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L.t("save", appState.profile.selectedLanguage)) {
                         appState.profile.name = name
                         appState.profile.bio = bio
                         appState.profile.avatarSystemName = selectedAvatar

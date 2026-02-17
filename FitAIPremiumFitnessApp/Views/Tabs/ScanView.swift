@@ -4,6 +4,8 @@ import PhotosUI
 struct ScanView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = ScanViewModel()
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var showPaywall: Bool = false
     @State private var showResultsSheet: Bool = false
     @State private var showTransformationSheet: Bool = false
@@ -92,7 +94,7 @@ struct ScanView: View {
     private var latestScoreCard: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Latest score")
+                Text(L.t("latestScore", lang))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 Text(String(format: "%.1f", appState.profile.latestScore ?? 0.0))
@@ -106,7 +108,7 @@ struct ScanView: View {
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.4))
                 } else {
-                    Text("No scan yet")
+                    Text(L.t("noScanYet", lang))
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.4))
                 }
@@ -123,17 +125,17 @@ struct ScanView: View {
     private var readyToScanCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Ready to Scan")
+                Text(L.t("readyToScan", lang))
                     .font(.title3.weight(.bold))
                     .foregroundStyle(.primary)
-                Text("Upload your physique photos for AI analysis")
+                Text(L.t("uploadPhotos", lang))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 12) {
                 photoSourceCard(
-                    title: "Front",
+                    title: L.t("front", lang),
                     subtitle: nil,
                     image: viewModel.frontImage,
                     pickerSelection: $viewModel.frontPickerItem,
@@ -141,8 +143,8 @@ struct ScanView: View {
                     showCamera: $showFrontCamera
                 )
                 photoSourceCard(
-                    title: "Back",
-                    subtitle: "Optional",
+                    title: L.t("back", lang),
+                    subtitle: L.t("optional", lang),
                     image: viewModel.backImage,
                     pickerSelection: $viewModel.backPickerItem,
                     showSourcePicker: $showBackSourcePicker,
@@ -170,9 +172,9 @@ struct ScanView: View {
                         Image(systemName: "sparkles")
                             .font(.system(size: 14))
                     }
-                    Text(viewModel.isAnalyzing ? "Analyzing..." : "Analyze with AI")
+                    Text(viewModel.isAnalyzing ? L.t("analyzing", lang) : L.t("analyzeWithAI", lang))
                     if !appState.profile.isPremium && !viewModel.isAnalyzing {
-                        Text("(Pro)")
+                        Text(L.t("pro", lang))
                     }
                 }
                 .font(.headline)
@@ -210,7 +212,7 @@ struct ScanView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 14))
-                    Text("Photo guidelines")
+                    Text(L.t("photoGuidelines", lang))
                         .font(.subheadline)
                 }
                 .foregroundStyle(.white.opacity(0.4))
@@ -281,12 +283,12 @@ struct ScanView: View {
                 }
             }
         }
-        .confirmationDialog("Choose \(title) Photo", isPresented: showSourcePicker, titleVisibility: .visible) {
-            Button("Take Photo") {
+        .confirmationDialog(L.t("choosePhoto", lang), isPresented: showSourcePicker, titleVisibility: .visible) {
+            Button(L.t("takePhoto", lang)) {
                 showCamera.wrappedValue = true
             }
             PhotosPicker(selection: pickerSelection, matching: .images) {
-                Text("Choose from Library")
+                Text(L.t("chooseFromLibrary", lang))
             }
         }
         .fullScreenCover(isPresented: showCamera) {
@@ -312,10 +314,10 @@ struct ScanView: View {
                                 LinearGradient(colors: [.purple, .blue], startPoint: .topLeading, endPoint: .bottomTrailing)
                             )
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("90-Day Transformation")
+                            Text(L.t("ninetyDayTransformation", lang))
                                 .font(.headline)
                                 .foregroundStyle(.primary)
-                            Text("See your potential physique with AI")
+                            Text(L.t("seePotentialPhysique", lang))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -334,7 +336,7 @@ struct ScanView: View {
                                 }
                                 .clipShape(.rect(cornerRadius: 12))
                                 .overlay(alignment: .bottomLeading) {
-                                    Text("Tap to view full")
+                                    Text(L.t("tapToViewFull", lang))
                                         .font(.caption2.weight(.medium))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 10)
@@ -363,7 +365,7 @@ struct ScanView: View {
                                 Image(systemName: "sparkles")
                                     .font(.system(size: 14))
                             }
-                            Text(viewModel.isGeneratingTransformation ? "Generating..." : viewModel.transformationResult != nil ? "Regenerate" : "Generate Preview")
+                            Text(viewModel.isGeneratingTransformation ? L.t("generating", lang) : viewModel.transformationResult != nil ? L.t("regenerate", lang) : L.t("generatePreview", lang))
                         }
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.white)
@@ -402,15 +404,15 @@ struct ScanView: View {
 
     private var tipsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Tips for a better scan")
+            Text(L.t("tipsForBetterScan", lang))
                 .font(.headline)
                 .foregroundStyle(.primary)
 
             VStack(alignment: .leading, spacing: 8) {
-                tipRow("Good, even lighting")
-                tipRow("Neutral standing pose")
-                tipRow("Torso or full body visible")
-                tipRow("Plain background if possible")
+                tipRow(L.t("goodLighting", lang))
+                tipRow(L.t("neutralPose", lang))
+                tipRow(L.t("torsoVisible", lang))
+                tipRow(L.t("plainBackground", lang))
             }
         }
         .padding(20)
@@ -444,8 +446,11 @@ struct ScanView: View {
 }
 
 struct ScanResultsSheet: View {
+    @Environment(AppState.self) private var appState
     let result: ScanResult?
     let onDismiss: () -> Void
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var appeared: Bool = false
     @State private var showShareSheet: Bool = false
     @State private var savedToPhotos: Bool = false
@@ -473,11 +478,11 @@ struct ScanResultsSheet: View {
                 }
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Results")
+            .navigationTitle(L.t("results", lang))
             .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: onDismiss)
+                    Button(L.t("done", lang), action: onDismiss)
                         .foregroundStyle(.white)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -514,7 +519,7 @@ struct ScanResultsSheet: View {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.yellow)
-                Text("Ratings")
+                Text(L.t("ratings", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -532,7 +537,7 @@ struct ScanResultsSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: savedToPhotos ? "checkmark" : "square.and.arrow.down")
                             .font(.system(size: 14))
-                        Text(savedToPhotos ? "Saved" : "Save")
+                        Text(savedToPhotos ? L.t("saved", lang) : L.t("save", lang))
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
@@ -547,7 +552,7 @@ struct ScanResultsSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "paperplane.fill")
                             .font(.system(size: 14))
-                        Text("Share")
+                        Text(L.t("share", lang))
                     }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.black)
@@ -596,8 +601,8 @@ struct ScanResultsSheet: View {
 
     private func bodyCompositionSection(_ result: ScanResult) -> some View {
         HStack(spacing: 12) {
-            statCard(title: "Potential", value: String(format: "%.1f/10", result.potentialRating), icon: "star.fill", color: .cyan)
-            statCard(title: "Muscle Mass", value: result.muscleMassRating, icon: "figure.strengthtraining.traditional", color: .blue)
+            statCard(title: L.t("potential", lang), value: String(format: "%.1f/10", result.potentialRating), icon: "star.fill", color: .cyan)
+            statCard(title: L.t("muscleMass", lang), value: result.muscleMassRating, icon: "figure.strengthtraining.traditional", color: .blue)
         }
     }
 
@@ -628,7 +633,7 @@ struct ScanResultsSheet: View {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.green)
-                Text("Strengths")
+                Text(L.t("strengths", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
@@ -657,7 +662,7 @@ struct ScanResultsSheet: View {
                 Image(systemName: "target")
                     .font(.system(size: 13))
                     .foregroundStyle(.orange)
-                Text("Areas to Improve")
+                Text(L.t("areasToImprove", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
@@ -688,7 +693,7 @@ struct ScanResultsSheet: View {
                 Image(systemName: "text.alignleft")
                     .font(.system(size: 13))
                     .foregroundStyle(.blue)
-                Text("Summary")
+                Text(L.t("summary", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
@@ -709,7 +714,7 @@ struct ScanResultsSheet: View {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.yellow)
-                Text("Recommendations")
+                Text(L.t("recommendations", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
@@ -743,11 +748,11 @@ struct ScanResultsSheet: View {
     }
 
     private func scoreLabel(_ score: Double) -> String {
-        if score >= 8 { return "Excellent" }
-        if score >= 7 { return "Great" }
-        if score >= 5.5 { return "Good" }
-        if score >= 4 { return "Average" }
-        return "Needs Work"
+        if score >= 8 { return L.t("excellent", lang) }
+        if score >= 7 { return L.t("great", lang) }
+        if score >= 5.5 { return L.t("good", lang) }
+        if score >= 4 { return L.t("average", lang) }
+        return L.t("needsWork", lang)
     }
 
     private func scoreColor(_ score: Double) -> Color {
@@ -758,9 +763,12 @@ struct ScanResultsSheet: View {
 }
 
 struct TransformationSheet: View {
+    @Environment(AppState.self) private var appState
     let result: TransformationResult?
     let isGenerating: Bool
     let onDismiss: () -> Void
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -771,10 +779,10 @@ struct TransformationSheet: View {
                         ProgressView()
                             .scaleEffect(1.2)
                             .tint(.white)
-                        Text("Generating your 90-day transformation...")
+                        Text(L.t("generatingTransformation", lang))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.6))
-                        Text("This may take up to a minute")
+                        Text(L.t("mayTakeMinute", lang))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.3))
                     }
@@ -794,7 +802,7 @@ struct TransformationSheet: View {
                                 .shadow(color: .purple.opacity(0.2), radius: 20, y: 10)
 
                             VStack(spacing: 8) {
-                                Text("Your 90-Day Potential")
+                                Text(L.t("your90DayPotential", lang))
                                     .font(.title3.weight(.bold))
                                     .foregroundStyle(.white)
                                 Text(result.description)
@@ -803,7 +811,7 @@ struct TransformationSheet: View {
                                     .multilineTextAlignment(.center)
                             }
 
-                            Text("Results may vary. This is an AI-generated visualization for motivation purposes.")
+                            Text(L.t("resultsDisclaimer", lang))
                                 .font(.caption2)
                                 .foregroundStyle(.white.opacity(0.25))
                                 .multilineTextAlignment(.center)
@@ -819,7 +827,7 @@ struct TransformationSheet: View {
                         Image(systemName: "photo.badge.exclamationmark")
                             .font(.system(size: 40))
                             .foregroundStyle(.white.opacity(0.2))
-                        Text("Could not generate transformation")
+                        Text(L.t("couldNotGenerate", lang))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -827,11 +835,11 @@ struct TransformationSheet: View {
                 }
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Transformation")
+            .navigationTitle(L.t("transformation", lang))
             .navigationBarTitleDisplayMode(.inline)
                         .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done", action: onDismiss)
+                    Button(L.t("done", lang), action: onDismiss)
                         .foregroundStyle(.white)
                 }
             }
@@ -862,7 +870,7 @@ struct PaywallSheet: View {
             .background(Color(.systemBackground))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(L.t("close", appState.profile.selectedLanguage)) { dismiss() }
                         .foregroundStyle(.white.opacity(0.5))
                 }
             }

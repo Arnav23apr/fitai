@@ -6,26 +6,30 @@ struct WorkoutsPerWeekView: View {
     @State private var selected: Int = 3
     @State private var appeared: Bool = false
 
-    private let options: [(count: Int, label: String)] = [
-        (1, "Just starting"),
-        (2, "Casual"),
-        (3, "Moderate"),
-        (4, "Dedicated"),
-        (5, "Intense"),
-        (6, "Athlete"),
-        (7, "Every day")
-    ]
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var options: [(count: Int, key: String)] {
+        [
+            (1, "justStarting"),
+            (2, "casual"),
+            (3, "moderate"),
+            (4, "dedicated"),
+            (5, "intense"),
+            (6, "athlete"),
+            (7, "everyDay")
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("How many times")
+                Text(L.t("howManyTimes", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("per week?")
+                Text(L.t("perWeek", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("How often do you want to train")
+                Text(L.t("howOftenTrain", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -41,7 +45,7 @@ struct WorkoutsPerWeekView: View {
                     .contentTransition(.numericText(value: Double(selected)))
                     .animation(.snappy, value: selected)
 
-                Text(options.first(where: { $0.count == selected })?.label ?? "")
+                Text(options.first(where: { $0.count == selected }).map { L.t($0.key, lang) } ?? "")
                     .font(.headline)
                     .foregroundStyle(.white.opacity(0.6))
                     .animation(.easeInOut(duration: 0.2), value: selected)
@@ -72,7 +76,7 @@ struct WorkoutsPerWeekView: View {
                 appState.profile.workoutsPerWeek = selected
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

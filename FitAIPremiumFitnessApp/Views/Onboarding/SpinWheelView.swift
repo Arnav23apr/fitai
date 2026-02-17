@@ -3,6 +3,8 @@ import SwiftUI
 struct SpinWheelView: View {
     @Environment(AppState.self) private var appState
     var onContinue: () -> Void
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var appeared: Bool = false
     @State private var rotation: Double = 0
     @State private var isSpinning: Bool = false
@@ -23,10 +25,10 @@ struct SpinWheelView: View {
                             .foregroundStyle(.white)
                             .transition(.scale.combined(with: .opacity))
                     } else {
-                        Text("Spin to Win")
+                        Text(L.t("spinToWin", lang))
                             .font(.system(.title, design: .default, weight: .bold))
                             .foregroundStyle(.white)
-                        Text("Get an exclusive discount")
+                        Text(L.t("getExclusiveDiscount", lang))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -144,7 +146,7 @@ struct SpinWheelView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     Button(action: spinWheel) {
-                        Text("Spin the Wheel")
+                        Text(L.t("spinTheWheel", lang))
                             .font(.headline)
                             .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
@@ -157,7 +159,7 @@ struct SpinWheelView: View {
                 }
 
                 Button(action: onContinue) {
-                    Text("No thanks")
+                    Text(L.t("noThanks", lang))
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.4))
                 }

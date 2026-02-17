@@ -3,6 +3,8 @@ import SwiftUI
 struct HeightWeightView: View {
     @Environment(AppState.self) private var appState
     var onContinue: () -> Void
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var usesMetric: Bool = false
     @State private var heightFeet: Int = 5
     @State private var heightInches: Int = 9
@@ -14,10 +16,10 @@ struct HeightWeightView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Your Body")
+                Text(L.t("yourBody", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Measurements")
+                Text(L.t("measurements", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
             }
@@ -25,8 +27,8 @@ struct HeightWeightView: View {
             .opacity(appeared ? 1 : 0)
 
             Picker("Unit", selection: $usesMetric) {
-                Text("Imperial").tag(false)
-                Text("Metric").tag(true)
+                Text(L.t("imperial", lang)).tag(false)
+                Text(L.t("metric", lang)).tag(true)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
@@ -35,7 +37,7 @@ struct HeightWeightView: View {
 
             HStack(spacing: 24) {
                 VStack(spacing: 8) {
-                    Text("HEIGHT")
+                    Text(L.t("height", lang))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.4))
                         .tracking(1)
@@ -78,7 +80,7 @@ struct HeightWeightView: View {
                 .frame(maxWidth: .infinity)
 
                 VStack(spacing: 8) {
-                    Text("WEIGHT")
+                    Text(L.t("weight", lang))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.white.opacity(0.4))
                         .tracking(1)
@@ -126,7 +128,7 @@ struct HeightWeightView: View {
                 appState.profile.usesMetric = usesMetric
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

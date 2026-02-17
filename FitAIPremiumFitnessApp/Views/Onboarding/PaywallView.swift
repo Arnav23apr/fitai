@@ -1,8 +1,11 @@
 import SwiftUI
 
 struct PaywallView: View {
+    @Environment(AppState.self) private var appState
     var onSubscribe: () -> Void
     var onSkip: () -> Void
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var appeared: Bool = false
     @State private var showSkip: Bool = false
     @State private var selectedPlan: Int = 1
@@ -45,10 +48,10 @@ struct PaywallView: View {
                         )
 
                     VStack(spacing: 8) {
-                        Text("Unlock Fit AI Pro")
+                        Text(L.t("unlockFitAIPro", lang))
                             .font(.system(.title, design: .default, weight: .bold))
                             .foregroundStyle(.white)
-                        Text("Your premium AI fitness experience")
+                        Text(L.t("premiumExperience", lang))
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.5))
                     }
@@ -109,7 +112,7 @@ struct PaywallView: View {
                 .opacity(appeared ? 1 : 0)
 
                 Button(action: onSubscribe) {
-                    Text("Start 3-Day Free Trial")
+                    Text(L.t("startFreeTrial", lang))
                         .font(.headline)
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -121,7 +124,7 @@ struct PaywallView: View {
                 .padding(.top, 24)
                 .opacity(appeared ? 1 : 0)
 
-                Text("Cancel anytime. No commitment.")
+                Text(L.t("cancelAnytime", lang))
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.3))
                     .padding(.top, 8)

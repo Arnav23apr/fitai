@@ -6,16 +6,18 @@ struct ConfidenceView: View {
     @State private var selectedValue: Int = 5
     @State private var appeared: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Training")
+                Text(L.t("trainingConfidence", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Confidence")
+                Text(L.t("confidence", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("How experienced are you?")
+                Text(L.t("howExperienced", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -66,7 +68,7 @@ struct ConfidenceView: View {
                 appState.profile.trainingConfidence = selectedValue
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
@@ -87,20 +89,20 @@ struct ConfidenceView: View {
 
     private var confidenceLabel: String {
         switch selectedValue {
-        case 1...3: return "Beginner"
-        case 4...6: return "Intermediate"
-        case 7...9: return "Advanced"
-        case 10: return "Expert"
+        case 1...3: return L.t("beginner", appState.profile.selectedLanguage)
+        case 4...6: return L.t("intermediate", appState.profile.selectedLanguage)
+        case 7...9: return L.t("advanced", appState.profile.selectedLanguage)
+        case 10: return L.t("expert", appState.profile.selectedLanguage)
         default: return ""
         }
     }
 
     private var confidenceDescription: String {
         switch selectedValue {
-        case 1...3: return "Just getting started"
-        case 4...6: return "Know the basics well"
-        case 7...9: return "Years of experience"
-        case 10: return "Competitive athlete level"
+        case 1...3: return L.t("justGettingStarted", appState.profile.selectedLanguage)
+        case 4...6: return L.t("knowBasicsWell", appState.profile.selectedLanguage)
+        case 7...9: return L.t("yearsOfExperience", appState.profile.selectedLanguage)
+        case 10: return L.t("competitiveAthleteLevel", appState.profile.selectedLanguage)
         default: return ""
         }
     }
