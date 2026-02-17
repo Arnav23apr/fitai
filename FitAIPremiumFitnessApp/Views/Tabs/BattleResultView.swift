@@ -1,11 +1,8 @@
 import SwiftUI
 
 struct BattleResultView: View {
-    @Environment(AppState.self) private var appState
     let battle: PhysiqueBattle
     let onDismiss: () -> Void
-
-    private var lang: String { appState.profile.selectedLanguage }
 
     @State private var showStamp: Bool = false
     @State private var stampScale: CGFloat = 3.0
@@ -71,7 +68,7 @@ struct BattleResultView: View {
 
     private var photosComparison: some View {
         VStack(spacing: 16) {
-            Text(L.t("physiqueBattleHeader", lang))
+            Text("PHYSIQUE BATTLE")
                 .font(.system(.caption, design: .rounded, weight: .black))
                 .tracking(3)
                 .foregroundStyle(.red)
@@ -152,7 +149,7 @@ struct BattleResultView: View {
             HStack(spacing: 6) {
                 Image(systemName: "crown.fill")
                     .foregroundStyle(.yellow)
-                Text(L.t("winsBy", lang).replacingOccurrences(of: "%@", with: battle.winner.name).replacingOccurrences(of: "%@", with: String(format: "%.1f", battle.scoreDifference)))
+                Text("\(battle.winner.name) wins by \(String(format: "%.1f", battle.scoreDifference)) points!")
                     .font(.subheadline.weight(.bold))
                     .foregroundStyle(.white)
             }
@@ -164,7 +161,7 @@ struct BattleResultView: View {
     }
 
     private var moggedStamp: some View {
-        Text(L.t("moggedStamp", lang))
+        Text("MOGGED")
             .font(.system(size: 32, weight: .black, design: .rounded))
             .foregroundStyle(.red)
             .padding(.horizontal, 12)
@@ -181,7 +178,7 @@ struct BattleResultView: View {
     private var overallComparison: some View {
         VStack(spacing: 14) {
             HStack {
-                Text(L.t("overallScoreLabel", lang))
+                Text("Overall Score")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -203,7 +200,7 @@ struct BattleResultView: View {
     private var muscleComparison: some View {
         VStack(spacing: 14) {
             HStack {
-                Text(L.t("muscleBreakdown", lang))
+                Text("Muscle Breakdown")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -301,7 +298,7 @@ struct BattleResultView: View {
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "square.and.arrow.up.fill")
-                    Text(L.t("shareBattleCard", lang))
+                    Text("Share Battle Card")
                         .font(.headline.weight(.bold))
                 }
                 .foregroundStyle(.white)
@@ -317,7 +314,7 @@ struct BattleResultView: View {
             Button {
                 onDismiss()
             } label: {
-                Text(L.t("done", lang))
+                Text("Done")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.5))
                     .frame(maxWidth: .infinity)

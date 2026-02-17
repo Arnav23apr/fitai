@@ -46,17 +46,17 @@ struct WorkoutDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L.t("done", appState.profile.selectedLanguage)) { dismiss() }
+                    Button("Done") { dismiss() }
                         .fontWeight(.medium)
                 }
             }
-            .alert(L.t("workoutCompleteTitle", appState.profile.selectedLanguage), isPresented: $showCompletionAlert) {
-                Button(L.t("finishButton", appState.profile.selectedLanguage)) {
+            .alert("Workout Complete!", isPresented: $showCompletionAlert) {
+                Button("Finish") {
                     dismiss()
                 }
             } message: {
                 let mins = elapsedSeconds / 60
-                Text(L.t("workoutCompleteMsg", appState.profile.selectedLanguage).replacingOccurrences(of: "%@", with: "\(completedExercises.count)").replacingOccurrences(of: "%@", with: "\(workout.exercises.count)").replacingOccurrences(of: "%@", with: "\(mins)").replacingOccurrences(of: "%@", with: "\(100 + completedExercises.count * 10)"))
+                Text("You completed \(completedExercises.count)/\(workout.exercises.count) exercises in \(mins) minutes. +\(100 + completedExercises.count * 10) points!")
             }
             .sensoryFeedback(.success, trigger: showCompletionAlert)
         }
@@ -84,7 +84,7 @@ struct WorkoutDetailSheet: View {
                             .font(.title3.weight(.bold))
                             .foregroundStyle(.white)
                         if workout.isWeakPointFocus {
-                            Text(L.t("focusBadge", appState.profile.selectedLanguage))
+                            Text("FOCUS")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.orange)
                                 .padding(.horizontal, 6)
@@ -93,7 +93,7 @@ struct WorkoutDetailSheet: View {
                                 .clipShape(.capsule)
                         }
                         if isAlreadyDone {
-                            Text(L.t("doneBadge", appState.profile.selectedLanguage))
+                            Text("DONE")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundStyle(.green)
                                 .padding(.horizontal, 6)
@@ -111,11 +111,11 @@ struct WorkoutDetailSheet: View {
             }
 
             HStack(spacing: 0) {
-                miniStat(value: "\(workout.exercises.count)", label: L.t("exercises", appState.profile.selectedLanguage))
+                miniStat(value: "\(workout.exercises.count)", label: "Exercises")
                 miniDivider
-                miniStat(value: "\(totalSets)", label: L.t("totalSets", appState.profile.selectedLanguage))
+                miniStat(value: "\(totalSets)", label: "Total Sets")
                 miniDivider
-                miniStat(value: estimatedTime, label: L.t("estTime", appState.profile.selectedLanguage))
+                miniStat(value: estimatedTime, label: "Est. Time")
             }
         }
         .padding(18)
@@ -127,7 +127,7 @@ struct WorkoutDetailSheet: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(isAlreadyDone ? L.t("completedStatus", appState.profile.selectedLanguage) : L.t("inProgressStatus", appState.profile.selectedLanguage))
+                    Text(isAlreadyDone ? "Completed" : "In Progress")
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(isAlreadyDone ? .green : .white)
                     if workoutStarted && !isAlreadyDone {
@@ -205,7 +205,7 @@ struct WorkoutDetailSheet: View {
     private var exercisesList: some View {
         VStack(spacing: 10) {
             HStack {
-                Text(L.t("exercises", appState.profile.selectedLanguage))
+                Text("Exercises")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.white)
                 Spacer()
@@ -250,7 +250,7 @@ struct WorkoutDetailSheet: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(exercise.sets) \(L.t("setsLabel", appState.profile.selectedLanguage))")
+                        Text("\(exercise.sets) sets")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.white.opacity(isCompleted ? 0.3 : 0.6))
                         Text(exercise.reps)
@@ -279,7 +279,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 14))
-                        Text(L.t("startWorkout", appState.profile.selectedLanguage))
+                        Text("Start Workout")
                             .font(.headline)
                     }
                     .foregroundStyle(.black)
@@ -296,7 +296,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
-                        Text(L.t("completeWorkout", appState.profile.selectedLanguage))
+                        Text("Complete Workout")
                             .font(.headline)
                     }
                     .foregroundStyle(.black)
@@ -312,7 +312,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "flag.checkered")
                             .font(.system(size: 14))
-                        Text("\(L.t("finishEarly", appState.profile.selectedLanguage)) (\(completedExercises.count)/\(workout.exercises.count))")
+                        Text("Finish Early (\(completedExercises.count)/\(workout.exercises.count))")
                             .font(.headline)
                     }
                     .foregroundStyle(.white)
@@ -331,17 +331,17 @@ struct WorkoutDetailSheet: View {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 12))
                     .foregroundStyle(.yellow.opacity(0.7))
-                Text(L.t("tips", appState.profile.selectedLanguage))
+                Text("Tips")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
             }
 
             VStack(alignment: .leading, spacing: 6) {
-                tipRow(L.t("tipRest", appState.profile.selectedLanguage))
-                tipRow(L.t("tipEccentric", appState.profile.selectedLanguage))
-                tipRow(L.t("tipHydration", appState.profile.selectedLanguage))
+                tipRow("Rest 60-90s between sets for hypertrophy")
+                tipRow("Focus on controlled eccentric (lowering) phase")
+                tipRow("Stay hydrated — aim for water between sets")
                 if workout.isWeakPointFocus {
-                    tipRow(L.t("tipWeakPoints", appState.profile.selectedLanguage))
+                    tipRow("Extra volume on weak points accelerates growth")
                 }
             }
         }

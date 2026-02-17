@@ -22,12 +22,12 @@ struct CompeteView: View {
 
     private var achievements: [Achievement] {
         [
-            Achievement(id: "first_win", title: L.t("firstBlood", lang), description: L.t("winFirstBattle", lang), icon: "flame.fill", requiredValue: 1, currentValue: min(appState.profile.totalWorkouts > 0 ? 1 : 0, 1), xpReward: 100, tier: .bronze),
-            Achievement(id: "streak_7", title: L.t("weekWarrior", lang), description: L.t("sevenDayWorkoutStreak", lang), icon: "flame.fill", requiredValue: 7, currentValue: min(appState.profile.currentStreak, 7), xpReward: 500, tier: .silver),
-            Achievement(id: "battles_10", title: L.t("gladiator", lang), description: L.t("complete10Battles", lang), icon: "figure.mixed.cardio", requiredValue: 10, currentValue: min(appState.profile.totalScans, 10), xpReward: 750, tier: .gold),
-            Achievement(id: "workouts_25", title: L.t("ironWill", lang), description: L.t("complete25Workouts", lang), icon: "figure.strengthtraining.traditional", requiredValue: 25, currentValue: min(appState.profile.totalWorkouts, 25), xpReward: 1000, tier: .gold),
-            Achievement(id: "streak_30", title: L.t("unstoppable", lang), description: L.t("thirtyDayStreak", lang), icon: "bolt.fill", requiredValue: 30, currentValue: min(appState.profile.currentStreak, 30), xpReward: 2000, tier: .diamond),
-            Achievement(id: "diamond", title: L.t("diamondLeague", lang), description: L.t("reachDiamondTier", lang), icon: "diamond.fill", requiredValue: 10000, currentValue: appState.profile.points, xpReward: 5000, tier: .diamond),
+            Achievement(id: "first_win", title: "First Blood", description: "Win your first battle", icon: "flame.fill", requiredValue: 1, currentValue: min(appState.profile.totalWorkouts > 0 ? 1 : 0, 1), xpReward: 100, tier: .bronze),
+            Achievement(id: "streak_7", title: "Week Warrior", description: "7-day workout streak", icon: "flame.fill", requiredValue: 7, currentValue: min(appState.profile.currentStreak, 7), xpReward: 500, tier: .silver),
+            Achievement(id: "battles_10", title: "Gladiator", description: "Complete 10 battles", icon: "figure.mixed.cardio", requiredValue: 10, currentValue: min(appState.profile.totalScans, 10), xpReward: 750, tier: .gold),
+            Achievement(id: "workouts_25", title: "Iron Will", description: "Complete 25 workouts", icon: "figure.strengthtraining.traditional", requiredValue: 25, currentValue: min(appState.profile.totalWorkouts, 25), xpReward: 1000, tier: .gold),
+            Achievement(id: "streak_30", title: "Unstoppable", description: "30-day streak", icon: "bolt.fill", requiredValue: 30, currentValue: min(appState.profile.currentStreak, 30), xpReward: 2000, tier: .diamond),
+            Achievement(id: "diamond", title: "Diamond League", description: "Reach Diamond tier", icon: "diamond.fill", requiredValue: 10000, currentValue: appState.profile.points, xpReward: 5000, tier: .diamond),
         ]
     }
 
@@ -37,10 +37,10 @@ struct CompeteView: View {
         let month = calendar.component(.month, from: now)
         let seasonName: String
         let seasonNum: Int
-        if month <= 3 { seasonName = L.t("winterBulk", appState.profile.selectedLanguage); seasonNum = 1 }
-        else if month <= 6 { seasonName = L.t("springCut", appState.profile.selectedLanguage); seasonNum = 2 }
-        else if month <= 9 { seasonName = L.t("summerShred", appState.profile.selectedLanguage); seasonNum = 3 }
-        else { seasonName = L.t("fallGains", appState.profile.selectedLanguage); seasonNum = 4 }
+        if month <= 3 { seasonName = "Winter Bulk"; seasonNum = 1 }
+        else if month <= 6 { seasonName = "Spring Cut"; seasonNum = 2 }
+        else if month <= 9 { seasonName = "Summer Shred"; seasonNum = 3 }
+        else { seasonName = "Fall Gains"; seasonNum = 4 }
 
         let endOfMonth = calendar.date(byAdding: DateComponents(month: 1, day: -(calendar.component(.day, from: now))), to: now) ?? now
         let daysLeft = max(calendar.dateComponents([.day], from: now, to: endOfMonth).day ?? 0, 0)
@@ -151,14 +151,14 @@ struct CompeteView: View {
                     .frame(height: 8)
                     .padding(.horizontal, 40)
 
-                    Text(L.t("xpToNextTier", lang).replacingOccurrences(of: "%@", with: "\(next.minPoints - appState.profile.points)").replacingOccurrences(of: "%@", with: next.name))
+                    Text("\(next.minPoints - appState.profile.points) XP to \(next.name)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
 
             HStack(spacing: 32) {
-                statPill(value: "\(appState.profile.points)", label: L.t("xp", lang), icon: "bolt.fill", color: .yellow)
+                statPill(value: "\(appState.profile.points)", label: "XP", icon: "bolt.fill", color: .yellow)
 
                 if appState.profile.currentStreak > 0 {
                     HStack(spacing: 6) {
@@ -169,15 +169,15 @@ struct CompeteView: View {
                         Text("\(appState.profile.currentStreak)")
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
                             .foregroundStyle(.primary)
-                        Text(L.t("streak", lang))
+                        Text("streak")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 } else {
-                    statPill(value: "0", label: L.t("streak", lang), icon: "flame.fill", color: .orange)
+                    statPill(value: "0", label: "streak", icon: "flame.fill", color: .orange)
                 }
 
-                statPill(value: "\(appState.profile.totalWorkouts)", label: L.t("wins", lang), icon: "trophy.fill", color: .green)
+                statPill(value: "\(appState.profile.totalWorkouts)", label: "wins", icon: "trophy.fill", color: .green)
             }
         }
         .padding(.vertical, 24)
@@ -218,7 +218,7 @@ struct CompeteView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text("\(L.t("season", lang)) \(seasonInfo.number)")
+                    Text("SEASON \(seasonInfo.number)")
                         .font(.system(.caption2, design: .rounded, weight: .black))
                         .tracking(1.5)
                         .foregroundStyle(.purple)
@@ -236,7 +236,7 @@ struct CompeteView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(L.t("ends", lang))
+                Text("ENDS")
                     .font(.system(.caption2, design: .rounded, weight: .bold))
                     .foregroundStyle(.tertiary)
                 Text("\(seasonInfo.daysRemaining)d")
@@ -278,7 +278,7 @@ struct CompeteView: View {
                 }
                 Spacer()
                 if !isComplete {
-                    Text("🔥 \(L.t("dLeft", lang).replacingOccurrences(of: "%@", with: "\(max(7 - Calendar.current.component(.weekday, from: Date()), 0))"))")
+                    Text("🔥 \(max(7 - Calendar.current.component(.weekday, from: Date()), 0))d left")
                         .font(.system(.caption2, design: .rounded, weight: .bold))
                         .foregroundStyle(.red.opacity(0.8))
                         .padding(.horizontal, 8)
@@ -306,7 +306,7 @@ struct CompeteView: View {
                     Text(L.t("weeklyWarrior", lang))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.primary)
-                    Text(L.t("completeAllWorkouts", lang).replacingOccurrences(of: "%@", with: "\(appState.profile.workoutsPerWeek)"))
+                    Text("Complete all \(appState.profile.workoutsPerWeek) planned workouts this week")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -404,7 +404,7 @@ struct CompeteView: View {
                             Text(L.t("physiqueBattle", lang))
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(.primary)
-                            Text(L.t("battleSubtitle", lang))
+                            Text("Upload photos • AI judges • Get mogged 💀")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -574,25 +574,25 @@ struct CompeteView: View {
 
     private var challenges: [(id: String, title: String, description: String, reward: Int, icon: String, progress: Double, progressText: String, completed: Bool, priority: String)] {
         [
-            (id: "c1", title: L.t("sevenDayStreak", lang), description: L.t("workOut7Days", lang), reward: 500, icon: "flame.fill",
+            (id: "c1", title: "7-Day Streak", description: "Work out 7 days in a row", reward: 500, icon: "flame.fill",
              progress: Double(min(appState.profile.currentStreak, 7)) / 7.0,
              progressText: "\(min(appState.profile.currentStreak, 7))/7 days",
-             completed: appState.profile.currentStreak >= 7, priority: "🔥 \(L.t("high", lang))"),
-            (id: "c2", title: L.t("firstScan", lang), description: L.t("completeFirstBodyScan", lang), reward: 200, icon: "camera.viewfinder",
+             completed: appState.profile.currentStreak >= 7, priority: "🔥 High"),
+            (id: "c2", title: "First Scan", description: "Complete your first body scan", reward: 200, icon: "camera.viewfinder",
              progress: appState.profile.totalScans > 0 ? 1.0 : 0.0,
              progressText: appState.profile.totalScans > 0 ? "Done" : "0/1",
-             completed: appState.profile.totalScans > 0, priority: "⚡ \(L.t("medium", lang))"),
-            (id: "c3", title: L.t("ironWill", lang), description: L.t("complete10Workouts", lang), reward: 500, icon: "figure.strengthtraining.traditional",
+             completed: appState.profile.totalScans > 0, priority: "⚡ Medium"),
+            (id: "c3", title: "Iron Will", description: "Complete 10 total workouts", reward: 500, icon: "figure.strengthtraining.traditional",
              progress: Double(min(appState.profile.totalWorkouts, 10)) / 10.0,
              progressText: "\(min(appState.profile.totalWorkouts, 10))/10",
-             completed: appState.profile.totalWorkouts >= 10, priority: "🔥 \(L.t("high", lang))"),
-            (id: "c4", title: L.t("earlyRiser", lang), description: L.t("fiveWorkoutsBefore9", lang), reward: 150, icon: "sunrise.fill",
+             completed: appState.profile.totalWorkouts >= 10, priority: "🔥 High"),
+            (id: "c4", title: "Early Riser", description: "5 workouts before 9 AM", reward: 150, icon: "sunrise.fill",
              progress: Double(earlyWorkouts) / 5.0,
              progressText: "\(earlyWorkouts)/5",
-             completed: earlyWorkouts >= 5, priority: "✅ \(L.t("bonus", lang))"),
-            (id: "c5", title: L.t("mysteryChallenge", lang), description: L.t("unlockAfter3Wins", lang), reward: 1000, icon: "lock.fill",
+             completed: earlyWorkouts >= 5, priority: "✅ Bonus"),
+            (id: "c5", title: "??? Mystery", description: "Unlock after 3 challenge wins", reward: 1000, icon: "lock.fill",
              progress: 0, progressText: "Locked",
-             completed: false, priority: "🔒 \(L.t("locked", lang))"),
+             completed: false, priority: "🔒 Locked"),
         ]
     }
 
@@ -731,7 +731,7 @@ struct CompeteView: View {
                         .font(.caption2)
                         .foregroundStyle(tierColorFor(entry.tier).opacity(0.7))
                     if entry.xpToday > 0 {
-                        Text("• +\(entry.xpToday) \(L.t("todayLabel", lang))")
+                        Text("• +\(entry.xpToday) today")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -783,7 +783,7 @@ struct CompeteView: View {
                     Text(appState.profile.name.isEmpty ? "You" : appState.profile.name)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
-                    Text(L.t("youLabel", lang))
+                    Text("(You)")
                         .font(.caption2)
                         .foregroundStyle(.green.opacity(0.6))
                 }

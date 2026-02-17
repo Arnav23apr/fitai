@@ -179,7 +179,7 @@ struct PlanView: View {
         if !appState.profile.primaryGoal.isEmpty {
             items.append(("target", appState.profile.primaryGoal, .orange))
         }
-        items.append(("calendar", L.t("timesPerWeek", lang).replacingOccurrences(of: "%@", with: "\(appState.profile.workoutsPerWeek)"), .blue))
+        items.append(("calendar", "\(appState.profile.workoutsPerWeek)x/week", .blue))
         if !appState.profile.weakPoints.isEmpty {
             let focus = appState.profile.weakPoints.prefix(2).joined(separator: " + ")
             items.append(("flame.fill", focus, .red))
@@ -278,7 +278,7 @@ struct PlanView: View {
                                 Text("\(nextTierPoints - appState.profile.points)")
                                     .font(.system(.subheadline, design: .rounded, weight: .bold))
                                     .foregroundStyle(.cyan)
-                                Text(L.t("toNextTier", lang).replacingOccurrences(of: "%@", with: nextTierName))
+                                Text("to \(nextTierName)")
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                             }
@@ -401,7 +401,7 @@ struct PlanView: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
-                    Text(L.t("streakDaysCount", lang).replacingOccurrences(of: "%@", with: "\(appState.profile.currentStreak)"))
+                    Text("Streak: \(appState.profile.currentStreak) days")
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
@@ -441,14 +441,14 @@ struct PlanView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        insightBullet(icon: "target", text: L.t("focusOnArea", lang).replacingOccurrences(of: "%@", with: appState.profile.weakPoints.prefix(2).joined(separator: " & ")), color: .orange)
+                        insightBullet(icon: "target", text: "Focus on \(appState.profile.weakPoints.prefix(2).joined(separator: " & "))", color: .orange)
 
                         if !appState.profile.strongPoints.isEmpty {
-                            insightBullet(icon: "checkmark.seal.fill", text: L.t("lookingStrongArea", lang).replacingOccurrences(of: "%@", with: appState.profile.strongPoints.first ?? ""), color: .green)
+                            insightBullet(icon: "checkmark.seal.fill", text: "\(appState.profile.strongPoints.first ?? "") looking strong", color: .green)
                         }
 
                         if let days = daysSinceLastScan {
-                            insightBullet(icon: "clock.fill", text: L.t("scannedDaysAgo", lang).replacingOccurrences(of: "%@", with: "\(days)"), color: .blue)
+                            insightBullet(icon: "clock.fill", text: "Scanned \(days) days ago", color: .blue)
                         }
                     }
                 }
@@ -484,7 +484,7 @@ struct PlanView: View {
                         .background((days <= 14 ? Color.green : Color.orange).opacity(0.12))
                         .clipShape(.capsule)
 
-                        Text(L.t("consistencyPercent", lang).replacingOccurrences(of: "%@", with: "\(min(100, appState.profile.totalScans * 25))"))
+                        Text("Consistency: \(min(100, appState.profile.totalScans * 25))%")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -619,7 +619,7 @@ struct PlanView: View {
                         HStack(spacing: 6) {
                             Image(systemName: priority.icon)
                                 .font(.system(size: 9))
-                            Text(priority.localizedLabel(lang))
+                            Text(priority.label)
                                 .font(.system(size: 10, weight: .bold))
                         }
                         .foregroundStyle(priority.color)
@@ -726,7 +726,7 @@ struct PlanView: View {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(.yellow)
-                    Text(L.t("completeForPointsMsg", lang).replacingOccurrences(of: "%@", with: workout.name).replacingOccurrences(of: "%@", with: "\(100 + workout.exercises.count * 10)"))
+                    Text("Complete \(workout.name) to earn +\(100 + workout.exercises.count * 10) Compete points")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -810,7 +810,7 @@ struct PlanView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(L.t("timesPerWeek", lang).replacingOccurrences(of: "%@", with: "\(appState.profile.workoutsPerWeek)"))
+                Text("\(appState.profile.workoutsPerWeek)x/week")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 10)
@@ -1097,9 +1097,9 @@ struct PlanView: View {
 
     private func workoutDifficulty(_ workout: WorkoutDay) -> String {
         let totalSets = workout.exercises.reduce(0) { $0 + $1.sets }
-        if totalSets >= 20 { return L.t("hard", lang) }
-        if totalSets >= 12 { return L.t("medium", lang) }
-        return L.t("easy", lang)
+        if totalSets >= 20 { return "Hard" }
+        if totalSets >= 12 { return "Medium" }
+        return "Easy"
     }
 
     private func muscleGroupIcon(_ area: String) -> String {
