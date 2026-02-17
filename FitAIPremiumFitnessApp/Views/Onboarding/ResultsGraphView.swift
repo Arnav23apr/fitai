@@ -18,9 +18,10 @@ struct ResultsGraphView: View {
 
     private var isDark: Bool { colorScheme == .dark }
 
-    private let drawDuration: Double = 2.2
+    private let drawDuration: Double = 2.0
     private let drawDelay: Double = 0.5
     private let traditionalDelay: Double = 0.2
+    private let dashPattern: [CGFloat] = [4, 6]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -156,7 +157,7 @@ struct ResultsGraphView: View {
                 var tradLine = Path()
                 tradLine.move(to: tradVisible[0])
                 for pt in tradVisible.dropFirst() { tradLine.addLine(to: pt) }
-                context.stroke(tradLine, with: .color(Color.blue.opacity(0.7)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                context.stroke(tradLine, with: .color(Color.blue.opacity(0.7)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round, dash: dashPattern))
             }
 
             let fitDrawCount = max(1, Int(CGFloat(fitAIPoints.count) * fitAIProgress))
@@ -166,7 +167,7 @@ struct ResultsGraphView: View {
                 var fitLine = Path()
                 fitLine.move(to: fitVisible[0])
                 for pt in fitVisible.dropFirst() { fitLine.addLine(to: pt) }
-                context.stroke(fitLine, with: .color(Color(.label)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                context.stroke(fitLine, with: .color(Color(.label)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round, dash: dashPattern))
             }
 
             if fitAIProgress > 0.01, let first = fitVisible.first {
@@ -271,8 +272,9 @@ struct ResultsGraphView: View {
         }
     }
 
-    private func easeInOut(_ t: CGFloat) -> CGFloat {
-        t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+    private func smoothEase(_ t: CGFloat) -> CGFloat {
+        let clamped = min(max(t, 0), 1)
+        return clamped * clamped * (3 - 2 * clamped)
     }
 
     private func startGraphAnimation() {
@@ -290,12 +292,15 @@ struct ResultsGraphView: View {
             let tradElapsed = elapsed - traditionalDelay
             let tradT = tradElapsed > 0 ? min(CGFloat(tradElapsed / drawDuration), 1.0) : 0
 
-            fitAIProgress = easeInOut(fitT)
-            traditionalProgress = tradElapsed > 0 ? easeInOut(tradT) : 0
+            fitAIProgress = smoothEase(fitT)
+            traditionalProgress = tradElapsed > 0 ? smoothEase(tradT) : 0
 
-            let hapticBucket = Int(fitT * 12)
-            if hapticBucket > lastHapticBucket {
-                lastHapticBucket = hapticBucket
+            let dotSpacing = dashPattern[0] + dashPattern[1]
+            let totalLineLength: CGFloat = 400
+            let totalDots = Int(totalLineLength / dotSpacing)
+            let currentDot = Int(fitAIProgress * CGFloat(totalDots))
+            if currentDot > lastHapticBucket {
+                lastHapticBucket = currentDot
                 hapticTick += 1
             }
 
