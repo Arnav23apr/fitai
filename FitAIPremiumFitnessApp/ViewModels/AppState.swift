@@ -10,6 +10,22 @@ class AppState {
     var profile: UserProfile = AppState.loadProfile()
     var isAuthenticating: Bool = false
     var authError: String? = nil
+    var isLoggedIn: Bool = false
+    var scanHistory: [ScanHistoryEntry] = []
+
+    init() {
+        scanHistory = ScanHistoryService.shared.loadAll()
+        Task { await checkSession() }
+    }
+
+    func checkSession() async {
+        if let session = await SupabaseAuthService.shared.currentSession() {
+            isLoggedIn = true
+            if let email = session.user.email, profile.email.isEmpty {
+                profile.email = email
+            }
+        }
+    }
 
     func saveProfile() {
         if let data = try? JSONEncoder().encode(profile) {
@@ -31,11 +47,25 @@ class AppState {
         saveProfile()
     }
 
+    func saveScanResult(_ result: ScanResult) {
+        profile.latestScore = result.overallScore
+        profile.lastScanDate = result.date
+        profile.totalScans += 1
+        profile.weakPoints = result.weakPoints
+        profile.strongPoints = result.strongPoints
+        saveProfile()
+
+        let entry = ScanHistoryEntry(from: result)
+        ScanHistoryService.shared.save(entry)
+        scanHistory = ScanHistoryService.shared.loadAll()
+    }
+
     func signInWithGoogle() async {
         isAuthenticating = true
         authError = nil
         do {
             let session = try await SupabaseAuthService.shared.signInWithGoogle()
+            isLoggedIn = true
             if let email = session.user.email {
                 profile.email = email
             }
@@ -62,10 +92,15 @@ class AppState {
         Task {
             try? await SupabaseAuthService.shared.signOut()
         }
+        isLoggedIn = false
         hasCompletedOnboarding = false
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
         UserDefaults.standard.removeObject(forKey: "userProfile")
+        UserDefaults.standard.removeObject(forKey: "cachedAIPlan")
+        UserDefaults.standard.removeObject(forKey: "cachedMealPlan")
+        ScanHistoryService.shared.clear()
         profile = UserProfile()
+        scanHistory = []
         showSplash = false
     }
 

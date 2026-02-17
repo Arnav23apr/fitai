@@ -445,12 +445,7 @@ struct ScanView: View {
     private func performAnalysis() async {
         let result = await viewModel.analyzeScan(profile: appState.profile)
         if let result {
-            appState.profile.latestScore = result.overallScore
-            appState.profile.lastScanDate = result.date
-            appState.profile.totalScans += 1
-            appState.profile.weakPoints = result.weakPoints
-            appState.profile.strongPoints = result.strongPoints
-            appState.saveProfile()
+            appState.saveScanResult(result)
             showResultsSheet = true
         }
     }
