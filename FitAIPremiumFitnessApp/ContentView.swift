@@ -17,7 +17,6 @@ struct ContentView: View {
             } else if !appState.hasCompletedOnboarding {
                 OnboardingContainerView()
                     .transition(.opacity)
-                    .preferredColorScheme(.dark)
             } else {
                 MainTabView()
                     .transition(.opacity)

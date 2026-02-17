@@ -2,11 +2,13 @@ import SwiftUI
 
 struct DateOfBirthView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var selectedDate: Date = Calendar.current.date(byAdding: .year, value: -20, to: Date()) ?? Date()
     @State private var appeared: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
 
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
@@ -20,13 +22,13 @@ struct DateOfBirthView: View {
             VStack(spacing: 12) {
                 Text(L.t("whenWere", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("youBorn", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("helpsPersonalize", lang))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
             }
             .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
@@ -37,18 +39,17 @@ struct DateOfBirthView: View {
             VStack(spacing: 24) {
                 Text(formattedAge)
                     .font(.system(size: 56, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .contentTransition(.numericText())
 
                 Text(L.t("yearsOld", lang))
                     .font(.headline)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
 
                 DatePicker("", selection: $selectedDate, in: dateRange, displayedComponents: .date)
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .frame(height: 180)
-                    .colorScheme(.dark)
                     .padding(.horizontal, 16)
             }
             .opacity(appeared ? 1 : 0)
@@ -63,10 +64,10 @@ struct DateOfBirthView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(.white)
+                    .background(isDark ? Color.white : Color.black)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .padding(.horizontal, 24)

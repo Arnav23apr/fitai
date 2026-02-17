@@ -2,11 +2,13 @@ import SwiftUI
 
 struct GoalsView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var selected: Set<String> = []
     @State private var appeared: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
 
     private let rows: [(String, String)] = [
         ("Build muscle", "Lose fat"),
@@ -21,13 +23,13 @@ struct GoalsView: View {
             VStack(spacing: 12) {
                 Text(L.t("in90Days", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("iWantTo", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("chooseTopGoals", lang))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
             }
             .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
@@ -54,10 +56,10 @@ struct GoalsView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(selected.isEmpty ? Color.white.opacity(0.3) : Color.white)
+                    .background(selected.isEmpty ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
                     .clipShape(.rect(cornerRadius: 16))
             }
             .disabled(selected.isEmpty)
@@ -82,10 +84,10 @@ struct GoalsView: View {
         } label: {
             Text(title)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(selected.contains(title) ? .black : .white.opacity(0.8))
+                .foregroundStyle(selected.contains(title) ? (isDark ? .black : .white) : .primary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
-                .background(selected.contains(title) ? Color.white : Color.white.opacity(0.08))
+                .background(selected.contains(title) ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
                 .clipShape(.rect(cornerRadius: 24))
         }
         .sensoryFeedback(.selection, trigger: selected.contains(title))

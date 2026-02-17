@@ -2,9 +2,11 @@ import SwiftUI
 
 struct HeightWeightView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
     @State private var usesMetric: Bool = false
     @State private var heightFeet: Int = 5
     @State private var heightInches: Int = 9
@@ -18,10 +20,10 @@ struct HeightWeightView: View {
             VStack(spacing: 12) {
                 Text(L.t("yourBody", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("measurements", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
@@ -39,14 +41,14 @@ struct HeightWeightView: View {
                 VStack(spacing: 8) {
                     Text(L.t("height", lang))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                         .tracking(1)
 
                     if usesMetric {
                         Picker("Height", selection: $heightCm) {
                             ForEach(120...220, id: \.self) { cm in
                                 Text("\(cm) cm")
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                     .tag(cm)
                             }
                         }
@@ -58,7 +60,7 @@ struct HeightWeightView: View {
                             Picker("Feet", selection: $heightFeet) {
                                 ForEach(4...7, id: \.self) { ft in
                                     Text("\(ft) ft")
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                         .tag(ft)
                                 }
                             }
@@ -68,7 +70,7 @@ struct HeightWeightView: View {
                             Picker("Inches", selection: $heightInches) {
                                 ForEach(0...11, id: \.self) { inch in
                                     Text("\(inch) in")
-                                        .foregroundStyle(.white)
+                                        .foregroundStyle(.primary)
                                         .tag(inch)
                                 }
                             }
@@ -82,14 +84,14 @@ struct HeightWeightView: View {
                 VStack(spacing: 8) {
                     Text(L.t("weight", lang))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                         .tracking(1)
 
                     if usesMetric {
                         Picker("Weight", selection: $weightKg) {
                             ForEach(30...200, id: \.self) { kg in
                                 Text("\(kg) kg")
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                     .tag(kg)
                             }
                         }
@@ -100,7 +102,7 @@ struct HeightWeightView: View {
                         Picker("Weight", selection: $weightLbs) {
                             ForEach(66...440, id: \.self) { lbs in
                                 Text("\(lbs) lbs")
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                     .tag(lbs)
                             }
                         }
@@ -130,10 +132,10 @@ struct HeightWeightView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(.white)
+                    .background(isDark ? Color.white : Color.black)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .padding(.horizontal, 24)

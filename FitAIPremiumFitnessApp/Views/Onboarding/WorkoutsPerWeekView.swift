@@ -2,11 +2,13 @@ import SwiftUI
 
 struct WorkoutsPerWeekView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var selected: Int = 3
     @State private var appeared: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
 
     private var options: [(count: Int, key: String)] {
         [
@@ -25,13 +27,13 @@ struct WorkoutsPerWeekView: View {
             VStack(spacing: 12) {
                 Text(L.t("howManyTimes", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("perWeek", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("howOftenTrain", lang))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
             }
             .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
@@ -41,13 +43,13 @@ struct WorkoutsPerWeekView: View {
             VStack(spacing: 24) {
                 Text("\(selected)x")
                     .font(.system(size: 64, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .contentTransition(.numericText(value: Double(selected)))
                     .animation(.snappy, value: selected)
 
                 Text(options.first(where: { $0.count == selected }).map { L.t($0.key, lang) } ?? "")
                     .font(.headline)
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
                     .animation(.easeInOut(duration: 0.2), value: selected)
 
                 HStack(spacing: 8) {
@@ -57,9 +59,9 @@ struct WorkoutsPerWeekView: View {
                         } label: {
                             Text("\(option.count)")
                                 .font(.system(.callout, weight: .semibold))
-                                .foregroundStyle(option.count == selected ? .black : .white.opacity(0.7))
+                                .foregroundStyle(option.count == selected ? (isDark ? .black : .white) : .secondary)
                                 .frame(width: 40, height: 40)
-                                .background(option.count == selected ? Color.white : Color.white.opacity(0.08))
+                                .background(option.count == selected ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
                                 .clipShape(Circle())
                         }
                         .sensoryFeedback(.selection, trigger: selected)
@@ -78,10 +80,10 @@ struct WorkoutsPerWeekView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(.white)
+                    .background(isDark ? Color.white : Color.black)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .padding(.horizontal, 24)
