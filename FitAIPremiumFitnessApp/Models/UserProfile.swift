@@ -2,6 +2,7 @@ import Foundation
 
 nonisolated struct UserProfile: Codable, Sendable {
     var name: String = ""
+    var username: String = ""
     var email: String = ""
     var avatarSystemName: String = "person.crop.circle.fill"
     var bio: String = ""

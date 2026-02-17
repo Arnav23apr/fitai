@@ -9,6 +9,8 @@ struct CompeteView: View {
     @State private var appeared: Bool = false
     @State private var streakFireTrigger: Int = 0
     @State private var challengesExpanded: Bool = false
+    @State private var showFriends: Bool = false
+    @State private var friendVM = FriendViewModel()
 
     private var currentTier: CompeteTier { CompeteTier.current(for: appState.profile.points) }
     private var nextTier: CompeteTier? { CompeteTier.next(for: appState.profile.points) }
@@ -80,6 +82,9 @@ struct CompeteView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
 
+                    friendsSection
+                        .padding(.bottom, 20)
+
                     battleCard
                         .padding(.horizontal, 20)
                         .padding(.bottom, 24)
@@ -109,8 +114,17 @@ struct CompeteView: View {
             .background(Color(.systemBackground))
             .navigationTitle(L.t("compete", lang))
             .navigationBarTitleDisplayMode(.large)
-                        .sheet(isPresented: $showBattleSetup) {
+            .sheet(isPresented: $showBattleSetup) {
                 BattleSetupView()
+            }
+            .sheet(isPresented: $showFriends) {
+                FriendsView()
+            }
+            .onAppear {
+                friendVM.loadSampleData()
+                if !appState.profile.username.isEmpty {
+                    friendVM.setUsername(appState.profile.username)
+                }
             }
         }
     }
@@ -917,6 +931,200 @@ struct CompeteView: View {
                 }
                 .padding(.vertical, 6)
             }
+        }
+    }
+
+    // MARK: - Friends Section
+
+    private var friendsSection: some View {
+        VStack(spacing: 14) {
+            HStack {
+                Text("Friends & 1v1")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button {
+                    showFriends = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("See All")
+                            .font(.caption.weight(.medium))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                    }
+                    .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 20)
+
+            if friendVM.friends.isEmpty {
+                Button {
+                    showFriends = true
+                } label: {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.1))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: "person.badge.plus")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.blue)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Add Friends")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text("Find friends and challenge them")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(14)
+                    .background(Color(.secondarySystemGroupedBackground))
+                    .clipShape(.rect(cornerRadius: 14))
+                }
+                .padding(.horizontal, 20)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        Button {
+                            showFriends = true
+                        } label: {
+                            VStack(spacing: 8) {
+                                ZStack {
+                                    Circle()
+                                        .fill(Color.blue.opacity(0.1))
+                                        .frame(width: 56, height: 56)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 20, weight: .semibold))
+                                        .foregroundStyle(.blue)
+                                }
+                                Text("Add")
+                                    .font(.system(.caption2, design: .rounded, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(width: 72)
+                        }
+
+                        ForEach(friendVM.friends) { friend in
+                            friendBubble(friend)
+                        }
+                    }
+                }
+                .contentMargins(.horizontal, 20)
+
+                if !friendVM.activeChallenges.isEmpty {
+                    VStack(spacing: 8) {
+                        ForEach(friendVM.activeChallenges.prefix(2)) { challenge in
+                            activeChallengeRow(challenge)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                }
+            }
+        }
+    }
+
+    private func friendBubble(_ friend: Friend) -> some View {
+        VStack(spacing: 8) {
+            ZStack(alignment: .bottomTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(friendTierColor(friend.tier).opacity(0.12))
+                        .frame(width: 56, height: 56)
+                    Text(friend.avatarEmoji)
+                        .font(.system(size: 24))
+                }
+                if friend.currentStreak > 0 {
+                    HStack(spacing: 1) {
+                        Image(systemName: "flame.fill")
+                            .font(.system(size: 7))
+                        Text("\(friend.currentStreak)")
+                            .font(.system(size: 8, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(Color.orange)
+                    .clipShape(Capsule())
+                    .offset(x: 4, y: 2)
+                }
+            }
+            Text(friend.displayName.components(separatedBy: " ").first ?? friend.displayName)
+                .font(.system(.caption2, design: .rounded, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(width: 72)
+    }
+
+    private func activeChallengeRow(_ challenge: Challenge1v1) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.12))
+                    .frame(width: 38, height: 38)
+                Image(systemName: "bolt.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.orange)
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("vs \(challenge.opponentName)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(challenge.category)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text(challengeStatusText(challenge.status))
+                .font(.system(.caption2, design: .rounded, weight: .bold))
+                .foregroundStyle(challengeStatusColor(challenge.status))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(challengeStatusColor(challenge.status).opacity(0.1))
+                .clipShape(Capsule())
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(.rect(cornerRadius: 12))
+    }
+
+    private func challengeStatusText(_ status: ChallengeStatus) -> String {
+        switch status {
+        case .pending: return "Pending"
+        case .accepted: return "Accepted"
+        case .inProgress: return "Live"
+        case .completed: return "Done"
+        case .declined: return "Declined"
+        case .expired: return "Expired"
+        }
+    }
+
+    private func challengeStatusColor(_ status: ChallengeStatus) -> Color {
+        switch status {
+        case .pending: return .orange
+        case .accepted: return .blue
+        case .inProgress: return .purple
+        case .completed: return .green
+        case .declined, .expired: return .gray
+        }
+    }
+
+    private func friendTierColor(_ tier: String) -> Color {
+        switch tier {
+        case "Silver": return Color(red: 0.75, green: 0.75, blue: 0.80)
+        case "Gold": return Color(red: 1.0, green: 0.84, blue: 0.0)
+        case "Platinum": return Color(red: 0.6, green: 0.8, blue: 0.95)
+        case "Diamond": return Color(red: 0.7, green: 0.85, blue: 1.0)
+        default: return Color(red: 0.80, green: 0.50, blue: 0.20)
         }
     }
 
