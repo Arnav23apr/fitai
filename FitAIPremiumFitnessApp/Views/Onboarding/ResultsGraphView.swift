@@ -42,6 +42,7 @@ struct ResultsGraphView: View {
 
             graphCard
                 .padding(.horizontal, 24)
+                .frame(maxWidth: .infinity)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 30)
 
@@ -75,7 +76,7 @@ struct ResultsGraphView: View {
 
     private var graphCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Your Weight")
+            Text("Your Physique")
                 .font(.system(.subheadline, design: .default, weight: .semibold))
                 .foregroundStyle(.primary)
                 .padding(.leading, 4)
@@ -99,7 +100,7 @@ struct ResultsGraphView: View {
             }
             .opacity(showLabels ? 1 : 0)
 
-            Text("80% of Fit AI users maintain their\nweight loss even 6 months later")
+            Text("80% of Fit AI users maintain their\nphysique gains even 6 months later")
                 .font(.system(.footnote, design: .default, weight: .medium))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -247,9 +248,9 @@ struct ResultsGraphView: View {
         return (0...steps).map { i in
             let t = CGFloat(i) / CGFloat(steps)
             let x = t * w
-            let startY: CGFloat = 0.15
-            let endY: CGFloat = 0.85
-            let curve = startY + (endY - startY) * (1 - pow(1 - t, 2.2))
+            let startY: CGFloat = 0.85
+            let endY: CGFloat = 0.12
+            let curve = startY + (endY - startY) * pow(t, 1.6)
             let y = topPad + curve * usableH
             return CGPoint(x: x, y: y)
         }
@@ -266,11 +267,11 @@ struct ResultsGraphView: View {
         return (0...steps).map { i in
             let t = CGFloat(i) / CGFloat(steps)
             let x = t * w
-            let dip = sin(t * .pi * 0.9) * 0.45
-            let rebound = t > 0.45 ? pow((t - 0.45) / 0.55, 1.8) * 0.35 : 0
-            let normalizedY = 0.15 + dip - rebound + (t > 0.45 ? 0 : 0)
-            let finalY = min(max(normalizedY, 0.05), 0.95)
-            let y = topPad + (1 - finalY) * usableH
+            let rise = sin(t * .pi * 0.8) * 0.35
+            let falloff = t > 0.5 ? pow((t - 0.5) / 0.5, 1.5) * 0.3 : 0
+            let normalizedY = 0.85 - rise + falloff
+            let finalY = min(max(normalizedY, 0.1), 0.95)
+            let y = topPad + finalY * usableH
             return CGPoint(x: x, y: y)
         }
     }
