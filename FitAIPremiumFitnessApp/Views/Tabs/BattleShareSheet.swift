@@ -3,6 +3,9 @@ import SwiftUI
 struct BattleShareSheet: View {
     let battle: PhysiqueBattle
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -16,7 +19,7 @@ struct BattleShareSheet: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Share")
+                            Text(L.t("share", lang))
                                 .font(.headline.weight(.bold))
                         }
                         .foregroundStyle(.white)
@@ -31,11 +34,11 @@ struct BattleShareSheet: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Share Battle")
+            .navigationTitle(L.t("shareBattle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(L.t("close", lang)) { dismiss() }
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }

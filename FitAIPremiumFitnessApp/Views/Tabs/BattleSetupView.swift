@@ -3,7 +3,10 @@ import PhotosUI
 
 struct BattleSetupView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     @State private var viewModel = BattleViewModel()
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -13,7 +16,7 @@ struct BattleSetupView: View {
 
                     HStack(spacing: 16) {
                         photoCard(
-                            title: "You",
+                            title: L.t("you", lang),
                             image: viewModel.playerPhoto,
                             pickerItem: $viewModel.playerPickerItem
                         )
@@ -21,7 +24,7 @@ struct BattleSetupView: View {
                         vsLabel
 
                         photoCard(
-                            title: "Opponent",
+                            title: L.t("opponentLabel", lang),
                             image: viewModel.opponentPhoto,
                             pickerItem: $viewModel.opponentPickerItem
                         )
@@ -44,11 +47,11 @@ struct BattleSetupView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("1v1 Battle")
+            .navigationTitle(L.t("oneVOneBattle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.t("cancel", lang)) { dismiss() }
                         .foregroundStyle(.white.opacity(0.6))
                 }
             }
@@ -96,11 +99,11 @@ struct BattleSetupView: View {
                     .foregroundStyle(.red)
             }
 
-            Text("Physique Battle")
+            Text(L.t("physiqueBattle", lang))
                 .font(.system(.title2, design: .rounded, weight: .bold))
                 .foregroundStyle(.white)
 
-            Text("Upload both physique photos and let AI decide who gets mogged")
+            Text(L.t("battleDesc", lang))
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.4))
                 .multilineTextAlignment(.center)
@@ -122,7 +125,7 @@ struct BattleSetupView: View {
                         Image(systemName: "person.crop.rectangle.badge.plus")
                             .font(.system(size: 28))
                             .foregroundStyle(.white.opacity(0.3))
-                        Text("Add Photo")
+                        Text(L.t("addPhoto", lang))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.3))
                     }
@@ -151,11 +154,11 @@ struct BattleSetupView: View {
 
     private var nameField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Opponent's Name")
+            Text(L.t("opponentNameLabel", lang))
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.white.opacity(0.5))
 
-            TextField("", text: $viewModel.opponentName, prompt: Text("Enter name").foregroundStyle(.white.opacity(0.2)))
+            TextField("", text: $viewModel.opponentName, prompt: Text(L.t("enterNamePlaceholder", lang)).foregroundStyle(.white.opacity(0.2)))
                 .font(.body)
                 .foregroundStyle(.white)
                 .padding(14)
@@ -184,7 +187,7 @@ struct BattleSetupView: View {
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "bolt.fill")
-                        Text("Start Battle")
+                        Text(L.t("startBattle", lang))
                             .font(.headline.weight(.bold))
                     }
                     .foregroundStyle(.white)
