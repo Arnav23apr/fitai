@@ -91,6 +91,12 @@ struct ProfileView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
 
+                if !appState.profile.username.isEmpty {
+                    Text("@\(appState.profile.username)")
+                        .font(.caption)
+                        .foregroundStyle(.blue.opacity(0.7))
+                }
+
                 if !appState.profile.goals.isEmpty {
                     Text(appState.profile.goals.prefix(2).joined(separator: ", "))
                         .font(.caption)
@@ -364,6 +370,7 @@ struct EditProfileSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @State private var name: String = ""
+    @State private var username: String = ""
     @State private var bio: String = ""
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var customPhotoData: Data? = nil
@@ -454,6 +461,23 @@ struct EditProfileSheet: View {
                             .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
 
+                        HStack(spacing: 0) {
+                            Text("@")
+                                .font(.body.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 16)
+                            TextField("username", text: $username)
+                                .font(.body)
+                                .foregroundStyle(.primary)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .padding(.vertical, 16)
+                                .padding(.leading, 4)
+                                .padding(.trailing, 16)
+                        }
+                        .background(Color(.secondarySystemGroupedBackground))
+                        .clipShape(.rect(cornerRadius: 12))
+
                         TextField(L.t("shortBio", appState.profile.selectedLanguage), text: $bio)
                             .font(.body)
                             .foregroundStyle(.primary)
@@ -475,6 +499,7 @@ struct EditProfileSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.t("save", appState.profile.selectedLanguage)) {
                         appState.profile.name = name
+                        appState.profile.username = username.lowercased().trimmingCharacters(in: .whitespaces)
                         appState.profile.bio = bio
                         appState.profile.avatarSystemName = selectedAvatar
                         appState.profile.customPhotoData = customPhotoData
@@ -495,6 +520,7 @@ struct EditProfileSheet: View {
         }
         .onAppear {
             name = appState.profile.name
+            username = appState.profile.username
             bio = appState.profile.bio
             selectedAvatar = appState.profile.avatarSystemName
             customPhotoData = appState.profile.customPhotoData
