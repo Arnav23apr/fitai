@@ -31,6 +31,8 @@ struct OnboardingContainerView: View {
                     GoalsView(onContinue: { advance() })
                 case .confidence:
                     ConfidenceView(onContinue: { advance() })
+                case .resultsGraph:
+                    ResultsGraphView(onContinue: { advance() })
                 case .referralCode:
                     ReferralCodeView(onContinue: { advance() })
                 case .signUp:
