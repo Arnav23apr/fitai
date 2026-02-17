@@ -30,8 +30,8 @@ struct ReferralCodeView: View {
                     Circle()
                         .fill(isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
                         .frame(width: 80, height: 80)
-                    Image(systemName: "gift.fill")
-                        .font(.system(size: 32))
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 30))
                         .foregroundStyle(isDark ? .white.opacity(0.5) : .black.opacity(0.4))
                 }
 
