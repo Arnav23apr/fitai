@@ -55,16 +55,27 @@ struct SignUpView: View {
                 .clipShape(.rect(cornerRadius: 28))
 
                 Button(action: {
-                    appState.profile.name = "Athlete"
-                    onContinue()
+                    Task {
+                        await appState.signInWithGoogle()
+                        if appState.authError == nil && !appState.isAuthenticating {
+                            if !appState.profile.email.isEmpty {
+                                onContinue()
+                            }
+                        }
+                    }
                 }) {
                     HStack(spacing: 10) {
-                        Image("GoogleLogo")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 20, height: 20)
-                        Text(L.t("signInGoogle", lang))
-                            .font(.system(size: 19, weight: .medium))
+                        if appState.isAuthenticating {
+                            ProgressView()
+                                .tint(.primary)
+                        } else {
+                            Image("GoogleLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 20, height: 20)
+                            Text(L.t("signInGoogle", lang))
+                                .font(.system(size: 19, weight: .medium))
+                        }
                     }
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
@@ -76,6 +87,7 @@ struct SignUpView: View {
                             .strokeBorder(Color(.systemGray4), lineWidth: 1)
                     )
                 }
+                .disabled(appState.isAuthenticating)
 
                 Button(action: {
                     appState.profile.name = "Athlete"

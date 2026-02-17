@@ -231,9 +231,7 @@ class AIService {
     private let imageEditURL = URL(string: "https://toolkit.rork.com/images/edit/")!
 
     init() {
-        let base = Config.EXPO_PUBLIC_TOOLKIT_URL
-        let normalized = base.hasSuffix("/") ? base : base + "/"
-        self.chatURL = URL(string: normalized + "agent/chat")!
+        self.chatURL = URL(string: "https://toolkit.rork.com/agent/chat")!
     }
 
     func analyzeImageWithSchema(imageBase64: String, systemPrompt: String, userPrompt: String) async throws -> [String: Any] {
