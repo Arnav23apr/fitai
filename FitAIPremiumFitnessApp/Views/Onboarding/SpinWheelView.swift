@@ -2,9 +2,11 @@ import SwiftUI
 
 struct SpinWheelView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
     @State private var appeared: Bool = false
     @State private var rotation: Double = 0
     @State private var isSpinning: Bool = false
@@ -22,15 +24,15 @@ struct SpinWheelView: View {
                     if hasSpun {
                         Text("🥳 You won \(resultDiscount)%! 🥳")
                             .font(.system(.title, design: .default, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .transition(.scale.combined(with: .opacity))
                     } else {
                         Text(L.t("spinToWin", lang))
                             .font(.system(.title, design: .default, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text(L.t("getExclusiveDiscount", lang))
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.secondary)
                     }
                 }
                 .padding(.top, 48)
@@ -42,8 +44,8 @@ struct SpinWheelView: View {
                 ZStack {
                     Image(systemName: "arrowtriangle.down.fill")
                         .font(.system(size: 28))
-                        .foregroundStyle(.white)
-                        .shadow(color: .white.opacity(0.4), radius: 4)
+                        .foregroundStyle(.primary)
+                        .shadow(color: isDark ? .white.opacity(0.4) : .black.opacity(0.2), radius: 4)
                         .offset(y: -158)
                         .zIndex(1)
 
@@ -63,7 +65,10 @@ struct SpinWheelView: View {
                             path.closeSubpath()
 
                             let isEven = i % 2 == 0
-                            context.fill(path, with: .color(isEven ? Color.white.opacity(0.08) : Color.white.opacity(0.16)))
+                            let fillColor = isDark
+                                ? (isEven ? Color.white.opacity(0.08) : Color.white.opacity(0.16))
+                                : (isEven ? Color.black.opacity(0.04) : Color.black.opacity(0.1))
+                            context.fill(path, with: .color(fillColor))
 
                             let midAngle = startAngle + segmentAngle / 2
                             let textRadius = radius * 0.68
@@ -77,7 +82,7 @@ struct SpinWheelView: View {
                                 ctx.rotate(by: .radians(midAngle + .pi / 2))
                                 let text = Text("\(segments[i])%")
                                     .font(.system(size: 16, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                 ctx.draw(text, at: .zero)
                             }
                         }
@@ -88,7 +93,9 @@ struct SpinWheelView: View {
                         Circle()
                             .strokeBorder(
                                 LinearGradient(
-                                    colors: [.white.opacity(0.3), .white.opacity(0.08)],
+                                    colors: isDark
+                                        ? [.white.opacity(0.3), .white.opacity(0.08)]
+                                        : [.black.opacity(0.2), .black.opacity(0.05)],
                                     startPoint: .top,
                                     endPoint: .bottom
                                 ),
@@ -97,16 +104,16 @@ struct SpinWheelView: View {
                     )
                     .overlay(
                         Circle()
-                            .strokeBorder(.white.opacity(0.05), lineWidth: 8)
+                            .strokeBorder(isDark ? .white.opacity(0.05) : .black.opacity(0.03), lineWidth: 8)
                             .padding(-4)
                     )
                     .rotationEffect(.degrees(rotation))
-                    .shadow(color: .white.opacity(0.05), radius: 20)
+                    .shadow(color: isDark ? .white.opacity(0.05) : .black.opacity(0.08), radius: 20)
 
                     Circle()
                         .fill(
                             RadialGradient(
-                                colors: [Color(white: 0.15), Color.black],
+                                colors: isDark ? [Color(white: 0.15), Color.black] : [Color(white: 0.95), Color.white],
                                 center: .center,
                                 startRadius: 0,
                                 endRadius: 30
@@ -115,14 +122,14 @@ struct SpinWheelView: View {
                         .frame(width: 56, height: 56)
                         .overlay(
                             Circle()
-                                .strokeBorder(Color.white.opacity(0.25), lineWidth: 2)
+                                .strokeBorder(isDark ? Color.white.opacity(0.25) : Color.black.opacity(0.15), lineWidth: 2)
                         )
                         .overlay(
                             Image(systemName: "star.fill")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                         )
-                        .shadow(color: .black.opacity(0.5), radius: 8)
+                        .shadow(color: isDark ? .black.opacity(0.5) : .black.opacity(0.15), radius: 8)
                 }
                 .opacity(appeared ? 1 : 0)
 
@@ -136,10 +143,10 @@ struct SpinWheelView: View {
                     }) {
                         Text("Claim \(resultDiscount)% Off")
                             .font(.headline)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(isDark ? .black : .white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(.white)
+                            .background(isDark ? Color.white : Color.black)
                             .clipShape(.rect(cornerRadius: 16))
                     }
                     .padding(.horizontal, 24)
@@ -148,10 +155,10 @@ struct SpinWheelView: View {
                     Button(action: spinWheel) {
                         Text(L.t("spinTheWheel", lang))
                             .font(.headline)
-                            .foregroundStyle(.black)
+                            .foregroundStyle(isDark ? .black : .white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(isSpinning ? Color.white.opacity(0.3) : Color.white)
+                            .background(isSpinning ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
                             .clipShape(.rect(cornerRadius: 16))
                     }
                     .disabled(isSpinning)
@@ -161,7 +168,7 @@ struct SpinWheelView: View {
                 Button(action: onContinue) {
                     Text(L.t("noThanks", lang))
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(.top, 12)
                 .padding(.bottom, 16)

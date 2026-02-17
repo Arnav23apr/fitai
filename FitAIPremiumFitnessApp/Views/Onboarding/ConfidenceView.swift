@@ -2,24 +2,26 @@ import SwiftUI
 
 struct ConfidenceView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var selectedValue: Int = 5
     @State private var appeared: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 Text(L.t("trainingConfidence", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("confidence", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("howExperienced", lang))
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
             }
             .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
@@ -29,17 +31,17 @@ struct ConfidenceView: View {
             VStack(spacing: 32) {
                 Text("\(selectedValue)")
                     .font(.system(size: 72, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .contentTransition(.numericText(value: Double(selectedValue)))
                     .animation(.snappy, value: selectedValue)
 
                 VStack(spacing: 8) {
                     Text(confidenceLabel)
                         .font(.headline)
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.primary.opacity(0.8))
                     Text(confidenceDescription)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
                 .animation(.easeInOut(duration: 0.2), value: selectedValue)
 
@@ -50,9 +52,9 @@ struct ConfidenceView: View {
                         }) {
                             Text("\(value)")
                                 .font(.system(.callout, weight: .semibold))
-                                .foregroundStyle(value == selectedValue ? .black : .white.opacity(0.7))
+                                .foregroundStyle(value == selectedValue ? (isDark ? .black : .white) : .secondary)
                                 .frame(width: 34, height: 34)
-                                .background(value == selectedValue ? Color.white : Color.white.opacity(0.08))
+                                .background(value == selectedValue ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
                                 .clipShape(Circle())
                         }
                         .sensoryFeedback(.selection, trigger: selectedValue)
@@ -70,10 +72,10 @@ struct ConfidenceView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(.white)
+                    .background(isDark ? Color.white : Color.black)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .padding(.horizontal, 24)

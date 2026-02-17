@@ -2,12 +2,14 @@ import SwiftUI
 
 struct TrainingLocationView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var selected: String = ""
     @State private var appeared: Bool = false
     @State private var selectedEquipment: Set<String> = []
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isDark: Bool { colorScheme == .dark }
 
     private var options: [(icon: String, labelKey: String, descKey: String, value: String)] {
         [
@@ -32,10 +34,10 @@ struct TrainingLocationView: View {
             VStack(spacing: 12) {
                 Text(L.t("whereDoYou", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text(L.t("youTrain", lang))
                     .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
@@ -55,17 +57,17 @@ struct TrainingLocationView: View {
                         VStack(spacing: 12) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 32))
-                                .foregroundStyle(selected == option.value ? .black : .white.opacity(0.6))
+                                .foregroundStyle(selected == option.value ? (isDark ? .black : .white) : .secondary)
                             Text(L.t(option.labelKey, lang))
                                 .font(.headline)
-                                .foregroundStyle(selected == option.value ? .black : .white)
+                                .foregroundStyle(selected == option.value ? (isDark ? .black : .white) : .primary)
                             Text(L.t(option.descKey, lang))
                                 .font(.caption)
-                                .foregroundStyle(selected == option.value ? .black.opacity(0.6) : .white.opacity(0.4))
+                                .foregroundStyle(selected == option.value ? (isDark ? Color.black.opacity(0.6) : Color.white.opacity(0.6)) : Color.secondary)
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 120)
-                        .background(selected == option.value ? Color.white : Color.white.opacity(0.06))
+                        .background(selected == option.value ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.04)))
                         .clipShape(.rect(cornerRadius: 20))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -75,7 +77,7 @@ struct TrainingLocationView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(L.t("availableEquipment", lang))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.secondary)
                             .padding(.leading, 4)
 
                         HStack(spacing: 10) {
@@ -92,26 +94,26 @@ struct TrainingLocationView: View {
                                 } label: {
                                     VStack(spacing: 8) {
                                         if eq.useCustomIcon {
-                                            PullUpBarIcon(color: isSelected ? .black : .white.opacity(0.6))
+                                            PullUpBarIcon(color: isSelected ? (isDark ? .black : .white) : .secondary)
                                                 .frame(width: 28, height: 24)
                                         } else {
                                             Image(systemName: eq.icon)
                                                 .font(.system(size: 20))
-                                                .foregroundStyle(isSelected ? .black : .white.opacity(0.6))
+                                                .foregroundStyle(isSelected ? (isDark ? .black : .white) : .secondary)
                                         }
                                         Text(eq.label)
                                             .font(.system(size: 11, weight: .medium))
-                                            .foregroundStyle(isSelected ? .black : .white.opacity(0.7))
+                                            .foregroundStyle(isSelected ? (isDark ? .black : .white) : .secondary)
                                             .multilineTextAlignment(.center)
                                             .lineLimit(2)
                                     }
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 80)
-                                    .background(isSelected ? Color.white : Color.white.opacity(0.06))
+                                    .background(isSelected ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.04)))
                                     .clipShape(.rect(cornerRadius: 14))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 14)
-                                            .strokeBorder(isSelected ? Color.white.opacity(0.3) : Color.clear, lineWidth: 1)
+                                            .strokeBorder(isSelected ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.2)) : Color.clear, lineWidth: 1)
                                     )
                                 }
                                 .sensoryFeedback(.selection, trigger: selectedEquipment)
@@ -132,10 +134,10 @@ struct TrainingLocationView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(.black)
+                    .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(selected.isEmpty ? Color.white.opacity(0.3) : Color.white)
+                    .background(selected.isEmpty ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
                     .clipShape(.rect(cornerRadius: 16))
             }
             .disabled(selected.isEmpty)
