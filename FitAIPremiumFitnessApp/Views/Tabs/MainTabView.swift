@@ -16,13 +16,10 @@ struct MainTabView: View {
             Tab(L.t("plan", lang), systemImage: "calendar.badge.clock", value: 1) {
                 PlanView()
             }
-            Tab(L.t("nutrition", lang), systemImage: "leaf.fill", value: 2) {
-                NutritionView()
-            }
-            Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 3) {
+            Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 2) {
                 CompeteView()
             }
-            Tab(L.t("profile", lang), systemImage: "person.fill", value: 4) {
+            Tab(L.t("profile", lang), systemImage: "person.fill", value: 3) {
                 ProfileView()
             }
         }
