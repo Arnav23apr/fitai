@@ -7,11 +7,15 @@ struct TrainingLocationView: View {
     @State private var appeared: Bool = false
     @State private var selectedEquipment: Set<String> = []
 
-    private let options: [(icon: String, label: String, desc: String)] = [
-        ("building.2", "Gym", "Full equipment access"),
-        ("house", "Home", "Bodyweight & minimal gear"),
-        ("figure.mixed.cardio", "Both", "Mix of gym and home")
-    ]
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var options: [(icon: String, labelKey: String, descKey: String, value: String)] {
+        [
+            ("building.2", "gym", "fullEquipment", "Gym"),
+            ("house", "home", "bodyweightMinimal", "Home"),
+            ("figure.mixed.cardio", "both", "mixGymHome", "Both")
+        ]
+    }
 
     private let equipmentOptions: [(icon: String, label: String, useCustomIcon: Bool)] = [
         ("dumbbell.fill", "Dumbbells", false),
@@ -26,10 +30,10 @@ struct TrainingLocationView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Where do")
+                Text(L.t("whereDoYou", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("you train?")
+                Text(L.t("youTrain", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
             }
@@ -39,11 +43,11 @@ struct TrainingLocationView: View {
             Spacer()
 
             VStack(spacing: 14) {
-                ForEach(options, id: \.label) { option in
+                ForEach(options, id: \.value) { option in
                     Button {
                         withAnimation(.snappy(duration: 0.3)) {
-                            selected = option.label
-                            if option.label == "Gym" {
+                            selected = option.value
+                            if option.value == "Gym" {
                                 selectedEquipment = []
                             }
                         }
@@ -51,17 +55,17 @@ struct TrainingLocationView: View {
                         VStack(spacing: 12) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 32))
-                                .foregroundStyle(selected == option.label ? .black : .white.opacity(0.6))
-                            Text(option.label)
+                                .foregroundStyle(selected == option.value ? .black : .white.opacity(0.6))
+                            Text(L.t(option.labelKey, lang))
                                 .font(.headline)
-                                .foregroundStyle(selected == option.label ? .black : .white)
-                            Text(option.desc)
+                                .foregroundStyle(selected == option.value ? .black : .white)
+                            Text(L.t(option.descKey, lang))
                                 .font(.caption)
-                                .foregroundStyle(selected == option.label ? .black.opacity(0.6) : .white.opacity(0.4))
+                                .foregroundStyle(selected == option.value ? .black.opacity(0.6) : .white.opacity(0.4))
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 120)
-                        .background(selected == option.label ? Color.white : Color.white.opacity(0.06))
+                        .background(selected == option.value ? Color.white : Color.white.opacity(0.06))
                         .clipShape(.rect(cornerRadius: 20))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -69,7 +73,7 @@ struct TrainingLocationView: View {
 
                 if showEquipment {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Available equipment")
+                        Text(L.t("availableEquipment", lang))
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.5))
                             .padding(.leading, 4)
@@ -126,7 +130,7 @@ struct TrainingLocationView: View {
                 appState.profile.trainingLocation = selected
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

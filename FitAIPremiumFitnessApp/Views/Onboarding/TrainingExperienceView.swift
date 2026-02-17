@@ -6,23 +6,27 @@ struct TrainingExperienceView: View {
     @State private var selected: String = ""
     @State private var appeared: Bool = false
 
-    private let options: [(icon: String, title: String, subtitle: String)] = [
-        ("leaf", "Beginner", "Less than 6 months"),
-        ("flame", "Intermediate", "6 months – 2 years"),
-        ("bolt.fill", "Advanced", "2+ years of training"),
-        ("trophy.fill", "Expert", "Competitive level")
-    ]
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var options: [(icon: String, titleKey: String, subtitleKey: String, value: String)] {
+        [
+            ("leaf", "beginner", "lessThan6Months", "Beginner"),
+            ("flame", "intermediate", "sixMonthsTo2Years", "Intermediate"),
+            ("bolt.fill", "advanced", "twoYearsPlus", "Advanced"),
+            ("trophy.fill", "expert", "competitiveLevel", "Expert")
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Training")
+                Text(L.t("training", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Experience")
+                Text(L.t("experience", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("How long have you been training?")
+                Text(L.t("howLongTraining", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -32,25 +36,25 @@ struct TrainingExperienceView: View {
             Spacer()
 
             VStack(spacing: 12) {
-                ForEach(options, id: \.title) { option in
+                ForEach(options, id: \.value) { option in
                     Button {
-                        selected = option.title
+                        selected = option.value
                     } label: {
                         HStack(spacing: 16) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 20))
-                                .foregroundStyle(selected == option.title ? .black : .white.opacity(0.5))
+                                .foregroundStyle(selected == option.value ? .black : .white.opacity(0.5))
                                 .frame(width: 32)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(option.title)
+                                Text(L.t(option.titleKey, lang))
                                     .font(.headline)
-                                    .foregroundStyle(selected == option.title ? .black : .white)
-                                Text(option.subtitle)
+                                    .foregroundStyle(selected == option.value ? .black : .white)
+                                Text(L.t(option.subtitleKey, lang))
                                     .font(.caption)
-                                    .foregroundStyle(selected == option.title ? .black.opacity(0.6) : .white.opacity(0.4))
+                                    .foregroundStyle(selected == option.value ? .black.opacity(0.6) : .white.opacity(0.4))
                             }
                             Spacer()
-                            if selected == option.title {
+                            if selected == option.value {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 14, weight: .bold))
                                     .foregroundStyle(.black)
@@ -58,7 +62,7 @@ struct TrainingExperienceView: View {
                         }
                         .padding(.horizontal, 20)
                         .frame(height: 64)
-                        .background(selected == option.title ? Color.white : Color.white.opacity(0.06))
+                        .background(selected == option.value ? Color.white : Color.white.opacity(0.06))
                         .clipShape(.rect(cornerRadius: 16))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -73,7 +77,7 @@ struct TrainingExperienceView: View {
                 appState.profile.trainingExperience = selected
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

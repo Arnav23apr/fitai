@@ -6,14 +6,18 @@ struct CoachView: View {
     @State private var viewModel = CoachViewModel()
     @FocusState private var isInputFocused: Bool
 
-    private let quickQuestions = [
-        "What should I eat post-workout?",
-        "How do I improve my bench press?",
-        "Best way to lose fat and build muscle?",
-        "How much protein do I need daily?",
-        "Create a meal plan for muscle gain",
-        "How to fix rounded shoulders?",
-    ]
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var quickQuestions: [(key: String, fallback: String)] {
+        [
+            ("whatEatPostWorkout", "What should I eat post-workout?"),
+            ("howImproveBench", "How do I improve my bench press?"),
+            ("bestWayLoseFat", "Best way to lose fat and build muscle?"),
+            ("howMuchProtein", "How much protein do I need daily?"),
+            ("createMealPlan", "Create a meal plan for muscle gain"),
+            ("howFixShoulders", "How to fix rounded shoulders?"),
+        ]
+    }
 
     var body: some View {
         NavigationStack {
@@ -27,7 +31,7 @@ struct CoachView: View {
                 inputBar
             }
             .background(Color(.systemBackground))
-            .navigationTitle("AI Coach")
+            .navigationTitle(L.t("aiCoach", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -111,30 +115,30 @@ struct CoachView: View {
             }
 
             VStack(spacing: 8) {
-                Text("Your AI Coach")
+                Text(L.t("yourAICoach", lang))
                     .font(.title2.weight(.bold))
                     .foregroundStyle(.primary)
-                Text("Ask me anything about fitness, nutrition,\nrecovery, or your workout plan.")
+                Text(L.t("askAnythingFitness", lang))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text("Try asking")
+                Text(L.t("tryAsking", lang))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 4)
 
-                ForEach(quickQuestions, id: \.self) { question in
+                ForEach(quickQuestions, id: \.key) { q in
                     Button(action: {
-                        viewModel.sendQuickQuestion(question, profile: appState.profile)
+                        viewModel.sendQuickQuestion(L.t(q.key, lang), profile: appState.profile)
                     }) {
                         HStack(spacing: 10) {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.blue.opacity(0.6))
-                            Text(question)
+                            Text(L.t(q.key, lang))
                                 .font(.subheadline)
                                 .foregroundStyle(.primary.opacity(0.7))
                                 .multilineTextAlignment(.leading)
@@ -272,7 +276,7 @@ struct CoachView: View {
             Divider()
 
             HStack(spacing: 12) {
-                TextField("Ask your coach...", text: $viewModel.inputText, axis: .vertical)
+                TextField(L.t("askYourCoach", lang), text: $viewModel.inputText, axis: .vertical)
                     .font(.subheadline)
                     .foregroundStyle(.primary)
                     .lineLimit(1...4)

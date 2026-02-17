@@ -6,22 +6,26 @@ struct PrimaryGoalView: View {
     @State private var selected: String = ""
     @State private var appeared: Bool = false
 
-    private let options: [(icon: String, label: String, desc: String)] = [
-        ("figure.strengthtraining.traditional", "Build Muscle", "Gain size and strength"),
-        ("flame.fill", "Lose Fat", "Lean down and cut body fat"),
-        ("arrow.triangle.2.circlepath", "Recomp", "Build muscle while losing fat")
-    ]
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var options: [(icon: String, labelKey: String, descKey: String, value: String)] {
+        [
+            ("figure.strengthtraining.traditional", "buildMuscle", "gainSizeStrength", "Build Muscle"),
+            ("flame.fill", "loseFat", "leanDownCut", "Lose Fat"),
+            ("arrow.triangle.2.circlepath", "recomp", "buildMuscleLoseFat", "Recomp")
+        ]
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("Primary")
+                Text(L.t("primary", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Goal")
+                Text(L.t("goal", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("What's your #1 focus right now?")
+                Text(L.t("whatsYourFocus", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -31,25 +35,25 @@ struct PrimaryGoalView: View {
             Spacer()
 
             VStack(spacing: 14) {
-                ForEach(options, id: \.label) { option in
+                ForEach(options, id: \.value) { option in
                     Button {
-                        selected = option.label
+                        selected = option.value
                     } label: {
                         HStack(spacing: 16) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 24))
-                                .foregroundStyle(selected == option.label ? .black : .white.opacity(0.5))
+                                .foregroundStyle(selected == option.value ? .black : .white.opacity(0.5))
                                 .frame(width: 40)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(option.label)
+                                Text(L.t(option.labelKey, lang))
                                     .font(.headline)
-                                    .foregroundStyle(selected == option.label ? .black : .white)
-                                Text(option.desc)
+                                    .foregroundStyle(selected == option.value ? .black : .white)
+                                Text(L.t(option.descKey, lang))
                                     .font(.caption)
-                                    .foregroundStyle(selected == option.label ? .black.opacity(0.6) : .white.opacity(0.4))
+                                    .foregroundStyle(selected == option.value ? .black.opacity(0.6) : .white.opacity(0.4))
                             }
                             Spacer()
-                            if selected == option.label {
+                            if selected == option.value {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 22))
                                     .foregroundStyle(.black)
@@ -57,7 +61,7 @@ struct PrimaryGoalView: View {
                         }
                         .padding(.horizontal, 20)
                         .frame(height: 72)
-                        .background(selected == option.label ? Color.white : Color.white.opacity(0.06))
+                        .background(selected == option.value ? Color.white : Color.white.opacity(0.06))
                         .clipShape(.rect(cornerRadius: 16))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -73,7 +77,7 @@ struct PrimaryGoalView: View {
                 appState.profile.primaryGoal = selected
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

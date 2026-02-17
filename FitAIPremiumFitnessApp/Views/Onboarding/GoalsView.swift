@@ -6,6 +6,8 @@ struct GoalsView: View {
     @State private var selected: Set<String> = []
     @State private var appeared: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private let rows: [(String, String)] = [
         ("Build muscle", "Lose fat"),
         ("Get stronger", "Improve endurance"),
@@ -17,13 +19,13 @@ struct GoalsView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("In 90 days,")
+                Text(L.t("in90Days", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("I want to...")
+                Text(L.t("iWantTo", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Choose your top goals")
+                Text(L.t("chooseTopGoals", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -50,7 +52,7 @@ struct GoalsView: View {
                 appState.profile.goals = Array(selected)
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

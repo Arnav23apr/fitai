@@ -6,6 +6,8 @@ struct DateOfBirthView: View {
     @State private var selectedDate: Date = Calendar.current.date(byAdding: .year, value: -20, to: Date()) ?? Date()
     @State private var appeared: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
         let min = calendar.date(byAdding: .year, value: -80, to: Date()) ?? Date()
@@ -16,13 +18,13 @@ struct DateOfBirthView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("When were")
+                Text(L.t("whenWere", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("you born?")
+                Text(L.t("youBorn", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("This helps us personalize your plan")
+                Text(L.t("helpsPersonalize", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -38,7 +40,7 @@ struct DateOfBirthView: View {
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
 
-                Text("years old")
+                Text(L.t("yearsOld", lang))
                     .font(.headline)
                     .foregroundStyle(.white.opacity(0.5))
 
@@ -59,7 +61,7 @@ struct DateOfBirthView: View {
                 appState.profile.dateOfBirth = selectedDate
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

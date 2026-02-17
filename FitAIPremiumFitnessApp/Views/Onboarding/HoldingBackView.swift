@@ -6,6 +6,8 @@ struct HoldingBackView: View {
     @State private var selected: Set<String> = []
     @State private var appeared: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private let rows: [(String, String)] = [
         ("Lack of motivation", "No workout plan"),
         ("Poor nutrition", "Inconsistency"),
@@ -17,13 +19,13 @@ struct HoldingBackView: View {
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
-                Text("What's holding")
+                Text(L.t("whatsHolding", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("you back?")
+                Text(L.t("youBack", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.white)
-                Text("Select all that apply")
+                Text(L.t("selectAllApply", lang))
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.5))
             }
@@ -50,7 +52,7 @@ struct HoldingBackView: View {
                 appState.profile.holdingBack = Array(selected)
                 onContinue()
             }) {
-                Text("Continue")
+                Text(L.t("continue", lang))
                     .font(.headline)
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

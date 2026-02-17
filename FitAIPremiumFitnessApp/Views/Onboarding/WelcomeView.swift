@@ -8,6 +8,8 @@ struct WelcomeView: View {
     @State private var appeared: Bool = false
     @State private var showLanguagePicker: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private let languages: [(name: String, flag: String, native: String)] = [
         ("English", "🇺🇸", "English"),
         ("Arabic", "🇸🇦", "العربية"),
@@ -66,14 +68,14 @@ struct WelcomeView: View {
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
 
-                Text("Your personal AI\nfitness coach.")
+                Text(L.t("yourPersonalCoach", lang))
                     .font(.system(.largeTitle, design: .default, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 15)
 
-                Text("Scan, plan, and compete.")
+                Text(L.t("scanPlanCompete", lang))
                     .font(.system(.title3, design: .default, weight: .medium))
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -86,7 +88,7 @@ struct WelcomeView: View {
 
             VStack(spacing: 12) {
                 Button(action: onContinue) {
-                    Text("Get Started")
+                    Text(L.t("getStarted", lang))
                         .font(.system(.headline, design: .default, weight: .bold))
                         .foregroundStyle(isDark ? .black : .white)
                         .frame(maxWidth: .infinity)
@@ -96,7 +98,7 @@ struct WelcomeView: View {
                 }
 
                 Button(action: { onLogin?() ?? onContinue() }) {
-                    Text("Already have an account? **Log In**")
+                    Text("\(L.t("alreadyHaveAccount", lang)) **\(L.t("logIn", lang))**")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(isDark ? .white.opacity(0.6) : .black.opacity(0.5))
                 }
@@ -107,16 +109,16 @@ struct WelcomeView: View {
             .offset(y: appeared ? 0 : 30)
 
             HStack(spacing: 4) {
-                Text("By continuing you agree to our")
+                Text(L.t("byContinuingAgree", lang))
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
-                Button("Terms") {}
+                Button(L.t("terms", lang)) {}
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
-                Text("and")
+                Text(L.t("and", lang))
                     .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
-                Button("Privacy Policy") {}
+                Button(L.t("privacyPolicy", lang)) {}
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
@@ -189,11 +191,11 @@ struct WelcomeView: View {
                 .padding(.horizontal, 16)
             }
             .scrollIndicators(.hidden)
-            .navigationTitle("Language")
+            .navigationTitle(L.t("language", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
+                    Button(L.t("done", lang)) {
                         showLanguagePicker = false
                     }
                     .fontWeight(.semibold)

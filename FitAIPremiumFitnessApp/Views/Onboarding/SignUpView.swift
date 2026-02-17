@@ -7,6 +7,8 @@ struct SignUpView: View {
     var onContinue: () -> Void
     @State private var appeared: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -23,7 +25,7 @@ struct SignUpView: View {
             .padding(.horizontal, 20)
             .padding(.top, 12)
 
-            Text("Log In")
+            Text(L.t("logIn", lang))
                 .font(.system(.title2, design: .default, weight: .bold))
                 .foregroundStyle(.primary)
                 .padding(.top, 8)
@@ -61,7 +63,7 @@ struct SignUpView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(width: 20, height: 20)
-                        Text("Sign in with Google")
+                        Text(L.t("signInGoogle", lang))
                             .font(.system(size: 19, weight: .medium))
                     }
                     .foregroundStyle(.primary)
@@ -82,7 +84,7 @@ struct SignUpView: View {
                     HStack(spacing: 10) {
                         Image(systemName: "envelope")
                             .font(.system(size: 18, weight: .medium))
-                        Text("Continue with email")
+                        Text(L.t("continueEmail", lang))
                             .font(.system(size: 19, weight: .medium))
                     }
                     .foregroundStyle(.primary)
@@ -103,18 +105,18 @@ struct SignUpView: View {
             Spacer()
 
             VStack(spacing: 0) {
-                Text("By continuing you agree to Fit AI's")
+                Text(L.t("byContinuingFitAI", lang))
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 4) {
-                    Button("Terms and Conditions") {}
+                    Button(L.t("termsAndConditions", lang)) {}
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.primary)
                         .underline()
-                    Text("and")
+                    Text(L.t("and", lang))
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
-                    Button("Privacy Policy") {}
+                    Button(L.t("privacyPolicy", lang)) {}
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.primary)
                         .underline()

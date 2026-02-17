@@ -2,6 +2,8 @@ import SwiftUI
 
 struct CompeteView: View {
     @Environment(AppState.self) private var appState
+
+    private var lang: String { appState.profile.selectedLanguage }
     @State private var showBattleSetup: Bool = false
     @State private var selectedLeaderboardTab: LeaderboardTab = .thisWeek
     @State private var appeared: Bool = false
@@ -105,7 +107,7 @@ struct CompeteView: View {
                 .padding(.top, 8)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Compete")
+            .navigationTitle(L.t("compete", lang))
             .navigationBarTitleDisplayMode(.large)
                         .sheet(isPresented: $showBattleSetup) {
                 BattleSetupView()
@@ -226,7 +228,7 @@ struct CompeteView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Text("\(seasonInfo.daysRemaining) days remaining")
+                Text("\(seasonInfo.daysRemaining) \(L.t("daysRemaining", lang))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -269,7 +271,7 @@ struct CompeteView: View {
                     Image(systemName: "target")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.orange)
-                    Text("ACTIVE CHALLENGE")
+                    Text(L.t("activeChallenge", lang))
                         .font(.system(.caption2, design: .rounded, weight: .black))
                         .tracking(1.5)
                         .foregroundStyle(.orange)
@@ -301,7 +303,7 @@ struct CompeteView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Weekly Warrior")
+                    Text(L.t("weeklyWarrior", lang))
                         .font(.headline.weight(.bold))
                         .foregroundStyle(.primary)
                     Text("Complete all \(appState.profile.workoutsPerWeek) planned workouts this week")
@@ -351,7 +353,7 @@ struct CompeteView: View {
                             .foregroundStyle(.quaternary)
                         VStack {
                             Spacer()
-                            Text("YOU")
+                            Text(L.t("you", lang))
                                 .font(.system(.caption2, design: .rounded, weight: .black))
                                 .tracking(2)
                                 .foregroundStyle(.green)
@@ -399,7 +401,7 @@ struct CompeteView: View {
                 VStack(spacing: 8) {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("1v1 Physique Battle")
+                            Text(L.t("physiqueBattle", lang))
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(.primary)
                             Text("Upload photos • AI judges • Get mogged 💀")
@@ -446,11 +448,11 @@ struct CompeteView: View {
     private var weeklyRingsSection: some View {
         VStack(spacing: 16) {
             HStack {
-                Text("This Week")
+                Text(L.t("thisWeek", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("Week \(Calendar.current.component(.weekOfYear, from: Date()))")
+                Text("\(L.t("week", lang)) \(Calendar.current.component(.weekOfYear, from: Date()))")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -463,9 +465,9 @@ struct CompeteView: View {
                 )
 
                 VStack(alignment: .leading, spacing: 12) {
-                    ringLegend(color: .red, label: "Compete", value: "\(appState.profile.points) XP")
-                    ringLegend(color: .green, label: "Train", value: "\(appState.totalWorkoutMinutes)m")
-                    ringLegend(color: .cyan, label: "Move", value: "\(appState.workoutsThisWeek)/\(appState.profile.workoutsPerWeek)")
+                    ringLegend(color: .red, label: L.t("compete", lang), value: "\(appState.profile.points) XP")
+                    ringLegend(color: .green, label: L.t("train", lang), value: "\(appState.totalWorkoutMinutes)m")
+                    ringLegend(color: .cyan, label: L.t("move", lang), value: "\(appState.workoutsThisWeek)/\(appState.profile.workoutsPerWeek)")
                 }
             }
 
@@ -534,7 +536,7 @@ struct CompeteView: View {
 
         return VStack(spacing: 14) {
             HStack {
-                Text("Challenges")
+                Text(L.t("challenges", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -554,7 +556,7 @@ struct CompeteView: View {
                     }
                 } label: {
                     HStack(spacing: 6) {
-                        Text(challengesExpanded ? "Show Less" : "Show All \(challenges.count) Challenges")
+                        Text(challengesExpanded ? L.t("showLess", lang) : "\(L.t("challenges", lang)) (\(challenges.count))")
                             .font(.subheadline.weight(.medium))
                         Image(systemName: challengesExpanded ? "chevron.up" : "chevron.down")
                             .font(.system(size: 12, weight: .semibold))
@@ -662,7 +664,7 @@ struct CompeteView: View {
     private var leaderboardSection: some View {
         VStack(spacing: 14) {
             HStack {
-                Text("Leaderboard")
+                Text(L.t("leaderboard", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -811,7 +813,7 @@ struct CompeteView: View {
     private var achievementsGrid: some View {
         VStack(spacing: 14) {
             HStack {
-                Text("Achievements")
+                Text(L.t("achievements", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -875,11 +877,11 @@ struct CompeteView: View {
     private var socialFeed: some View {
         VStack(spacing: 14) {
             HStack {
-                Text("Activity")
+                Text(L.t("activity", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("Recent")
+                Text(L.t("recent", lang))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
