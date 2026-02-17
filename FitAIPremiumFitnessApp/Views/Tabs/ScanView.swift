@@ -13,6 +13,8 @@ struct ScanView: View {
     @State private var showBackSourcePicker: Bool = false
     @State private var showFrontCamera: Bool = false
     @State private var showBackCamera: Bool = false
+    @State private var showFrontPhotoPicker: Bool = false
+    @State private var showBackPhotoPicker: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -138,17 +140,13 @@ struct ScanView: View {
                     title: L.t("front", lang),
                     subtitle: nil,
                     image: viewModel.frontImage,
-                    pickerSelection: $viewModel.frontPickerItem,
-                    showSourcePicker: $showFrontSourcePicker,
-                    showCamera: $showFrontCamera
+                    isFront: true
                 )
                 photoSourceCard(
                     title: L.t("back", lang),
                     subtitle: L.t("optional", lang),
                     image: viewModel.backImage,
-                    pickerSelection: $viewModel.backPickerItem,
-                    showSourcePicker: $showBackSourcePicker,
-                    showCamera: $showBackCamera
+                    isFront: false
                 )
             }
 
@@ -224,9 +222,13 @@ struct ScanView: View {
         .clipShape(.rect(cornerRadius: 16))
     }
 
-    private func photoSourceCard(title: String, subtitle: String?, image: UIImage?, pickerSelection: Binding<PhotosPickerItem?>, showSourcePicker: Binding<Bool>, showCamera: Binding<Bool>) -> some View {
+    private func photoSourceCard(title: String, subtitle: String?, image: UIImage?, isFront: Bool) -> some View {
         Button {
-            showSourcePicker.wrappedValue = true
+            if isFront {
+                showFrontSourcePicker = true
+            } else {
+                showBackSourcePicker = true
+            }
         } label: {
             VStack(spacing: 0) {
                 if let image {
@@ -283,17 +285,26 @@ struct ScanView: View {
                 }
             }
         }
-        .confirmationDialog(L.t("choosePhoto", lang), isPresented: showSourcePicker, titleVisibility: .visible) {
+        .confirmationDialog(L.t("choosePhoto", lang), isPresented: isFront ? $showFrontSourcePicker : $showBackSourcePicker, titleVisibility: .visible) {
             Button(L.t("takePhoto", lang)) {
-                showCamera.wrappedValue = true
+                if isFront {
+                    showFrontCamera = true
+                } else {
+                    showBackCamera = true
+                }
             }
-            PhotosPicker(selection: pickerSelection, matching: .images) {
-                Text(L.t("chooseFromLibrary", lang))
+            Button(L.t("chooseFromLibrary", lang)) {
+                if isFront {
+                    showFrontPhotoPicker = true
+                } else {
+                    showBackPhotoPicker = true
+                }
             }
         }
-        .fullScreenCover(isPresented: showCamera) {
+        .photosPicker(isPresented: isFront ? $showFrontPhotoPicker : $showBackPhotoPicker, selection: isFront ? $viewModel.frontPickerItem : $viewModel.backPickerItem, matching: .images)
+        .fullScreenCover(isPresented: isFront ? $showFrontCamera : $showBackCamera) {
             CameraProxyView { capturedImage in
-                if title == "Front" {
+                if isFront {
                     viewModel.frontImage = capturedImage
                 } else {
                     viewModel.backImage = capturedImage
