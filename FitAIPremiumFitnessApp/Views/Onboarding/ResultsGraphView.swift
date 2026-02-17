@@ -125,10 +125,10 @@ struct ResultsGraphView: View {
 
             let gridColor = Color.gray.opacity(0.12)
             for i in 0...4 {
-                let y = topPad + (h - topPad - bottomPad) * CGFloat(i) / 4.0
+                let y = graphTopPad + (h - graphTopPad - graphBottomPad) * CGFloat(i) / 4.0
                 var gridPath = Path()
-                gridPath.move(to: CGPoint(x: 0, y: y))
-                gridPath.addLine(to: CGPoint(x: w, y: y))
+                gridPath.move(to: CGPoint(x: graphLeftPad, y: y))
+                gridPath.addLine(to: CGPoint(x: w - graphRightPad, y: y))
                 context.stroke(gridPath, with: .color(gridColor), lineWidth: 0.5)
             }
 
@@ -202,7 +202,7 @@ struct ResultsGraphView: View {
                 let labelIdx = min(Int(CGFloat(traditionalPoints.count) * 0.55), traditionalPoints.count - 1)
                 let labelPt = traditionalPoints[labelIdx]
                 let resolved = context.resolve(
-                    Text("Traditional Diet")
+                    Text("Traditional Training")
                         .font(.system(size: 10, weight: .medium))
                         .foregroundStyle(Color.red.opacity(0.8))
                 )
@@ -219,9 +219,6 @@ struct ResultsGraphView: View {
                     .scaledToFit()
                     .frame(width: 16, height: 16)
                     .clipShape(.rect(cornerRadius: 4))
-                Text("Fit AI")
-                    .font(.system(.caption, design: .default, weight: .semibold))
-                    .foregroundStyle(.primary)
             }
 
             HStack(spacing: 6) {
@@ -237,21 +234,25 @@ struct ResultsGraphView: View {
         }
     }
 
+    private let graphLeftPad: CGFloat = 16
+    private let graphRightPad: CGFloat = 16
+    private let graphTopPad: CGFloat = 16
+    private let graphBottomPad: CGFloat = 16
+
     private func fitAICurvePoints(in size: CGSize) -> [CGPoint] {
         let w = size.width
         let h = size.height
-        let topPad: CGFloat = 10
-        let bottomPad: CGFloat = 10
-        let usableH = h - topPad - bottomPad
+        let usableW = w - graphLeftPad - graphRightPad
+        let usableH = h - graphTopPad - graphBottomPad
         let steps = 60
 
         return (0...steps).map { i in
             let t = CGFloat(i) / CGFloat(steps)
-            let x = t * w
-            let startY: CGFloat = 0.85
+            let x = graphLeftPad + t * usableW
+            let startY: CGFloat = 0.82
             let endY: CGFloat = 0.12
             let curve = startY + (endY - startY) * pow(t, 1.6)
-            let y = topPad + curve * usableH
+            let y = graphTopPad + curve * usableH
             return CGPoint(x: x, y: y)
         }
     }
@@ -259,19 +260,18 @@ struct ResultsGraphView: View {
     private func traditionalCurvePoints(in size: CGSize) -> [CGPoint] {
         let w = size.width
         let h = size.height
-        let topPad: CGFloat = 10
-        let bottomPad: CGFloat = 10
-        let usableH = h - topPad - bottomPad
+        let usableW = w - graphLeftPad - graphRightPad
+        let usableH = h - graphTopPad - graphBottomPad
         let steps = 60
 
         return (0...steps).map { i in
             let t = CGFloat(i) / CGFloat(steps)
-            let x = t * w
-            let rise = sin(t * .pi * 0.8) * 0.35
-            let falloff = t > 0.5 ? pow((t - 0.5) / 0.5, 1.5) * 0.3 : 0
-            let normalizedY = 0.85 - rise + falloff
-            let finalY = min(max(normalizedY, 0.1), 0.95)
-            let y = topPad + finalY * usableH
+            let x = graphLeftPad + t * usableW
+            let rise = sin(t * .pi * 0.7) * 0.3
+            let plateau = t > 0.5 ? (t - 0.5) * 0.15 : 0
+            let normalizedY = 0.82 - rise + plateau
+            let finalY = min(max(normalizedY, 0.15), 0.90)
+            let y = graphTopPad + finalY * usableH
             return CGPoint(x: x, y: y)
         }
     }
