@@ -1288,7 +1288,7 @@ struct PlanView: View {
             Exercise(name: "Band Face Pulls", sets: 3, reps: "15-20", muscleGroup: "Rear Delts"),
             Exercise(name: "Doorway Curls", sets: 3, reps: "12-15", muscleGroup: "Biceps"),
         ]
-        return WorkoutDay(dayLabel: "TUE", name: "Pull Day", focusAreas: ["Back", "Biceps", "Rear Delts"], icon: "figure.rowing", exercises: exercises, isWeakPointFocus: weakFocus)
+        return WorkoutDay(dayLabel: "TUE", name: "Pull Day", focusAreas: ["Back", "Biceps", "Rear Delts"], icon: "figure.strengthtraining.functional", exercises: exercises, isWeakPointFocus: weakFocus)
     }
 
     private func buildLegDay(isGym: Bool, weakFocus: Bool) -> WorkoutDay {
