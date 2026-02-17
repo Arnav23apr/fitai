@@ -103,11 +103,10 @@ struct CompeteView: View {
                 }
                 .padding(.top, 8)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("Compete")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .sheet(isPresented: $showBattleSetup) {
+                        .sheet(isPresented: $showBattleSetup) {
                 BattleSetupView()
             }
         }
@@ -129,7 +128,7 @@ struct CompeteView: View {
 
                 Text("\(appState.profile.points) XP")
                     .font(.system(.headline, design: .rounded, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
             }
 
             if let next = nextTier {
@@ -151,7 +150,7 @@ struct CompeteView: View {
 
                     Text("\(next.minPoints - appState.profile.points) XP to \(next.name)")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.35))
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -166,10 +165,10 @@ struct CompeteView: View {
                             .symbolEffect(.bounce, value: streakFireTrigger)
                         Text("\(appState.profile.currentStreak)")
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text("streak")
                             .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.4))
+                            .foregroundStyle(.secondary)
                     }
                 } else {
                     statPill(value: "0", label: "streak", icon: "flame.fill", color: .orange)
@@ -194,10 +193,10 @@ struct CompeteView: View {
                 .foregroundStyle(color)
             Text(value)
                 .font(.system(.subheadline, design: .rounded, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -221,14 +220,14 @@ struct CompeteView: View {
                         .tracking(1.5)
                         .foregroundStyle(.purple)
                     Text("•")
-                        .foregroundStyle(.white.opacity(0.2))
+                        .foregroundStyle(.tertiary)
                     Text(seasonInfo.name)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.secondary)
                 }
                 Text("\(seasonInfo.daysRemaining) days remaining")
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
 
             Spacer()
@@ -236,7 +235,7 @@ struct CompeteView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("ENDS")
                     .font(.system(.caption2, design: .rounded, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
                 Text("\(seasonInfo.daysRemaining)d")
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
                     .foregroundStyle(.purple)
@@ -297,16 +296,16 @@ struct CompeteView: View {
 
                     Text("\(appState.workoutsThisWeek)/\(appState.profile.workoutsPerWeek)")
                         .font(.system(.caption2, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Weekly Warrior")
                         .font(.headline.weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Complete all \(appState.profile.workoutsPerWeek) planned workouts this week")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -317,7 +316,7 @@ struct CompeteView: View {
                         .foregroundStyle(isComplete ? .green : .yellow)
                     Text("XP")
                         .font(.system(.caption2, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
             }
         }
@@ -348,7 +347,7 @@ struct CompeteView: View {
                         Color(white: 0.08)
                         Image(systemName: "figure.stand")
                             .font(.system(size: 36, weight: .light))
-                            .foregroundStyle(.white.opacity(0.15))
+                            .foregroundStyle(.quaternary)
                         VStack {
                             Spacer()
                             Text("YOU")
@@ -381,7 +380,7 @@ struct CompeteView: View {
                         Color(white: 0.08)
                         Image(systemName: "figure.stand")
                             .font(.system(size: 36, weight: .light))
-                            .foregroundStyle(.white.opacity(0.15))
+                            .foregroundStyle(.quaternary)
                         VStack {
                             Spacer()
                             Text("???")
@@ -401,15 +400,15 @@ struct CompeteView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("1v1 Physique Battle")
                                 .font(.headline.weight(.bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("Upload photos • AI judges • Get mogged 💀")
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.35))
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                         Image(systemName: "chevron.right")
                             .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.2))
+                            .foregroundStyle(.tertiary)
                     }
 
                     HStack(spacing: 8) {
@@ -434,7 +433,7 @@ struct CompeteView: View {
     private func battleTag(_ text: String) -> some View {
         Text(text)
             .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(.white.opacity(0.3))
+            .foregroundStyle(.tertiary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.white.opacity(0.04))
@@ -448,11 +447,11 @@ struct CompeteView: View {
             HStack {
                 Text("This Week")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("Week \(Calendar.current.component(.weekOfYear, from: Date()))")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
 
             HStack(spacing: 24) {
@@ -483,11 +482,11 @@ struct CompeteView: View {
                 .frame(width: 8, height: 8)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
             Spacer()
             Text(value)
                 .font(.system(.caption, design: .rounded, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
         }
     }
 
@@ -534,11 +533,11 @@ struct CompeteView: View {
             HStack {
                 Text("Challenges")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("\(challenges.filter { $0.completed }.count)/\(challenges.count)")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
 
             ForEach(Array(challenges.enumerated()), id: \.element.id) { index, challenge in
@@ -625,7 +624,7 @@ struct CompeteView: View {
                     .foregroundStyle(challenge.completed ? .green : .yellow)
                 Text(challenge.progressText)
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(12)
@@ -641,7 +640,7 @@ struct CompeteView: View {
             HStack {
                 Text("Leaderboard")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -683,7 +682,7 @@ struct CompeteView: View {
                 } else {
                     Text("\(entry.rank)")
                         .font(.system(.callout, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
             }
             .frame(width: 28)
@@ -700,7 +699,7 @@ struct CompeteView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.name)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 HStack(spacing: 4) {
                     Text(entry.tier)
                         .font(.caption2)
@@ -708,7 +707,7 @@ struct CompeteView: View {
                     if entry.xpToday > 0 {
                         Text("• +\(entry.xpToday) today")
                             .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.25))
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
@@ -718,7 +717,7 @@ struct CompeteView: View {
             VStack(alignment: .trailing, spacing: 2) {
                 Text("\(entry.points)")
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.6))
+                    .foregroundStyle(.secondary)
 
                 if entry.rankChange != 0 {
                     HStack(spacing: 2) {
@@ -757,7 +756,7 @@ struct CompeteView: View {
                 HStack(spacing: 4) {
                     Text(appState.profile.name.isEmpty ? "You" : appState.profile.name)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("(You)")
                         .font(.caption2)
                         .foregroundStyle(.green.opacity(0.6))
@@ -790,11 +789,11 @@ struct CompeteView: View {
             HStack {
                 Text("Achievements")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("\(achievements.filter { $0.isUnlocked }.count)/\(achievements.count)")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
 
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
@@ -819,7 +818,7 @@ struct CompeteView: View {
                 } else {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(.white.opacity(0.15))
+                        .foregroundStyle(.quaternary)
                 }
 
                 if !achievement.isUnlocked {
@@ -854,11 +853,11 @@ struct CompeteView: View {
             HStack {
                 Text("Activity")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("Recent")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
 
             ForEach(activityFeed) { item in
@@ -869,26 +868,26 @@ struct CompeteView: View {
                         .overlay(
                             Image(systemName: item.icon)
                                 .font(.system(size: 12))
-                                .foregroundStyle(.white.opacity(0.4))
+                                .foregroundStyle(.secondary)
                         )
 
                     HStack(spacing: 0) {
                         Text(item.userName)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(.primary.opacity(0.7))
                         Text(" \(item.action) ")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.secondary)
                         Text(item.detail)
                             .font(.caption.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
 
                     Text(item.timeAgo)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.2))
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(.vertical, 6)
             }

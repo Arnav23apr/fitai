@@ -18,7 +18,7 @@ struct SplashView: View {
                 Image(colorScheme == .dark ? "FitAILogoWhite" : "FitAILogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(height: 52)
+                    .frame(height: 64)
             }
             .opacity(logoOpacity)
             .scaleEffect(logoScale)

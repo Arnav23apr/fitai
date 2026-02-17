@@ -12,10 +12,9 @@ struct RatingsCardSheet: View {
                     .padding(.top, 20)
                     .padding(.bottom, 40)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("Ratings")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -23,7 +22,6 @@ struct RatingsCardSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 

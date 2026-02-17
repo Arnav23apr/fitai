@@ -8,23 +8,23 @@ struct LanguageSelectionView: View {
 
     private let languages: [(name: String, flag: String, native: String)] = [
         ("English", "🇺🇸", "English"),
-        ("Spanish", "🇪🇸", "Español"),
+        ("Arabic", "🇸🇦", "العربية"),
+        ("Chinese", "🇨🇳", "中文"),
+        ("Dutch", "🇳🇱", "Nederlands"),
         ("French", "🇫🇷", "Français"),
         ("German", "🇩🇪", "Deutsch"),
-        ("Portuguese", "🇧🇷", "Português"),
+        ("Hebrew", "🇮🇱", "עברית"),
+        ("Hindi", "🇮🇳", "हिन्दी"),
         ("Italian", "🇮🇹", "Italiano"),
-        ("Dutch", "🇳🇱", "Nederlands"),
-        ("Russian", "🇷🇺", "Русский"),
         ("Japanese", "🇯🇵", "日本語"),
         ("Korean", "🇰🇷", "한국어"),
-        ("Chinese", "🇨🇳", "中文"),
-        ("Arabic", "🇸🇦", "العربية"),
-        ("Hindi", "🇮🇳", "हिन्दी"),
-        ("Turkish", "🇹🇷", "Türkçe"),
         ("Polish", "🇵🇱", "Polski"),
-        ("Swedish", "🇸🇪", "Svenska"),
+        ("Portuguese", "🇧🇷", "Português"),
         ("Romanian", "🇷🇴", "Română"),
-        ("Hebrew", "🇮🇱", "עברית")
+        ("Russian", "🇷🇺", "Русский"),
+        ("Spanish", "🇪🇸", "Español"),
+        ("Swedish", "🇸🇪", "Svenska"),
+        ("Turkish", "🇹🇷", "Türkçe"),
     ]
 
     var body: some View {

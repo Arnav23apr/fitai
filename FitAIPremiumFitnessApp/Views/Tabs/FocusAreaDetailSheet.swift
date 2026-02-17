@@ -20,10 +20,9 @@ struct FocusAreaDetailSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 40)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle(area)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -31,7 +30,6 @@ struct FocusAreaDetailSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var headerSection: some View {

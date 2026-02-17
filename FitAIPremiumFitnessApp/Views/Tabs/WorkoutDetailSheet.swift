@@ -41,10 +41,9 @@ struct WorkoutDetailSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle(workout.name)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -61,7 +60,6 @@ struct WorkoutDetailSheet: View {
             }
             .sensoryFeedback(.success, trigger: showCompletionAlert)
         }
-        .preferredColorScheme(.dark)
         .onDisappear {
             timer?.invalidate()
         }

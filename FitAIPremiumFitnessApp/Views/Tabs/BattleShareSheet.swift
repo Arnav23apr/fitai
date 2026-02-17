@@ -30,10 +30,9 @@ struct BattleShareSheet: View {
                 .padding(.top, 16)
                 .padding(.bottom, 40)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("Share Battle")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }

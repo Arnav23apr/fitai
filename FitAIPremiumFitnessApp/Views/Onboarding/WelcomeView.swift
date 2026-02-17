@@ -10,23 +10,23 @@ struct WelcomeView: View {
 
     private let languages: [(name: String, flag: String, native: String)] = [
         ("English", "🇺🇸", "English"),
-        ("Spanish", "🇪🇸", "Español"),
+        ("Arabic", "🇸🇦", "العربية"),
+        ("Chinese", "🇨🇳", "中文"),
+        ("Dutch", "🇳🇱", "Nederlands"),
         ("French", "🇫🇷", "Français"),
         ("German", "🇩🇪", "Deutsch"),
-        ("Portuguese", "🇧🇷", "Português"),
+        ("Hebrew", "🇮🇱", "עברית"),
+        ("Hindi", "🇮🇳", "हिन्दी"),
         ("Italian", "🇮🇹", "Italiano"),
-        ("Dutch", "🇳🇱", "Nederlands"),
-        ("Russian", "🇷🇺", "Русский"),
         ("Japanese", "🇯🇵", "日本語"),
         ("Korean", "🇰🇷", "한국어"),
-        ("Chinese", "🇨🇳", "中文"),
-        ("Arabic", "🇸🇦", "العربية"),
-        ("Hindi", "🇮🇳", "हिन्दी"),
-        ("Turkish", "🇹🇷", "Türkçe"),
         ("Polish", "🇵🇱", "Polski"),
-        ("Swedish", "🇸🇪", "Svenska"),
+        ("Portuguese", "🇧🇷", "Português"),
         ("Romanian", "🇷🇴", "Română"),
-        ("Hebrew", "🇮🇱", "עברית")
+        ("Russian", "🇷🇺", "Русский"),
+        ("Spanish", "🇪🇸", "Español"),
+        ("Swedish", "🇸🇪", "Svenska"),
+        ("Turkish", "🇹🇷", "Türkçe"),
     ]
 
     private var isDark: Bool { colorScheme == .dark }
@@ -61,20 +61,10 @@ struct WelcomeView: View {
                 Image(isDark ? "FitAILogoWhite" : "FitAILogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 100, height: 100)
+                    .frame(width: 120, height: 120)
                     .clipShape(.rect(cornerRadius: 24))
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
-
-                VStack(spacing: 12) {
-                    Text("Transform Your")
-                        .font(.system(.largeTitle, design: .default, weight: .bold))
-                    Text("Physique with AI")
-                        .font(.system(.largeTitle, design: .default, weight: .bold))
-                }
-                .foregroundStyle(.primary)
-                .opacity(appeared ? 1 : 0)
-                .offset(y: appeared ? 0 : 20)
 
                 Text("Your personal AI fitness coach.\nScan, plan, and compete.")
                     .font(.body)
@@ -102,9 +92,9 @@ struct WelcomeView: View {
                     HStack(spacing: 4) {
                         Text("Already have an account?")
                             .foregroundStyle(.secondary)
-                        Text("Sign In")
+                        Text("Log In")
                             .fontWeight(.bold)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(isDark ? .white : .black)
                     }
                     .font(.subheadline)
                 }

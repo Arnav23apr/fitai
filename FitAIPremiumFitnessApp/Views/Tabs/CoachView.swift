@@ -26,16 +26,15 @@ struct CoachView: View {
 
                 inputBar
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("AI Coach")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.secondary)
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -43,13 +42,12 @@ struct CoachView: View {
                         Button(action: { viewModel.clearChat() }) {
                             Image(systemName: "trash")
                                 .font(.system(size: 13))
-                                .foregroundStyle(.white.opacity(0.4))
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var messagesArea: some View {
@@ -115,17 +113,17 @@ struct CoachView: View {
             VStack(spacing: 8) {
                 Text("Your AI Coach")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text("Ask me anything about fitness, nutrition,\nrecovery, or your workout plan.")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("Try asking")
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
                     .padding(.leading, 4)
 
                 ForEach(quickQuestions, id: \.self) { question in
@@ -138,16 +136,16 @@ struct CoachView: View {
                                 .foregroundStyle(.blue.opacity(0.6))
                             Text(question)
                                 .font(.subheadline)
-                                .foregroundStyle(.white.opacity(0.7))
+                                .foregroundStyle(.primary.opacity(0.7))
                                 .multilineTextAlignment(.leading)
                             Spacer()
                             Image(systemName: "arrow.up.right")
                                 .font(.system(size: 10))
-                                .foregroundStyle(.white.opacity(0.2))
+                                .foregroundStyle(.tertiary)
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
-                        .background(Color.white.opacity(0.05))
+                        .background(Color(.secondarySystemGroupedBackground))
                         .clipShape(.rect(cornerRadius: 12))
                     }
                 }
@@ -179,20 +177,20 @@ struct CoachView: View {
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
                 Text(message.content)
                     .font(.subheadline)
-                    .foregroundStyle(message.role == .user ? .black : .white)
+                    .foregroundStyle(message.role == .user ? Color(.systemBackground) : .primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
                     .background(
                         message.role == .user ?
-                        AnyShapeStyle(Color.white) :
-                        AnyShapeStyle(Color.white.opacity(0.08))
+                        AnyShapeStyle(Color(.label)) :
+                        AnyShapeStyle(Color(.secondarySystemGroupedBackground))
                     )
                     .clipShape(.rect(cornerRadius: 18))
                     .textSelection(.enabled)
 
                 Text(message.timestamp, format: .dateTime.hour().minute())
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.2))
+                    .foregroundStyle(.tertiary)
             }
             .frame(maxWidth: 280, alignment: message.role == .user ? .trailing : .leading)
 
@@ -227,7 +225,7 @@ struct CoachView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color.white.opacity(0.08))
+            .background(Color(.secondarySystemGroupedBackground))
             .clipShape(.rect(cornerRadius: 18))
 
             Spacer()
@@ -241,13 +239,13 @@ struct CoachView: View {
                 .foregroundStyle(.red.opacity(0.8))
             Text(message)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.secondary)
                 .lineLimit(2)
             Spacer()
             Button(action: { viewModel.errorMessage = nil }) {
                 Image(systemName: "xmark")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(.horizontal, 16)
@@ -257,12 +255,12 @@ struct CoachView: View {
 
     private var inputBar: some View {
         VStack(spacing: 0) {
-            Divider().background(Color.white.opacity(0.08))
+            Divider()
 
             HStack(spacing: 12) {
                 TextField("Ask your coach...", text: $viewModel.inputText, axis: .vertical)
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .lineLimit(1...4)
                     .focused($isInputFocused)
                     .submitLabel(.send)
@@ -277,7 +275,7 @@ struct CoachView: View {
                         .font(.system(size: 30))
                         .foregroundStyle(
                             viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?
-                            .white.opacity(0.15) : .white
+                            Color.primary.opacity(0.15) : Color.primary
                         )
                 }
                 .disabled(viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
@@ -285,7 +283,7 @@ struct CoachView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .background(Color.black)
+        .background(Color(.systemBackground))
     }
 }
 
@@ -295,7 +293,7 @@ struct TypingDot: View {
 
     var body: some View {
         Circle()
-            .fill(.white.opacity(0.4))
+            .fill(.secondary)
             .frame(width: 6, height: 6)
             .offset(y: isAnimating ? -5 : 3)
             .animation(

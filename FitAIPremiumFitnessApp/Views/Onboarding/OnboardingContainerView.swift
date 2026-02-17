@@ -23,6 +23,8 @@ struct OnboardingContainerView: View {
                     TrainingLocationView(onContinue: { advance() })
                 case .primaryGoal:
                     PrimaryGoalView(onContinue: { advance() })
+                case .dateOfBirth:
+                    DateOfBirthView(onContinue: { advance() })
                 case .heightWeight:
                     HeightWeightView(onContinue: { advance() })
                 case .holdingBack:

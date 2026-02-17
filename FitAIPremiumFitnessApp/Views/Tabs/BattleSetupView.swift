@@ -43,10 +43,9 @@ struct BattleSetupView: View {
                 .padding(.top, 12)
                 .padding(.bottom, 40)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("1v1 Battle")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
