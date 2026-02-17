@@ -1,4 +1,5 @@
 import SwiftUI
+import Auth
 
 @main
 struct FitAIPremiumFitnessAppApp: App {
@@ -8,6 +9,9 @@ struct FitAIPremiumFitnessAppApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
+                .onOpenURL { url in
+                    supabaseAuth.handle(url)
+                }
         }
     }
 }

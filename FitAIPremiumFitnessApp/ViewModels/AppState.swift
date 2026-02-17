@@ -1,4 +1,5 @@
 import SwiftUI
+import Auth
 
 @Observable
 @MainActor
@@ -7,6 +8,8 @@ class AppState {
 
     var showSplash: Bool = true
     var profile: UserProfile = AppState.loadProfile()
+    var isAuthenticating: Bool = false
+    var authError: String? = nil
 
     func saveProfile() {
         if let data = try? JSONEncoder().encode(profile) {
@@ -28,7 +31,37 @@ class AppState {
         saveProfile()
     }
 
+    func signInWithGoogle() async {
+        isAuthenticating = true
+        authError = nil
+        do {
+            let session = try await SupabaseAuthService.shared.signInWithGoogle()
+            if let email = session.user.email {
+                profile.email = email
+            }
+            let meta = session.user.userMetadata
+            let fullName = meta["full_name"]?.stringValue
+                ?? meta["name"]?.stringValue
+            if let name = fullName, !name.isEmpty {
+                profile.name = name
+            } else {
+                profile.name = "Athlete"
+            }
+            saveProfile()
+        } catch {
+            if (error as NSError).code == 1 {
+                // user cancelled
+            } else {
+                authError = error.localizedDescription
+            }
+        }
+        isAuthenticating = false
+    }
+
     func logout() {
+        Task {
+            try? await SupabaseAuthService.shared.signOut()
+        }
         hasCompletedOnboarding = false
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
         UserDefaults.standard.removeObject(forKey: "userProfile")
