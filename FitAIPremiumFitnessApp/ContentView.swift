@@ -5,7 +5,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color(.systemBackground).ignoresSafeArea()
 
             if appState.showSplash {
                 SplashView {
@@ -14,7 +14,6 @@ struct ContentView: View {
                     }
                 }
                 .transition(.opacity)
-                .preferredColorScheme(nil)
             } else if !appState.hasCompletedOnboarding {
                 OnboardingContainerView()
                     .transition(.opacity)
@@ -22,7 +21,6 @@ struct ContentView: View {
             } else {
                 MainTabView()
                     .transition(.opacity)
-                    .preferredColorScheme(.dark)
             }
         }
         .animation(.easeInOut(duration: 0.4), value: appState.showSplash)

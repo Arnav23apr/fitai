@@ -23,7 +23,7 @@ struct SignUpView: View {
             .padding(.horizontal, 20)
             .padding(.top, 12)
 
-            Text("Sign In")
+            Text("Log In")
                 .font(.system(.title2, design: .default, weight: .bold))
                 .foregroundStyle(.primary)
                 .padding(.top, 8)
@@ -137,41 +137,33 @@ struct GoogleLogo: View {
             let h = size.height
             let cx = w / 2
             let cy = h / 2
-            let r = min(w, h) / 2 * 0.9
+            let outerR = min(w, h) / 2 * 0.88
+            let strokeW = outerR * 0.38
+            let r = outerR - strokeW / 2
 
-            var bluePath = Path()
-            bluePath.move(to: CGPoint(x: cx, y: cy))
-            bluePath.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: .degrees(-45), endAngle: .degrees(45), clockwise: false)
-            bluePath.closeSubpath()
-            context.fill(bluePath, with: .color(Color(red: 0.259, green: 0.522, blue: 0.957)))
+            let blue = Color(red: 0.259, green: 0.522, blue: 0.957)
+            let green = Color(red: 0.204, green: 0.659, blue: 0.325)
+            let yellow = Color(red: 0.984, green: 0.737, blue: 0.016)
+            let red = Color(red: 0.918, green: 0.263, blue: 0.208)
 
-            var greenPath = Path()
-            greenPath.move(to: CGPoint(x: cx, y: cy))
-            greenPath.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: .degrees(45), endAngle: .degrees(150), clockwise: false)
-            greenPath.closeSubpath()
-            context.fill(greenPath, with: .color(Color(red: 0.204, green: 0.659, blue: 0.325)))
+            let center = CGPoint(x: cx, y: cy)
+            let arcs: [(start: Double, end: Double, color: Color)] = [
+                (-40, 40, blue),
+                (40, 150, green),
+                (150, 230, yellow),
+                (230, 320, red),
+            ]
 
-            var yellowPath = Path()
-            yellowPath.move(to: CGPoint(x: cx, y: cy))
-            yellowPath.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: .degrees(150), endAngle: .degrees(230), clockwise: false)
-            yellowPath.closeSubpath()
-            context.fill(yellowPath, with: .color(Color(red: 0.984, green: 0.737, blue: 0.016)))
+            for arc in arcs {
+                var path = Path()
+                path.addArc(center: center, radius: r, startAngle: .degrees(arc.start), endAngle: .degrees(arc.end), clockwise: false)
+                context.stroke(path, with: .color(arc.color), style: StrokeStyle(lineWidth: strokeW, lineCap: .butt))
+            }
 
-            var redPath = Path()
-            redPath.move(to: CGPoint(x: cx, y: cy))
-            redPath.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: .degrees(230), endAngle: .degrees(315), clockwise: false)
-            redPath.closeSubpath()
-            context.fill(redPath, with: .color(Color(red: 0.918, green: 0.263, blue: 0.208)))
-
-            let innerR = r * 0.55
-            var innerCircle = Path()
-            innerCircle.addEllipse(in: CGRect(x: cx - innerR, y: cy - innerR, width: innerR * 2, height: innerR * 2))
-            context.fill(innerCircle, with: .color(.white))
-
-            let barH = r * 0.36
+            let barH = strokeW
             var bar = Path()
-            bar.addRect(CGRect(x: cx, y: cy - barH / 2, width: r, height: barH))
-            context.fill(bar, with: .color(Color(red: 0.259, green: 0.522, blue: 0.957)))
+            bar.addRect(CGRect(x: cx - 1, y: cy - barH / 2, width: outerR + 1, height: barH))
+            context.fill(bar, with: .color(blue))
         }
     }
 }

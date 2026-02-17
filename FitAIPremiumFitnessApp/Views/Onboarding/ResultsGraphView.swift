@@ -145,7 +145,7 @@ struct ResultsGraphView: View {
                 tradFill.addLine(to: CGPoint(x: tradVisible.last!.x, y: h - bottomPad))
                 tradFill.closeSubpath()
                 context.fill(tradFill, with: .linearGradient(
-                    Gradient(colors: [Color.red.opacity(0.12), Color.red.opacity(0.02)]),
+                    Gradient(colors: [Color.blue.opacity(0.12), Color.blue.opacity(0.02)]),
                     startPoint: CGPoint(x: w / 2, y: topPad),
                     endPoint: CGPoint(x: w / 2, y: h - bottomPad)
                 ))
@@ -153,7 +153,7 @@ struct ResultsGraphView: View {
                 var tradLine = Path()
                 tradLine.move(to: tradVisible[0])
                 for pt in tradVisible.dropFirst() { tradLine.addLine(to: pt) }
-                context.stroke(tradLine, with: .color(Color.red.opacity(0.7)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                context.stroke(tradLine, with: .color(Color.blue.opacity(0.7)), style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
             }
 
             let fitDrawCount = max(1, Int(CGFloat(fitAIPoints.count) * fitAIProgress))
@@ -198,34 +198,26 @@ struct ResultsGraphView: View {
                 )
             }
 
-            if traditionalProgress > 0.6 {
-                let labelIdx = min(Int(CGFloat(traditionalPoints.count) * 0.55), traditionalPoints.count - 1)
-                let labelPt = traditionalPoints[labelIdx]
-                let resolved = context.resolve(
-                    Text("Traditional Training")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.red.opacity(0.8))
-                )
-                context.draw(resolved, at: CGPoint(x: labelPt.x + 20, y: labelPt.y - 14))
-            }
+
         }
     }
 
     private var legendRow: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             HStack(spacing: 6) {
-                Image(isDark ? "FitAILogoWhite" : "FitAILogo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 16, height: 16)
-                    .clipShape(.rect(cornerRadius: 4))
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.primary)
+                Text("Fit AI Training")
+                    .font(.system(.caption, design: .default, weight: .medium))
+                    .foregroundStyle(.primary)
             }
 
             HStack(spacing: 6) {
                 Circle()
-                    .fill(Color.red.opacity(0.6))
+                    .fill(Color.blue.opacity(0.7))
                     .frame(width: 8, height: 8)
-                Text("Traditional")
+                Text("Traditional Training")
                     .font(.system(.caption, design: .default, weight: .medium))
                     .foregroundStyle(.secondary)
             }

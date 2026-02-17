@@ -91,14 +91,13 @@ struct PlanView: View {
                 .padding(.bottom, 100)
                 .opacity(appeared ? 1 : 0)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .overlay(alignment: .bottomTrailing) {
                 aiFloatingButton
             }
             .navigationTitle("Plan")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .sheet(isPresented: $showCoach) {
+                        .sheet(isPresented: $showCoach) {
                 CoachView()
             }
             .sheet(item: $selectedDay) { day in
@@ -130,7 +129,7 @@ struct PlanView: View {
                     .foregroundStyle(.cyan)
                 Text("Your Plan is based on")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
                 Spacer()
             }
 
@@ -144,7 +143,7 @@ struct PlanView: View {
                             .frame(width: 20)
                         Text(item.text)
                             .font(.caption2.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
                             .lineLimit(1)
                         Spacer()
                     }
@@ -214,7 +213,7 @@ struct PlanView: View {
 
                             Text(workout.isRestDay ? "Rest & Recover" : workout.name)
                                 .font(.title2.weight(.bold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
 
                             if !workout.isRestDay {
                                 HStack(spacing: 12) {
@@ -223,7 +222,7 @@ struct PlanView: View {
                                     Label("\(workout.exercises.count)", systemImage: "list.bullet")
                                 }
                                 .font(.caption.weight(.medium))
-                                .foregroundStyle(.white.opacity(0.4))
+                                .foregroundStyle(.secondary)
                             }
                         }
 
@@ -265,7 +264,7 @@ struct PlanView: View {
                                     .foregroundStyle(isCompleted ? .green : .yellow)
                                 Text("XP Reward")
                                     .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.3))
+                                    .foregroundStyle(.tertiary)
                             }
                             .frame(maxWidth: .infinity)
 
@@ -279,7 +278,7 @@ struct PlanView: View {
                                     .foregroundStyle(.cyan)
                                 Text("to \(nextTierName)")
                                     .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.3))
+                                    .foregroundStyle(.tertiary)
                             }
                             .frame(maxWidth: .infinity)
 
@@ -290,11 +289,11 @@ struct PlanView: View {
                             VStack(spacing: 2) {
                                 Text(workout.focusAreas.first ?? "–")
                                     .font(.system(.subheadline, design: .rounded, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                     .lineLimit(1)
                                 Text("Target")
                                     .font(.caption2)
-                                    .foregroundStyle(.white.opacity(0.3))
+                                    .foregroundStyle(.tertiary)
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -346,7 +345,7 @@ struct PlanView: View {
                         .foregroundStyle(.orange)
                     Text("Weekly Streak")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 Spacer()
                 Text("\(completedCount)/\(appState.profile.workoutsPerWeek)")
@@ -402,7 +401,7 @@ struct PlanView: View {
                         .foregroundStyle(.orange)
                     Text("Streak: \(appState.profile.currentStreak) days")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.secondary)
                 }
 
                 if completedCount >= appState.profile.workoutsPerWeek {
@@ -436,7 +435,7 @@ struct PlanView: View {
                             .foregroundStyle(.green)
                         Text("Scan Insight")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
@@ -457,10 +456,10 @@ struct PlanView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(String(format: "%.1f", appState.profile.latestScore ?? 0))
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Score")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
             }
 
@@ -485,7 +484,7 @@ struct PlanView: View {
 
                         Text("Consistency: \(min(100, appState.profile.totalScans * 25))%")
                             .font(.caption2)
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }
@@ -513,7 +512,7 @@ struct PlanView: View {
                 .frame(width: 16)
             Text(text)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
     }
@@ -556,15 +555,15 @@ struct PlanView: View {
         VStack(spacing: 14) {
             Image(systemName: "camera.viewfinder")
                 .font(.system(size: 32))
-                .foregroundStyle(.white.opacity(0.2))
+                .foregroundStyle(.tertiary)
 
             VStack(spacing: 4) {
                 Text("Scan to Personalize")
                     .font(.headline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text("Complete a body scan to get a workout plan\ntailored to your weak points")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
             }
         }
@@ -584,7 +583,7 @@ struct PlanView: View {
                     .foregroundStyle(.orange)
                 Text("Focus Areas")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -606,10 +605,10 @@ struct PlanView: View {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(point)
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text(focusAreaSubtitle(point))
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.35))
+                                .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         }
 
@@ -629,7 +628,7 @@ struct PlanView: View {
 
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10))
-                            .foregroundStyle(.white.opacity(0.15))
+                            .foregroundStyle(.quaternary)
                     }
                     .padding(14)
                     .background(Color.white.opacity(0.04))
@@ -660,12 +659,12 @@ struct PlanView: View {
                         .frame(width: 48, height: 48)
                     Image(systemName: "brain.head.profile.fill")
                         .font(.system(size: 22))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
 
                 Text("Ask me anything")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.leading, 4)
             .padding(.trailing, 18)
@@ -733,7 +732,7 @@ struct PlanView: View {
                     .foregroundStyle(.yellow)
                 Text("Compete Bonus")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text(appState.profile.tier)
                     .font(.caption.weight(.bold))
@@ -751,7 +750,7 @@ struct PlanView: View {
                         .foregroundStyle(.yellow)
                     Text("Complete \(workout.name) to earn +\(100 + workout.exercises.count * 10) Compete points")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
                 .padding(10)
@@ -763,10 +762,10 @@ struct PlanView: View {
                 VStack(spacing: 2) {
                     Text("\(appState.profile.points)")
                         .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("Points")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -780,7 +779,7 @@ struct PlanView: View {
                         .foregroundStyle(.orange)
                     Text("Streak")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -794,7 +793,7 @@ struct PlanView: View {
                         .foregroundStyle(.green)
                     Text("Rank")
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
             }
@@ -831,11 +830,11 @@ struct PlanView: View {
             HStack {
                 Text("This Week")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text("\(appState.profile.workoutsPerWeek)x/week")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
                     .background(Color.white.opacity(0.06))
@@ -931,12 +930,12 @@ struct PlanView: View {
                         Text("\(estimatedMinutes(workout))min")
                     }
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
                     .lineLimit(1)
                 } else {
                     Text(workout.focusAreas.joined(separator: " · "))
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                         .lineLimit(1)
                 }
             }
@@ -947,14 +946,14 @@ struct PlanView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(workout.exercises.count)")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                     Text(workoutDifficulty(workout))
                         .font(.system(size: 9))
                         .foregroundStyle(accentColor.opacity(0.6))
                 }
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.15))
+                    .foregroundStyle(.quaternary)
             }
         }
         .padding(13)
@@ -989,17 +988,17 @@ struct PlanView: View {
                         let remaining = max(14 - days, 0)
                         Text(remaining > 0 ? "Next scan in \(remaining) days" : "Time for a new scan!")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text("Keep consistent for best accuracy")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.secondary)
                     } else {
                         Text("Complete your first scan")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text("Track progress with regular scans")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -1007,7 +1006,7 @@ struct PlanView: View {
 
                 Image(systemName: "chevron.right")
                     .font(.system(size: 10))
-                    .foregroundStyle(.white.opacity(0.15))
+                    .foregroundStyle(.quaternary)
             }
         }
         .padding(16)
@@ -1035,7 +1034,7 @@ struct PlanView: View {
                     .foregroundStyle(.mint)
                 Text("This Week")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -1066,7 +1065,7 @@ struct PlanView: View {
                         .foregroundStyle(.cyan)
                     Text("Improvement areas: \(appState.profile.weakPoints.prefix(2).joined(separator: " + "))")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
                 .padding(10)
@@ -1086,7 +1085,7 @@ struct PlanView: View {
                 .foregroundStyle(color)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }

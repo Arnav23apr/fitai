@@ -22,7 +22,7 @@ struct ScanView: View {
                 .padding(.top, 4)
                 .padding(.bottom, 32)
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .toolbar(.hidden, for: .navigationBar)
             .overlay {
                 if viewModel.isAnalyzing {
@@ -66,7 +66,7 @@ struct ScanView: View {
                     .clipShape(.rect(cornerRadius: 6))
                 Text("Fit AI")
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             Spacer()
             HStack(spacing: 6) {
@@ -75,11 +75,11 @@ struct ScanView: View {
                     .foregroundStyle(.orange)
                 Text("\(appState.profile.points)")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color.white.opacity(0.08))
+            .background(Color(.secondarySystemGroupedBackground))
             .clipShape(.capsule)
         }
         .padding(.vertical, 8)
@@ -90,10 +90,10 @@ struct ScanView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Latest score")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
                 Text(String(format: "%.1f", appState.profile.latestScore ?? 0.0))
                     .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             Spacer()
             HStack(spacing: 4) {
@@ -112,7 +112,7 @@ struct ScanView: View {
             }
         }
         .padding(20)
-        .background(Color.white.opacity(0.06))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 16))
     }
 
@@ -121,10 +121,10 @@ struct ScanView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Ready to Scan")
                     .font(.title3.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Text("Upload your physique photos for AI analysis")
                     .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.4))
+                    .foregroundStyle(.secondary)
             }
 
             HStack(spacing: 12) {
@@ -210,7 +210,7 @@ struct ScanView: View {
             }
         }
         .padding(20)
-        .background(Color.white.opacity(0.06))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 16))
     }
 
@@ -262,11 +262,11 @@ struct ScanView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .frame(height: 140)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color(.tertiarySystemGroupedBackground))
                     .clipShape(.rect(cornerRadius: 14))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color.white.opacity(0.06), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                            .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
                     )
                 }
             }
@@ -286,10 +286,10 @@ struct ScanView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("90-Day Transformation")
                                 .font(.headline)
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                             Text("See your potential physique with AI")
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.4))
+                                .foregroundStyle(.secondary)
                         }
                         Spacer()
                     }
@@ -376,7 +376,7 @@ struct ScanView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tips for a better scan")
                 .font(.headline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
 
             VStack(alignment: .leading, spacing: 8) {
                 tipRow("Good, even lighting")
@@ -386,18 +386,18 @@ struct ScanView: View {
             }
         }
         .padding(20)
-        .background(Color.white.opacity(0.06))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 16))
     }
 
     private func tipRow(_ text: String) -> some View {
         HStack(spacing: 10) {
             Circle()
-                .fill(.white.opacity(0.3))
+                .fill(Color(.tertiaryLabel))
                 .frame(width: 6, height: 6)
             Text(text)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -444,11 +444,10 @@ struct ScanResultsSheet: View {
                     .offset(y: appeared ? 0 : 20)
                 }
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("Results")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
+                        .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", action: onDismiss)
                         .foregroundStyle(.white)
@@ -478,7 +477,7 @@ struct ScanResultsSheet: View {
             }
         }
         .presentationDetents([.large])
-        .preferredColorScheme(.dark)
+        
     }
 
     private func ratingsShareSection(_ result: ScanResult) -> some View {
@@ -799,11 +798,10 @@ struct TransformationSheet: View {
                     Spacer()
                 }
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .navigationTitle("Transformation")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .toolbar {
+                        .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done", action: onDismiss)
                         .foregroundStyle(.white)
@@ -811,7 +809,7 @@ struct TransformationSheet: View {
             }
         }
         .presentationDetents([.large])
-        .preferredColorScheme(.dark)
+        
     }
 }
 
@@ -833,7 +831,7 @@ struct PaywallSheet: View {
                     }
                 )
             }
-            .background(Color.black)
+            .background(Color(.systemBackground))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
@@ -841,6 +839,6 @@ struct PaywallSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        
     }
 }

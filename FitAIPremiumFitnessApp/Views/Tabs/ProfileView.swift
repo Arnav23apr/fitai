@@ -6,33 +6,30 @@ struct ProfileView: View {
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
     @State private var showLanguagePicker: Bool = false
+    @State private var showHealthAlert: Bool = false
     @State private var notificationsEnabled: Bool = true
-    @State private var darkModeEnabled: Bool = true
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
                     userCard
-
                     statsCard
-
                     if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
                         limitedOfferCard
                     }
-
                     scanHistorySection
-
                     settingsSection
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(Color.black)
-            .navigationTitle("Profile")
+            .background(Color(.systemBackground))
+            .navigationTitle(L.t("profile", lang))
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if appState.profile.isPremium {
@@ -61,6 +58,11 @@ struct ProfileView: View {
             .sheet(isPresented: $showLanguagePicker) {
                 LanguagePickerSheet()
             }
+            .alert(L.t("comingSoon", lang), isPresented: $showHealthAlert) {
+                Button(L.t("ok", lang), role: .cancel) {}
+            } message: {
+                Text(L.t("comingSoonMessage", lang))
+            }
         }
     }
 
@@ -77,9 +79,9 @@ struct ProfileView: View {
                 } else {
                     Image(systemName: appState.profile.avatarSystemName)
                         .font(.system(size: 44))
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.secondary)
                         .frame(width: 64, height: 64)
-                        .background(Color.white.opacity(0.06))
+                        .background(Color(.secondarySystemGroupedBackground))
                         .clipShape(Circle())
                 }
             }
@@ -87,18 +89,18 @@ struct ProfileView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(appState.profile.name.isEmpty ? "Athlete" : appState.profile.name)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 if !appState.profile.goals.isEmpty {
                     Text(appState.profile.goals.prefix(2).joined(separator: ", "))
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.tertiary)
                 }
 
                 if !appState.profile.bio.isEmpty {
                     Text(appState.profile.bio)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
             }
 
@@ -107,14 +109,14 @@ struct ProfileView: View {
             Button(action: { showEditProfile = true }) {
                 Image(systemName: "pencil")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
                     .frame(width: 36, height: 36)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(Circle())
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 20))
     }
 
@@ -127,13 +129,13 @@ struct ProfileView: View {
             profileStat(value: "\(appState.profile.currentStreak)", label: "Streak")
         }
         .padding(20)
-        .background(Color.white.opacity(0.04))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 20))
     }
 
     private var profileDivider: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.08))
+            .fill(Color(.separator))
             .frame(width: 1, height: 36)
     }
 
@@ -141,10 +143,10 @@ struct ProfileView: View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.system(.title2, design: .rounded, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -158,17 +160,17 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Limited Offer")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     if let discount = appState.profile.spinDiscount {
                         Text("\(discount)% off Pro — Claim now")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
             .padding(16)
             .background(
@@ -189,9 +191,9 @@ struct ProfileView: View {
     private var scanHistorySection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Scan History")
+                Text(L.t("scanHistory", lang))
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -199,32 +201,32 @@ struct ProfileView: View {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.bar")
                         .font(.title2)
-                        .foregroundStyle(.white.opacity(0.2))
-                    Text("No scans yet")
+                        .foregroundStyle(.tertiary)
+                    Text(L.t("noScansYet", lang))
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(32)
-                .background(Color.white.opacity(0.04))
+                .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(.rect(cornerRadius: 16))
             } else if let score = appState.profile.latestScore, let date = appState.profile.lastScanDate {
                 HStack(spacing: 14) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(String(format: "%.1f", score))
                             .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         Text(date, format: .dateTime.month(.abbreviated).day().year())
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.2))
+                        .foregroundStyle(.tertiary)
                 }
                 .padding(16)
-                .background(Color.white.opacity(0.04))
+                .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(.rect(cornerRadius: 14))
             }
         }
@@ -233,31 +235,31 @@ struct ProfileView: View {
     private var settingsSection: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Settings")
+                Text(L.t("settings", lang))
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
             VStack(spacing: 0) {
-                settingsToggle(title: "Notifications", icon: "bell.fill", isOn: $notificationsEnabled)
-                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsToggle(title: "Dark Mode", icon: "moon.fill", isOn: $darkModeEnabled)
-                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: "Apple Health", icon: "heart.fill", iconColor: .pink) {}
-                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: "Restore Purchases", icon: "arrow.clockwise") {
+                settingsToggle(title: L.t("notifications", lang), icon: "bell.fill", isOn: $notificationsEnabled)
+                Divider().padding(.leading, 52)
+                settingsRow(title: L.t("appleHealth", lang), icon: "heart.fill", iconColor: .pink) {
+                    showHealthAlert = true
+                }
+                Divider().padding(.leading, 52)
+                settingsRow(title: L.t("restorePurchases", lang), icon: "arrow.clockwise") {
                     appState.profile.isPremium = true
                     appState.saveProfile()
                 }
-                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: "Language", icon: "globe", trailing: appState.profile.selectedLanguage) {
+                Divider().padding(.leading, 52)
+                settingsRow(title: L.t("language", lang), icon: "globe", trailing: appState.profile.selectedLanguage) {
                     showLanguagePicker = true
                 }
-                Divider().background(Color.white.opacity(0.06)).padding(.leading, 52)
-                settingsRow(title: "Terms & Privacy", icon: "doc.text") {}
+                Divider().padding(.leading, 52)
+                settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {}
             }
-            .background(Color.white.opacity(0.04))
+            .background(Color(.secondarySystemGroupedBackground))
             .clipShape(.rect(cornerRadius: 16))
 
             Button(action: {
@@ -266,13 +268,13 @@ struct ProfileView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 14))
-                    Text("Log Out")
+                    Text(L.t("logOut", lang))
                         .font(.subheadline)
                 }
                 .foregroundStyle(.red.opacity(0.8))
                 .frame(maxWidth: .infinity)
                 .padding(16)
-                .background(Color.white.opacity(0.04))
+                .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(.rect(cornerRadius: 16))
             }
         }
@@ -282,11 +284,11 @@ struct ProfileView: View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.secondary)
                 .frame(width: 28)
             Text(title)
                 .font(.subheadline)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Spacer()
             Toggle("", isOn: isOn)
                 .tint(.green)
@@ -296,7 +298,7 @@ struct ProfileView: View {
         .padding(.vertical, 12)
     }
 
-    private func settingsRow(title: String, icon: String, iconColor: Color = .white.opacity(0.6), trailing: String? = nil, action: @escaping () -> Void) -> some View {
+    private func settingsRow(title: String, icon: String, iconColor: Color = .secondary, trailing: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
@@ -305,16 +307,16 @@ struct ProfileView: View {
                     .frame(width: 28)
                 Text(title)
                     .font(.subheadline)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 if let trailing {
                     Text(trailing)
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.2))
+                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -357,18 +359,18 @@ struct EditProfileSheet: View {
                             } else {
                                 Image(systemName: selectedAvatar)
                                     .font(.system(size: 56))
-                                    .foregroundStyle(.white.opacity(0.6))
+                                    .foregroundStyle(.secondary)
                                     .frame(width: 88, height: 88)
-                                    .background(Color.white.opacity(0.08))
+                                    .background(Color(.secondarySystemGroupedBackground))
                                     .clipShape(Circle())
                             }
 
                             PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(.black)
+                                    .foregroundStyle(Color(.systemBackground))
                                     .frame(width: 28, height: 28)
-                                    .background(Color.white)
+                                    .background(Color(.label))
                                     .clipShape(Circle())
                                     .shadow(color: .black.opacity(0.3), radius: 3, y: 1)
                             }
@@ -396,9 +398,9 @@ struct EditProfileSheet: View {
                                     }) {
                                         Image(systemName: avatar)
                                             .font(.system(size: 22))
-                                            .foregroundStyle(selectedAvatar == avatar && customPhotoData == nil ? .black : .white.opacity(0.5))
+                                            .foregroundStyle(selectedAvatar == avatar && customPhotoData == nil ? Color(.systemBackground) : .secondary)
                                             .frame(width: 44, height: 44)
-                                            .background(selectedAvatar == avatar && customPhotoData == nil ? Color.white : Color.white.opacity(0.06))
+                                            .background(selectedAvatar == avatar && customPhotoData == nil ? Color(.label) : Color(.secondarySystemGroupedBackground))
                                             .clipShape(Circle())
                                     }
                                 }
@@ -411,30 +413,28 @@ struct EditProfileSheet: View {
                     VStack(spacing: 14) {
                         TextField("Name", text: $name)
                             .font(.body)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .padding(16)
-                            .background(Color.white.opacity(0.06))
+                            .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
 
                         TextField("Short bio (optional)", text: $bio)
                             .font(.body)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .padding(16)
-                            .background(Color.white.opacity(0.06))
+                            .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
                     }
                     .padding(.horizontal, 20)
                 }
                 .padding(.top, 24)
             }
-            .background(Color.black)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(.white.opacity(0.5))
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
@@ -457,7 +457,6 @@ struct EditProfileSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
         .onAppear {
             name = appState.profile.name
             bio = appState.profile.bio
@@ -474,23 +473,23 @@ struct LanguagePickerSheet: View {
 
     private let languages: [(name: String, flag: String, native: String)] = [
         ("English", "🇺🇸", "English"),
-        ("Spanish", "🇪🇸", "Español"),
+        ("Arabic", "🇸🇦", "العربية"),
+        ("Chinese", "🇨🇳", "中文"),
+        ("Dutch", "🇳🇱", "Nederlands"),
         ("French", "🇫🇷", "Français"),
         ("German", "🇩🇪", "Deutsch"),
-        ("Portuguese", "🇧🇷", "Português"),
+        ("Hebrew", "🇮🇱", "עברית"),
+        ("Hindi", "🇮🇳", "हिन्दी"),
         ("Italian", "🇮🇹", "Italiano"),
-        ("Dutch", "🇳🇱", "Nederlands"),
-        ("Russian", "🇷🇺", "Русский"),
         ("Japanese", "🇯🇵", "日本語"),
         ("Korean", "🇰🇷", "한국어"),
-        ("Chinese", "🇨🇳", "中文"),
-        ("Arabic", "🇸🇦", "العربية"),
-        ("Hindi", "🇮🇳", "हिन्दी"),
-        ("Turkish", "🇹🇷", "Türkçe"),
         ("Polish", "🇵🇱", "Polski"),
-        ("Swedish", "🇸🇪", "Svenska"),
+        ("Portuguese", "🇧🇷", "Português"),
         ("Romanian", "🇷🇴", "Română"),
-        ("Hebrew", "🇮🇱", "עברית")
+        ("Russian", "🇷🇺", "Русский"),
+        ("Spanish", "🇪🇸", "Español"),
+        ("Swedish", "🇸🇪", "Svenska"),
+        ("Turkish", "🇹🇷", "Türkçe"),
     ]
 
     var body: some View {
@@ -506,11 +505,11 @@ struct LanguagePickerSheet: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(language.native)
                                     .font(.body.weight(.medium))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                 if language.native != language.name {
                                     Text(language.name)
                                         .font(.caption)
-                                        .foregroundStyle(.white.opacity(0.5))
+                                        .foregroundStyle(.secondary)
                                 }
                             }
                             Spacer()
@@ -521,22 +520,20 @@ struct LanguagePickerSheet: View {
                             }
                         }
                     }
-                    .listRowBackground(Color.white.opacity(0.04))
+                    .listRowBackground(Color(.secondarySystemGroupedBackground))
                 }
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
-            .background(Color.black)
-            .navigationTitle("Language")
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(L.t("language", appState.profile.selectedLanguage))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(.white.opacity(0.5))
+                    Button(L.t("cancel", appState.profile.selectedLanguage)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L.t("save", appState.profile.selectedLanguage)) {
                         appState.profile.selectedLanguage = selectedLanguage
                         appState.saveProfile()
                         dismiss()
@@ -545,7 +542,6 @@ struct LanguagePickerSheet: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
         .onAppear {
             selectedLanguage = appState.profile.selectedLanguage
         }
