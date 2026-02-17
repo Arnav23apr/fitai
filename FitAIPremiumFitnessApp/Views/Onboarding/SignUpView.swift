@@ -57,7 +57,9 @@ struct SignUpView: View {
                     onContinue()
                 }) {
                     HStack(spacing: 10) {
-                        GoogleLogo()
+                        Image("GoogleLogo")
+                            .resizable()
+                            .scaledToFit()
                             .frame(width: 20, height: 20)
                         Text("Sign in with Google")
                             .font(.system(size: 19, weight: .medium))

@@ -61,12 +61,19 @@ struct WelcomeView: View {
                 Image(isDark ? "FitAILogoWhite" : "FitAILogo")
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 120, height: 120)
-                    .clipShape(.rect(cornerRadius: 24))
+                    .frame(width: 160, height: 160)
+                    .clipShape(.rect(cornerRadius: 32))
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
 
-                Text("Your personal AI fitness coach.\nScan, plan, and compete.")
+                Text("Your personal AI\nfitness coach.")
+                    .font(.system(.title, design: .default, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .opacity(appeared ? 1 : 0)
+                    .offset(y: appeared ? 0 : 15)
+
+                Text("Scan, plan, and compete.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -89,14 +96,9 @@ struct WelcomeView: View {
                 }
 
                 Button(action: { onLogin?() ?? onContinue() }) {
-                    HStack(spacing: 4) {
-                        Text("Already have an account?")
-                            .foregroundStyle(.secondary)
-                        Text("Log In")
-                            .fontWeight(.bold)
-                            .foregroundStyle(isDark ? .white : .black)
-                    }
-                    .font(.subheadline)
+                    Text("Already have an account? Log In")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
                 }
                 .padding(.top, 4)
             }
