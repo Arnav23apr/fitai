@@ -175,24 +175,38 @@ struct CoachView: View {
             }
 
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                Text(message.content)
-                    .font(.subheadline)
-                    .foregroundStyle(message.role == .user ? Color(.systemBackground) : .primary)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(
-                        message.role == .user ?
-                        AnyShapeStyle(Color(.label)) :
-                        AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+                Group {
+                    if message.role == .assistant {
+                        MarkdownText(text: message.content)
+                            .foregroundStyle(.primary)
+                    } else {
+                        Text(message.content)
+                            .font(.subheadline)
+                            .foregroundStyle(Color(.systemBackground))
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .background(
+                    message.role == .user ?
+                    AnyShapeStyle(Color(.label)) :
+                    AnyShapeStyle(Color(.secondarySystemGroupedBackground))
+                )
+                .clipShape(
+                    .rect(
+                        topLeadingRadius: message.role == .user ? 18 : 4,
+                        bottomLeadingRadius: 18,
+                        bottomTrailingRadius: message.role == .user ? 4 : 18,
+                        topTrailingRadius: 18
                     )
-                    .clipShape(.rect(cornerRadius: 18))
-                    .textSelection(.enabled)
+                )
+                .textSelection(.enabled)
 
                 Text(message.timestamp, format: .dateTime.hour().minute())
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
-            .frame(maxWidth: 280, alignment: message.role == .user ? .trailing : .leading)
+            .frame(maxWidth: 300, alignment: message.role == .user ? .trailing : .leading)
 
             if message.role == .user {
                 Spacer(minLength: 0)

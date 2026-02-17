@@ -7,6 +7,10 @@ struct ScanView: View {
     @State private var showPaywall: Bool = false
     @State private var showResultsSheet: Bool = false
     @State private var showTransformationSheet: Bool = false
+    @State private var showFrontSourcePicker: Bool = false
+    @State private var showBackSourcePicker: Bool = false
+    @State private var showFrontCamera: Bool = false
+    @State private var showBackCamera: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -128,17 +132,21 @@ struct ScanView: View {
             }
 
             HStack(spacing: 12) {
-                photoPickerCard(
+                photoSourceCard(
                     title: "Front",
                     subtitle: nil,
                     image: viewModel.frontImage,
-                    selection: $viewModel.frontPickerItem
+                    pickerSelection: $viewModel.frontPickerItem,
+                    showSourcePicker: $showFrontSourcePicker,
+                    showCamera: $showFrontCamera
                 )
-                photoPickerCard(
+                photoSourceCard(
                     title: "Back",
                     subtitle: "Optional",
                     image: viewModel.backImage,
-                    selection: $viewModel.backPickerItem
+                    pickerSelection: $viewModel.backPickerItem,
+                    showSourcePicker: $showBackSourcePicker,
+                    showCamera: $showBackCamera
                 )
             }
 
@@ -214,8 +222,10 @@ struct ScanView: View {
         .clipShape(.rect(cornerRadius: 16))
     }
 
-    private func photoPickerCard(title: String, subtitle: String?, image: UIImage?, selection: Binding<PhotosPickerItem?>) -> some View {
-        PhotosPicker(selection: selection, matching: .images) {
+    private func photoSourceCard(title: String, subtitle: String?, image: UIImage?, pickerSelection: Binding<PhotosPickerItem?>, showSourcePicker: Binding<Bool>, showCamera: Binding<Bool>) -> some View {
+        Button {
+            showSourcePicker.wrappedValue = true
+        } label: {
             VStack(spacing: 0) {
                 if let image {
                     Color.clear
@@ -247,7 +257,7 @@ struct ScanView: View {
                 } else {
                     VStack(spacing: 10) {
                         Spacer()
-                        Image(systemName: "photo.badge.plus")
+                        Image(systemName: "camera.fill")
                             .font(.system(size: 24))
                             .foregroundStyle(.white.opacity(0.3))
                         Text(title)
@@ -270,6 +280,24 @@ struct ScanView: View {
                     )
                 }
             }
+        }
+        .confirmationDialog("Choose \(title) Photo", isPresented: showSourcePicker, titleVisibility: .visible) {
+            Button("Take Photo") {
+                showCamera.wrappedValue = true
+            }
+            PhotosPicker(selection: pickerSelection, matching: .images) {
+                Text("Choose from Library")
+            }
+        }
+        .fullScreenCover(isPresented: showCamera) {
+            CameraProxyView { capturedImage in
+                if title == "Front" {
+                    viewModel.frontImage = capturedImage
+                } else {
+                    viewModel.backImage = capturedImage
+                }
+            }
+            .ignoresSafeArea()
         }
     }
 

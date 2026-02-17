@@ -6,6 +6,7 @@ struct CompeteView: View {
     @State private var selectedLeaderboardTab: LeaderboardTab = .thisWeek
     @State private var appeared: Bool = false
     @State private var streakFireTrigger: Int = 0
+    @State private var challengesExpanded: Bool = false
 
     private var currentTier: CompeteTier { CompeteTier.current(for: appState.profile.points) }
     private var nextTier: CompeteTier? { CompeteTier.next(for: appState.profile.points) }
@@ -529,7 +530,9 @@ struct CompeteView: View {
     // MARK: - Challenges Grid
 
     private var challengesGrid: some View {
-        VStack(spacing: 14) {
+        let visibleChallenges = challengesExpanded ? challenges : Array(challenges.prefix(2))
+
+        return VStack(spacing: 14) {
             HStack {
                 Text("Challenges")
                     .font(.title3.weight(.semibold))
@@ -540,8 +543,29 @@ struct CompeteView: View {
                     .foregroundStyle(.tertiary)
             }
 
-            ForEach(Array(challenges.enumerated()), id: \.element.id) { index, challenge in
+            ForEach(Array(visibleChallenges.enumerated()), id: \.element.id) { index, challenge in
                 challengeRow(challenge, index: index)
+            }
+
+            if challenges.count > 2 {
+                Button {
+                    withAnimation(.snappy(duration: 0.35)) {
+                        challengesExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(challengesExpanded ? "Show Less" : "Show All \(challenges.count) Challenges")
+                            .font(.subheadline.weight(.medium))
+                        Image(systemName: challengesExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.white.opacity(0.04))
+                    .clipShape(.rect(cornerRadius: 12))
+                }
+                .sensoryFeedback(.selection, trigger: challengesExpanded)
             }
         }
     }
