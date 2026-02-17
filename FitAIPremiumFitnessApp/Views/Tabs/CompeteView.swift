@@ -758,7 +758,7 @@ struct CompeteView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.white.opacity(0.03))
+        .background(Color.primary.opacity(0.03))
         .clipShape(.rect(cornerRadius: 12))
     }
 

@@ -36,7 +36,7 @@ struct BattleResultView: View {
             .padding(.top, 8)
             .padding(.bottom, 40)
         }
-        .background(Color.black)
+        .background(Color(.systemBackground))
         .onAppear {
             withAnimation(.easeOut(duration: 0.6).delay(0.5)) {
                 showStamp = true
@@ -61,7 +61,7 @@ struct BattleResultView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.title2)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
         }
     }
@@ -151,11 +151,11 @@ struct BattleResultView: View {
                     .foregroundStyle(.yellow)
                 Text("\(battle.winner.name) wins by \(String(format: "%.1f", battle.scoreDifference)) points!")
                     .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 16)
-            .background(Color.white.opacity(0.06))
+            .background(Color.primary.opacity(0.06))
             .clipShape(Capsule())
         }
     }
@@ -180,7 +180,7 @@ struct BattleResultView: View {
             HStack {
                 Text("Overall Score")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -192,7 +192,7 @@ struct BattleResultView: View {
             )
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
@@ -202,7 +202,7 @@ struct BattleResultView: View {
             HStack {
                 Text("Muscle Breakdown")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -217,7 +217,7 @@ struct BattleResultView: View {
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
@@ -244,7 +244,7 @@ struct BattleResultView: View {
                 HStack {
                     Text(label)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                     Spacer()
                 }
             }
@@ -252,7 +252,7 @@ struct BattleResultView: View {
             HStack(spacing: 10) {
                 Text(scoreText(leftValue))
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .foregroundStyle(leftValue >= rightValue ? .green : .white.opacity(0.5))
+                    .foregroundStyle(leftValue >= rightValue ? .green : .secondary)
                     .frame(width: 32, alignment: .trailing)
 
                 GeometryReader { geo in
@@ -262,10 +262,10 @@ struct BattleResultView: View {
 
                     HStack(spacing: 2) {
                         Capsule()
-                            .fill(leftValue >= rightValue ? Color.green : Color.white.opacity(0.15))
+                            .fill(leftValue >= rightValue ? Color.green : Color.primary.opacity(0.15))
                             .frame(width: leftWidth, height: 8)
                         Capsule()
-                            .fill(rightValue > leftValue ? Color.red : Color.white.opacity(0.15))
+                            .fill(rightValue > leftValue ? Color.red : Color.primary.opacity(0.15))
                             .frame(width: rightWidth, height: 8)
                     }
                 }
@@ -273,7 +273,7 @@ struct BattleResultView: View {
 
                 Text(scoreText(rightValue))
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
-                    .foregroundStyle(rightValue > leftValue ? .red : .white.opacity(0.5))
+                    .foregroundStyle(rightValue > leftValue ? .red : .secondary)
                     .frame(width: 32, alignment: .leading)
             }
 
@@ -281,11 +281,11 @@ struct BattleResultView: View {
                 HStack {
                     Text(leftName)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                     Spacer()
                     Text(rightName)
                         .font(.caption2)
-                        .foregroundStyle(.white.opacity(0.3))
+                        .foregroundStyle(.tertiary)
                 }
             }
         }
@@ -316,10 +316,10 @@ struct BattleResultView: View {
             } label: {
                 Text("Done")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color.primary.opacity(0.06))
                     .clipShape(.rect(cornerRadius: 12))
             }
         }
