@@ -195,9 +195,14 @@ struct ProfileView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
+                if !appState.scanHistory.isEmpty {
+                    Text("\(appState.scanHistory.count) scans")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
 
-            if appState.profile.totalScans == 0 {
+            if appState.scanHistory.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.bar")
                         .font(.title2)
@@ -210,26 +215,57 @@ struct ProfileView: View {
                 .padding(32)
                 .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(.rect(cornerRadius: 16))
-            } else if let score = appState.profile.latestScore, let date = appState.profile.lastScanDate {
-                HStack(spacing: 14) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(String(format: "%.1f", score))
-                            .font(.system(.title2, design: .rounded, weight: .bold))
-                            .foregroundStyle(.primary)
-                        Text(date, format: .dateTime.month(.abbreviated).day().year())
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+            } else {
+                ForEach(appState.scanHistory.prefix(5)) { entry in
+                    scanHistoryRow(entry)
                 }
-                .padding(16)
-                .background(Color(.secondarySystemGroupedBackground))
-                .clipShape(.rect(cornerRadius: 14))
             }
         }
+    }
+
+    private func scanHistoryRow(_ entry: ScanHistoryEntry) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(scoreColor(entry.overallScore).opacity(0.12))
+                    .frame(width: 44, height: 44)
+                Text(String(format: "%.1f", entry.overallScore))
+                    .font(.system(.caption, design: .rounded, weight: .bold))
+                    .foregroundStyle(scoreColor(entry.overallScore))
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.date, format: .dateTime.month(.abbreviated).day().year())
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
+                if !entry.strongPoints.isEmpty {
+                    Text(entry.strongPoints.prefix(2).joined(separator: ", "))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(String(format: "%.1f", entry.overallScore))
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+                    .foregroundStyle(.primary)
+                Text("/10")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(14)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(.rect(cornerRadius: 14))
+    }
+
+    private func scoreColor(_ score: Double) -> Color {
+        if score >= 7 { return .green }
+        if score >= 5 { return .yellow }
+        return .orange
     }
 
     private var settingsSection: some View {
