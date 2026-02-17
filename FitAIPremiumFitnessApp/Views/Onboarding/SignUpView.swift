@@ -6,6 +6,11 @@ struct SignUpView: View {
     @Environment(\.colorScheme) private var colorScheme
     var onContinue: () -> Void
     @State private var appeared: Bool = false
+    @State private var showEmailForm: Bool = false
+    @State private var email: String = ""
+    @State private var password: String = ""
+    @State private var isSignUp: Bool = false
+    @State private var showConfirmationAlert: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -90,8 +95,9 @@ struct SignUpView: View {
                 .disabled(appState.isAuthenticating)
 
                 Button(action: {
-                    appState.profile.name = "Athlete"
-                    onContinue()
+                    withAnimation(.spring(duration: 0.35)) {
+                        showEmailForm = true
+                    }
                 }) {
                     HStack(spacing: 10) {
                         Image(systemName: "envelope")
@@ -108,6 +114,10 @@ struct SignUpView: View {
                         RoundedRectangle(cornerRadius: 28)
                             .strokeBorder(Color(.systemGray4), lineWidth: 1)
                     )
+                }
+
+                if showEmailForm {
+                    emailFormSection
                 }
             }
             .padding(.horizontal, 24)
@@ -141,6 +151,96 @@ struct SignUpView: View {
         .onAppear {
             withAnimation(.easeOut(duration: 0.5)) {
                 appeared = true
+            }
+        }
+        .alert("Check Your Email", isPresented: $showConfirmationAlert) {
+            Button("OK") {}
+        } message: {
+            Text("We sent a confirmation link to \(email). Please verify your email to sign in.")
+        }
+        .onChange(of: appState.emailConfirmationNeeded) { _, newValue in
+            if newValue {
+                showConfirmationAlert = true
+                appState.emailConfirmationNeeded = false
+            }
+        }
+    }
+
+    private var emailFormSection: some View {
+        VStack(spacing: 12) {
+            TextField("Email", text: $email)
+                .textContentType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.emailAddress)
+                .padding(.horizontal, 16)
+                .frame(height: 50)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(.rect(cornerRadius: 14))
+
+            SecureField("Password", text: $password)
+                .textContentType(isSignUp ? .newPassword : .password)
+                .padding(.horizontal, 16)
+                .frame(height: 50)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(.rect(cornerRadius: 14))
+
+            if let error = appState.authError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button(action: submitEmail) {
+                HStack(spacing: 8) {
+                    if appState.isAuthenticating {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Text(isSignUp ? "Create Account" : "Sign In")
+                            .font(.system(size: 17, weight: .semibold))
+                    }
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    isFormValid
+                        ? Color.accentColor
+                        : Color.accentColor.opacity(0.4)
+                )
+                .clipShape(.rect(cornerRadius: 14))
+            }
+            .disabled(!isFormValid || appState.isAuthenticating)
+
+            Button(action: {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSignUp.toggle()
+                    appState.authError = nil
+                }
+            }) {
+                Text(isSignUp ? "Already have an account? **Sign In**" : "Don't have an account? **Sign Up**")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private var isFormValid: Bool {
+        email.contains("@") && email.contains(".") && password.count >= 6
+    }
+
+    private func submitEmail() {
+        Task {
+            if isSignUp {
+                await appState.signUpWithEmail(email: email, password: password)
+            } else {
+                await appState.signInWithEmail(email: email, password: password)
+            }
+            if appState.authError == nil && !appState.isAuthenticating && appState.isLoggedIn {
+                onContinue()
             }
         }
     }

@@ -19,11 +19,34 @@ class SupabaseAuthService {
         )
     }
 
+    func signUpWithEmail(email: String, password: String) async throws -> Session {
+        let result = try await supabaseAuth.signUp(email: email, password: password)
+        guard let session = result.session else {
+            throw AuthError.emailConfirmationRequired
+        }
+        return session
+    }
+
+    func signInWithEmail(email: String, password: String) async throws -> Session {
+        try await supabaseAuth.signIn(email: email, password: password)
+    }
+
     func signOut() async throws {
         try await supabaseAuth.signOut()
     }
 
     func currentSession() async -> Session? {
         try? await supabaseAuth.session
+    }
+}
+
+nonisolated enum AuthError: LocalizedError, Sendable {
+    case emailConfirmationRequired
+
+    var errorDescription: String? {
+        switch self {
+        case .emailConfirmationRequired:
+            return "Please check your email to confirm your account."
+        }
     }
 }
