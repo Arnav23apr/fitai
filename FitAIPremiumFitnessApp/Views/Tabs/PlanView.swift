@@ -646,46 +646,22 @@ struct PlanView: View {
 
     private var aiFloatingButton: some View {
         Button(action: { showCoach = true }) {
-            HStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "brain.head.profile.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(.primary)
-                }
-
-                Text("Ask me anything")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            .padding(.leading, 4)
-            .padding(.trailing, 18)
-            .padding(.vertical, 4)
-            .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .blue.opacity(0.3), radius: 16, y: 6)
-                    .shadow(color: .black.opacity(0.4), radius: 8, y: 4)
-            )
-            .overlay(
-                Capsule()
-                    .strokeBorder(
+            HStack(spacing: 0) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 52, height: 52)
+                    .background(
                         LinearGradient(
-                            colors: [.blue.opacity(0.3), .purple.opacity(0.2)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        lineWidth: 1
+                            colors: [Color(red: 0.35, green: 0.45, blue: 1.0), Color(red: 0.55, green: 0.35, blue: 0.95)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
                     )
-            )
+                    .clipShape(Circle())
+            }
+            .shadow(color: Color(red: 0.4, green: 0.35, blue: 1.0).opacity(0.45), radius: 14, y: 6)
+            .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
         }
         .padding(.trailing, 20)
         .padding(.bottom, 24)
