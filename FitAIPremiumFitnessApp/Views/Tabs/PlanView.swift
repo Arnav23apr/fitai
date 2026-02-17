@@ -1078,7 +1078,7 @@ struct PlanView: View {
         if workout.isRestDay { return .gray }
         let name = workout.name.lowercased()
         if name.contains("push") { return .red }
-        if name.contains("pull") { return .indigo }
+        if name.contains("pull") { return .blue }
         if name.contains("leg") { return .purple }
         if name.contains("upper") { return .cyan }
         if name.contains("lower") || name.contains("core") { return .orange }
