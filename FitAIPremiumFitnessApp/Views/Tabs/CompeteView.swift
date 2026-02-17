@@ -139,7 +139,7 @@ struct CompeteView: View {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Capsule()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color(.systemGray5))
                                 .frame(height: 8)
 
                             Capsule()
@@ -347,7 +347,7 @@ struct CompeteView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     ZStack {
-                        Color(white: 0.08)
+                        Color(.secondarySystemBackground)
                         Image(systemName: "figure.stand")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.quaternary)
@@ -380,7 +380,7 @@ struct CompeteView: View {
                     )
 
                     ZStack {
-                        Color(white: 0.08)
+                        Color(.secondarySystemBackground)
                         Image(systemName: "figure.stand")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.quaternary)
@@ -423,7 +423,7 @@ struct CompeteView: View {
                 }
                 .padding(16)
             }
-            .background(Color.white.opacity(0.03))
+            .background(Color(.secondarySystemGroupedBackground))
             .clipShape(.rect(cornerRadius: 18))
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
@@ -439,7 +439,7 @@ struct CompeteView: View {
             .foregroundStyle(.tertiary)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color.white.opacity(0.04))
+            .background(Color(.systemGray5))
             .clipShape(Capsule())
     }
 
@@ -474,7 +474,7 @@ struct CompeteView: View {
             weekdayDots
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 16))
     }
 
@@ -506,20 +506,20 @@ struct CompeteView: View {
                 VStack(spacing: 6) {
                     Text(days[index])
                         .font(.system(.caption2, design: .rounded, weight: .medium))
-                        .foregroundStyle(isToday ? .white : .white.opacity(0.3))
+                        .foregroundStyle(isToday ? .primary : .tertiary)
 
                     ZStack {
                         Circle()
-                            .fill(isCompleted ? Color.green : Color.white.opacity(0.06))
+                            .fill(isCompleted ? Color.green : Color(.systemGray5))
                             .frame(width: 28, height: 28)
 
                         if isCompleted {
                             Image(systemName: "checkmark")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.black)
+                                .foregroundStyle(.white)
                         } else if isToday {
                             Circle()
-                                .strokeBorder(Color.white.opacity(0.3), lineWidth: 1.5)
+                                .strokeBorder(Color.primary.opacity(0.3), lineWidth: 1.5)
                                 .frame(width: 28, height: 28)
                         }
                     }
@@ -564,7 +564,7 @@ struct CompeteView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 44)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(.rect(cornerRadius: 12))
                 }
                 .sensoryFeedback(.selection, trigger: challengesExpanded)
@@ -607,32 +607,32 @@ struct CompeteView: View {
         return HStack(spacing: 14) {
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(challenge.completed ? Color.green.opacity(0.12) : (isLocked ? Color.white.opacity(0.03) : Color.white.opacity(0.06)))
+                    .fill(challenge.completed ? Color.green.opacity(0.12) : Color(.systemGray5))
                     .frame(width: 44, height: 44)
 
                 Image(systemName: challenge.completed ? "checkmark.circle.fill" : challenge.icon)
                     .font(.system(size: 18))
-                    .foregroundStyle(challenge.completed ? .green : (isLocked ? .white.opacity(0.15) : .white.opacity(0.5)))
+                    .foregroundStyle(challenge.completed ? .green : (isLocked ? Color(.systemGray4) : .secondary))
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(challenge.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(isLocked ? .white.opacity(0.2) : .white)
+                        .foregroundStyle(isLocked ? .tertiary : .primary)
 
                     Text(challenge.priority)
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(Color.white.opacity(0.04))
+                        .background(Color(.systemGray5))
                         .clipShape(Capsule())
                 }
 
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
-                            .fill(Color.white.opacity(0.06))
+                            .fill(Color(.systemGray5))
                             .frame(height: 4)
                         Capsule()
                             .fill(challenge.completed ? Color.green : Color.yellow)
@@ -654,7 +654,7 @@ struct CompeteView: View {
             }
         }
         .padding(12)
-        .background(challenge.completed ? Color.green.opacity(0.03) : Color.white.opacity(0.03))
+        .background(challenge.completed ? Color.green.opacity(0.05) : Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 14))
         .opacity(isLocked ? 0.5 : 1)
     }
@@ -679,10 +679,10 @@ struct CompeteView: View {
                     } label: {
                         Text(tab.rawValue)
                             .font(.system(.caption, design: .rounded, weight: .semibold))
-                            .foregroundStyle(selectedLeaderboardTab == tab ? .white : .white.opacity(0.35))
+                            .foregroundStyle(selectedLeaderboardTab == tab ? .primary : .tertiary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
-                            .background(selectedLeaderboardTab == tab ? Color.white.opacity(0.1) : Color.clear)
+                            .background(selectedLeaderboardTab == tab ? Color(.systemGray5) : Color.clear)
                             .clipShape(Capsule())
                     }
                 }
@@ -834,7 +834,7 @@ struct CompeteView: View {
         VStack(spacing: 8) {
             ZStack {
                 Circle()
-                    .fill(achievement.isUnlocked ? tierColorFor(achievement.tier.rawValue).opacity(0.15) : Color.white.opacity(0.04))
+                    .fill(achievement.isUnlocked ? tierColorFor(achievement.tier.rawValue).opacity(0.15) : Color(.systemGray5))
                     .frame(width: 52, height: 52)
 
                 if achievement.isUnlocked {
@@ -858,17 +858,17 @@ struct CompeteView: View {
 
             Text(achievement.title)
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(achievement.isUnlocked ? .white : .white.opacity(0.3))
+                .foregroundStyle(achievement.isUnlocked ? .primary : .tertiary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
 
             Text("+\(achievement.xpReward) XP")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
-                .foregroundStyle(achievement.isUnlocked ? .green : .white.opacity(0.2))
+                .foregroundStyle(achievement.isUnlocked ? .green : Color(.systemGray3))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(achievement.isUnlocked ? tierColorFor(achievement.tier.rawValue).opacity(0.04) : Color.white.opacity(0.02))
+        .background(achievement.isUnlocked ? tierColorFor(achievement.tier.rawValue).opacity(0.06) : Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 14))
     }
 
@@ -889,7 +889,7 @@ struct CompeteView: View {
             ForEach(activityFeed) { item in
                 HStack(spacing: 12) {
                     Circle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(Color(.systemGray5))
                         .frame(width: 32, height: 32)
                         .overlay(
                             Image(systemName: item.icon)
