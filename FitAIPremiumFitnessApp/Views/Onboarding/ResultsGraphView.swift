@@ -10,8 +10,14 @@ struct ResultsGraphView: View {
     @State private var showLabels: Bool = false
     @State private var showSubtext: Bool = false
     @State private var hapticTick: Int = 0
+    @State private var animationTimer: Timer?
+    @State private var animationStart: Date?
 
     private var isDark: Bool { colorScheme == .dark }
+
+    private let drawDuration: Double = 2.2
+    private let drawDelay: Double = 0.5
+    private let traditionalDelay: Double = 0.2
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,6 +66,10 @@ struct ResultsGraphView: View {
                 appeared = true
             }
             startGraphAnimation()
+        }
+        .onDisappear {
+            animationTimer?.invalidate()
+            animationTimer = nil
         }
     }
 
@@ -179,8 +189,17 @@ struct ResultsGraphView: View {
                 )
             }
 
+            if fitDrawCount > 1, let tip = fitVisible.last, fitAIProgress < 0.98 {
+                let glowSize: CGFloat = 6
+                context.fill(
+                    Path(ellipseIn: CGRect(x: tip.x - glowSize / 2, y: tip.y - glowSize / 2, width: glowSize, height: glowSize)),
+                    with: .color(Color(.label).opacity(0.6))
+                )
+            }
+
             if traditionalProgress > 0.6 {
-                let labelPt = traditionalPoints[Int(CGFloat(traditionalPoints.count) * 0.55)]
+                let labelIdx = min(Int(CGFloat(traditionalPoints.count) * 0.55), traditionalPoints.count - 1)
+                let labelPt = traditionalPoints[labelIdx]
                 let resolved = context.resolve(
                     Text("Traditional Diet")
                         .font(.system(size: 10, weight: .medium))
@@ -256,28 +275,45 @@ struct ResultsGraphView: View {
         }
     }
 
-    private func startGraphAnimation() {
-        let totalDuration: Double = 2.0
-        let tickCount = 12
+    private func easeInOut(_ t: CGFloat) -> CGFloat {
+        t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+    }
 
-        for i in 0..<tickCount {
-            let delay = 0.5 + totalDuration * Double(i) / Double(tickCount)
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+    private func startGraphAnimation() {
+        let startTime = Date().addingTimeInterval(drawDelay)
+        animationStart = startTime
+        var lastHapticBucket = -1
+
+        animationTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { timer in
+            let now = Date()
+            let elapsed = now.timeIntervalSince(startTime)
+
+            guard elapsed > 0 else { return }
+
+            let fitT = min(CGFloat(elapsed / drawDuration), 1.0)
+            let tradElapsed = elapsed - traditionalDelay
+            let tradT = tradElapsed > 0 ? min(CGFloat(tradElapsed / drawDuration), 1.0) : 0
+
+            fitAIProgress = easeInOut(fitT)
+            traditionalProgress = tradElapsed > 0 ? easeInOut(tradT) : 0
+
+            let hapticBucket = Int(fitT * 12)
+            if hapticBucket > lastHapticBucket {
+                lastHapticBucket = hapticBucket
                 hapticTick += 1
             }
-        }
 
-        withAnimation(.easeInOut(duration: totalDuration).delay(0.5)) {
-            fitAIProgress = 1.0
-        }
-        withAnimation(.easeInOut(duration: totalDuration).delay(0.7)) {
-            traditionalProgress = 1.0
-        }
-        withAnimation(.easeOut(duration: 0.4).delay(0.5 + totalDuration)) {
-            showLabels = true
-        }
-        withAnimation(.easeOut(duration: 0.4).delay(0.5 + totalDuration + 0.3)) {
-            showSubtext = true
+            if fitT >= 1.0 && tradT >= 1.0 {
+                timer.invalidate()
+                animationTimer = nil
+
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showLabels = true
+                }
+                withAnimation(.easeOut(duration: 0.4).delay(0.2)) {
+                    showSubtext = true
+                }
+            }
         }
     }
 }
