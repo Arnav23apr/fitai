@@ -108,15 +108,15 @@ struct ScanView: View {
                 if let date = appState.profile.lastScanDate {
                     Text(date, format: .dateTime.year().month(.twoDigits).day(.twoDigits))
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 } else {
                     Text(L.t("noScanYet", lang))
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.3))
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(20)
@@ -176,10 +176,10 @@ struct ScanView: View {
                     }
                 }
                 .font(.headline)
-                .foregroundStyle(viewModel.frontImage != nil ? .black : .white.opacity(0.4))
+                .foregroundStyle(viewModel.frontImage != nil ? Color(.systemBackground) : .secondary)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
-                .background(viewModel.frontImage != nil ? Color.white : Color.white.opacity(0.08))
+                .background(viewModel.frontImage != nil ? Color.primary : Color.primary.opacity(0.08))
                 .clipShape(.rect(cornerRadius: 14))
             }
             .disabled(viewModel.frontImage == nil || viewModel.isAnalyzing)
@@ -192,13 +192,13 @@ struct ScanView: View {
                         .foregroundStyle(.orange)
                     Text(error)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                     Spacer()
                     Button(action: { viewModel.errorMessage = nil }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                     }
                 }
                 .padding(10)
@@ -213,7 +213,7 @@ struct ScanView: View {
                     Text(L.t("photoGuidelines", lang))
                         .font(.subheadline)
                 }
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
             }
         }
@@ -263,14 +263,14 @@ struct ScanView: View {
                         Spacer()
                         Image(systemName: "camera.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                         Text(title)
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(.primary.opacity(0.7))
                         if let subtitle {
                             Text(subtitle)
                                 .font(.caption)
-                                .foregroundStyle(.white.opacity(0.3))
+                                .foregroundStyle(.tertiary)
                         }
                         Spacer()
                     }
@@ -494,13 +494,13 @@ struct ScanResultsSheet: View {
                         .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.t("done", lang), action: onDismiss)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(action: { showShareSheet = true }) {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 14))
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -532,7 +532,7 @@ struct ScanResultsSheet: View {
                     .foregroundStyle(.yellow)
                 Text(L.t("ratings", lang))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -551,10 +551,10 @@ struct ScanResultsSheet: View {
                         Text(savedToPhotos ? L.t("saved", lang) : L.t("save", lang))
                     }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.primary.opacity(0.1))
                     .clipShape(.rect(cornerRadius: 14))
                 }
                 .sensoryFeedback(.success, trigger: savedToPhotos)
@@ -566,16 +566,16 @@ struct ScanResultsSheet: View {
                         Text(L.t("share", lang))
                     }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.black)
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
-                    .background(Color.white)
+                    .background(Color.primary)
                     .clipShape(.rect(cornerRadius: 14))
                 }
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
     }
 
@@ -583,7 +583,7 @@ struct ScanResultsSheet: View {
         VStack(spacing: 12) {
             ZStack {
                 Circle()
-                    .stroke(Color.white.opacity(0.06), lineWidth: 10)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 10)
                     .frame(width: 120, height: 120)
                 Circle()
                     .trim(from: 0, to: result.overallScore / 10)
@@ -596,10 +596,10 @@ struct ScanResultsSheet: View {
                 VStack(spacing: 2) {
                     Text(String(format: "%.1f", result.overallScore))
                         .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                     Text("/ 10")
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
             }
             Text(scoreLabel(result.overallScore))
@@ -625,11 +625,11 @@ struct ScanResultsSheet: View {
                     .foregroundStyle(color)
                 Text(title)
                     .font(.caption.weight(.medium))
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(.secondary)
             }
             Text(value)
                 .font(.caption)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -646,7 +646,7 @@ struct ScanResultsSheet: View {
                     .foregroundStyle(.green)
                 Text(L.t("strengths", lang))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             FlowLayout(spacing: 8) {
                 ForEach(result.strongPoints, id: \.self) { point in
@@ -663,7 +663,7 @@ struct ScanResultsSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
     }
 
@@ -675,7 +675,7 @@ struct ScanResultsSheet: View {
                     .foregroundStyle(.orange)
                 Text(L.t("areasToImprove", lang))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(result.weakPoints, id: \.self) { point in
@@ -694,7 +694,7 @@ struct ScanResultsSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
     }
 
@@ -706,16 +706,16 @@ struct ScanResultsSheet: View {
                     .foregroundStyle(.blue)
                 Text(L.t("summary", lang))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             Text(result.summary)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
     }
 
@@ -727,20 +727,20 @@ struct ScanResultsSheet: View {
                     .foregroundStyle(.yellow)
                 Text(L.t("recommendations", lang))
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Array(result.recommendations.enumerated()), id: \.offset) { index, rec in
                     HStack(alignment: .top, spacing: 10) {
                         Text("\(index + 1)")
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                             .frame(width: 20, height: 20)
-                            .background(Color.white.opacity(0.1))
+                            .background(Color.primary.opacity(0.1))
                             .clipShape(Circle())
                         Text(rec)
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.7))
+                            .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
@@ -748,7 +748,7 @@ struct ScanResultsSheet: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
     }
 
@@ -792,10 +792,10 @@ struct TransformationSheet: View {
                             .tint(.white)
                         Text(L.t("generatingTransformation", lang))
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.6))
+                            .foregroundStyle(.secondary)
                         Text(L.t("mayTakeMinute", lang))
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                     }
                     Spacer()
                 } else if let result {
@@ -815,16 +815,16 @@ struct TransformationSheet: View {
                             VStack(spacing: 8) {
                                 Text(L.t("your90DayPotential", lang))
                                     .font(.title3.weight(.bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.primary)
                                 Text(result.description)
                                     .font(.subheadline)
-                                    .foregroundStyle(.white.opacity(0.5))
+                                    .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
 
                             Text(L.t("resultsDisclaimer", lang))
                                 .font(.caption2)
-                                .foregroundStyle(.white.opacity(0.25))
+                                .foregroundStyle(.tertiary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
                         }
@@ -837,10 +837,10 @@ struct TransformationSheet: View {
                     VStack(spacing: 12) {
                         Image(systemName: "photo.badge.exclamationmark")
                             .font(.system(size: 40))
-                            .foregroundStyle(.white.opacity(0.2))
+                            .foregroundStyle(.tertiary)
                         Text(L.t("couldNotGenerate", lang))
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
@@ -851,7 +851,7 @@ struct TransformationSheet: View {
                         .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.t("done", lang), action: onDismiss)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.primary)
                 }
             }
         }
@@ -882,7 +882,7 @@ struct PaywallSheet: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L.t("close", appState.profile.selectedLanguage)) { dismiss() }
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.secondary)
                 }
             }
         }

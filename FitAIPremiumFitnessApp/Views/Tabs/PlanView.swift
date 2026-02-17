@@ -151,7 +151,7 @@ struct PlanView: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color.primary.opacity(0.04))
                     .clipShape(.rect(cornerRadius: 8))
                 }
             }
@@ -159,7 +159,7 @@ struct PlanView: View {
         .padding(16)
         .background(
             LinearGradient(
-                colors: [Color.cyan.opacity(0.05), Color.white.opacity(0.02)],
+                colors: [Color.cyan.opacity(0.05), Color.clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -233,7 +233,7 @@ struct PlanView: View {
                         if !workout.isRestDay {
                             ZStack {
                                 Circle()
-                                    .stroke(Color.white.opacity(0.06), lineWidth: 5)
+                                    .stroke(Color.primary.opacity(0.06), lineWidth: 5)
                                     .frame(width: 60, height: 60)
 
                                 let exercisesDone = isCompleted ? workout.exercises.count : 0
@@ -256,7 +256,6 @@ struct PlanView: View {
 
                     if !workout.isRestDay {
                         Divider()
-                            .background(Color.white.opacity(0.06))
                             .padding(.vertical, 14)
 
                         HStack(spacing: 0) {
@@ -271,7 +270,7 @@ struct PlanView: View {
                             .frame(maxWidth: .infinity)
 
                             Rectangle()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.primary.opacity(0.06))
                                 .frame(width: 1, height: 28)
 
                             VStack(spacing: 2) {
@@ -285,7 +284,7 @@ struct PlanView: View {
                             .frame(maxWidth: .infinity)
 
                             Rectangle()
-                                .fill(Color.white.opacity(0.06))
+                                .fill(Color.primary.opacity(0.06))
                                 .frame(width: 1, height: 28)
 
                             VStack(spacing: 2) {
@@ -322,7 +321,7 @@ struct PlanView: View {
                 .padding(20)
                 .background(
                     LinearGradient(
-                        colors: [accentColor.opacity(0.08), Color.white.opacity(0.02)],
+                        colors: [accentColor.opacity(0.08), Color.clear],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -370,14 +369,14 @@ struct PlanView: View {
                     VStack(spacing: 8) {
                         Text(label)
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(isToday ? .white : .white.opacity(0.35))
+                            .foregroundStyle(isToday ? .primary : .tertiary)
 
                         ZStack {
                             Circle()
                                 .fill(
                                     completed ? Color.green :
-                                    isToday ? Color.white.opacity(0.12) :
-                                    Color.white.opacity(0.05)
+                                    isToday ? Color.primary.opacity(0.12) :
+                                    Color.primary.opacity(0.05)
                                 )
                                 .frame(width: 34, height: 34)
 
@@ -387,7 +386,7 @@ struct PlanView: View {
                                     .foregroundStyle(.black)
                             } else if isToday {
                                 Circle()
-                                    .fill(Color.white.opacity(0.4))
+                                    .fill(Color.primary.opacity(0.4))
                                     .frame(width: 6, height: 6)
                             }
                         }
@@ -421,7 +420,7 @@ struct PlanView: View {
             }
         }
         .padding(18)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 18))
     }
 
@@ -494,7 +493,7 @@ struct PlanView: View {
         .padding(18)
         .background(
             LinearGradient(
-                colors: [Color.green.opacity(0.06), Color.white.opacity(0.02)],
+                colors: [Color.green.opacity(0.06), Color.clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -524,17 +523,17 @@ struct PlanView: View {
             let weakLower = appState.profile.weakPoints.lowercased()
             VStack(spacing: 2) {
                 Circle()
-                    .fill(Color.white.opacity(0.15))
+                    .fill(Color.primary.opacity(0.15))
                     .frame(width: 14, height: 14)
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(weakLower.contains(where: { "chest,back,core,ab".contains($0) }) ? Color.orange.opacity(0.5) : Color.white.opacity(0.12))
+                    .fill(weakLower.contains(where: { "chest,back,core,ab".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
                     .frame(width: 18, height: 22)
                 HStack(spacing: 8) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.white.opacity(0.12))
+                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
                         .frame(width: 7, height: 24)
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.white.opacity(0.12))
+                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
                         .frame(width: 7, height: 24)
                 }
             }
@@ -571,7 +570,7 @@ struct PlanView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(28)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 18))
     }
 
@@ -633,14 +632,14 @@ struct PlanView: View {
                             .foregroundStyle(.quaternary)
                     }
                     .padding(14)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color.primary.opacity(0.04))
                     .clipShape(.rect(cornerRadius: 14))
                 }
                 .sensoryFeedback(.selection, trigger: selectedFocusItem?.id)
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.03))
+        .background(Color.primary.opacity(0.03))
         .clipShape(.rect(cornerRadius: 18))
     }
 
@@ -779,7 +778,7 @@ struct PlanView: View {
         .padding(16)
         .background(
             LinearGradient(
-                colors: [Color.yellow.opacity(0.04), Color.white.opacity(0.02)],
+                colors: [Color.yellow.opacity(0.04), Color.clear],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -815,7 +814,7 @@ struct PlanView: View {
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Color.white.opacity(0.06))
+                    .background(Color.primary.opacity(0.06))
                     .clipShape(.capsule)
             }
 
@@ -841,7 +840,7 @@ struct PlanView: View {
             VStack(spacing: 2) {
                 Text(workout.dayLabel)
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(isToday ? .white : .white.opacity(0.35))
+                    .foregroundStyle(isToday ? .primary : .tertiary)
                 if isToday {
                     Circle()
                         .fill(accentColor)
@@ -854,8 +853,8 @@ struct PlanView: View {
                 Image(systemName: workout.icon)
                     .font(.system(size: 16))
                     .foregroundStyle(
-                        completed ? .green :
-                        workout.isRestDay ? .white.opacity(0.2) : accentColor
+                        completed ? Color.green :
+                        workout.isRestDay ? Color(.tertiaryLabel) : accentColor
                     )
                     .frame(width: 38, height: 38)
                     .background(
@@ -868,7 +867,7 @@ struct PlanView: View {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(.green)
-                        .background(Circle().fill(.black).frame(width: 12, height: 12))
+                        .background(Circle().fill(Color(.systemBackground)).frame(width: 12, height: 12))
                         .offset(x: 14, y: 14)
                 }
             }
@@ -878,8 +877,8 @@ struct PlanView: View {
                     Text(workout.name)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(
-                            completed ? .white.opacity(0.5) :
-                            workout.isRestDay ? .white.opacity(0.3) : .white
+                            completed ? .secondary :
+                            workout.isRestDay ? .tertiary : .primary
                         )
                     if completed {
                         Text(L.t("doneLabel", lang))
@@ -937,7 +936,7 @@ struct PlanView: View {
         .padding(13)
         .background(
             completed ? Color.green.opacity(0.04) :
-            isToday ? accentColor.opacity(0.06) : Color.white.opacity(0.04)
+            isToday ? accentColor.opacity(0.06) : Color.primary.opacity(0.04)
         )
         .clipShape(.rect(cornerRadius: 14))
         .overlay(
@@ -990,7 +989,7 @@ struct PlanView: View {
         .padding(16)
         .background(
             LinearGradient(
-                colors: [Color.purple.opacity(0.06), Color.white.opacity(0.02)],
+                colors: [Color.purple.opacity(0.06), Color.clear],
                 startPoint: .leading,
                 endPoint: .trailing
             )
@@ -1052,7 +1051,7 @@ struct PlanView: View {
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
     }
 
@@ -1070,7 +1069,7 @@ struct PlanView: View {
 
     private var summaryDivider: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.06))
+            .fill(Color.primary.opacity(0.06))
             .frame(width: 1, height: 28)
     }
 

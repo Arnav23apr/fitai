@@ -70,11 +70,11 @@ struct WorkoutDetailSheet: View {
             HStack(spacing: 14) {
                 Image(systemName: workout.icon)
                     .font(.system(size: 24))
-                    .foregroundStyle(workout.isWeakPointFocus ? .orange : .white)
+                    .foregroundStyle(workout.isWeakPointFocus ? .orange : .primary)
                     .frame(width: 52, height: 52)
                     .background(
                         workout.isWeakPointFocus ?
-                        Color.orange.opacity(0.12) : Color.white.opacity(0.08)
+                        Color.orange.opacity(0.12) : Color.primary.opacity(0.08)
                     )
                     .clipShape(Circle())
 
@@ -82,7 +82,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 8) {
                         Text(workout.name)
                             .font(.title3.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(.primary)
                         if workout.isWeakPointFocus {
                             Text("FOCUS")
                                 .font(.system(size: 10, weight: .bold))
@@ -104,7 +104,7 @@ struct WorkoutDetailSheet: View {
                     }
                     Text(workout.focusAreas.joined(separator: " · "))
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.4))
+                        .foregroundStyle(.secondary)
                 }
 
                 Spacer()
@@ -119,7 +119,7 @@ struct WorkoutDetailSheet: View {
             }
         }
         .padding(18)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 18))
     }
 
@@ -129,24 +129,24 @@ struct WorkoutDetailSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(isAlreadyDone ? "Completed" : "In Progress")
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(isAlreadyDone ? .green : .white)
+                        .foregroundStyle(isAlreadyDone ? .green : .primary)
                     if workoutStarted && !isAlreadyDone {
                         Text(formatTime(elapsedSeconds))
                             .font(.system(.caption, design: .monospaced, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
                 Text("\(completedExercises.count)/\(workout.exercises.count)")
                     .font(.system(.title3, design: .rounded, weight: .bold))
-                    .foregroundStyle(allCompleted || isAlreadyDone ? .green : .white)
+                    .foregroundStyle(allCompleted || isAlreadyDone ? .green : .primary)
             }
 
             GeometryReader { geo in
                 let progress = workout.exercises.isEmpty ? 0.0 : Double(completedExercises.count) / Double(workout.exercises.count)
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(Color.primary.opacity(0.08))
                         .frame(height: 6)
                     Capsule()
                         .fill(
@@ -165,7 +165,7 @@ struct WorkoutDetailSheet: View {
         .padding(16)
         .background(
             (allCompleted || isAlreadyDone) ?
-            Color.green.opacity(0.06) : Color.white.opacity(0.04)
+            Color.green.opacity(0.06) : Color.primary.opacity(0.04)
         )
         .clipShape(.rect(cornerRadius: 14))
         .overlay(
@@ -177,7 +177,7 @@ struct WorkoutDetailSheet: View {
 
     private var miniDivider: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.06))
+            .fill(Color.primary.opacity(0.06))
             .frame(width: 1, height: 28)
     }
 
@@ -185,10 +185,10 @@ struct WorkoutDetailSheet: View {
         VStack(spacing: 3) {
             Text(value)
                 .font(.system(.headline, design: .rounded, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(.white.opacity(0.35))
+                .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -207,7 +207,7 @@ struct WorkoutDetailSheet: View {
             HStack {
                 Text("Exercises")
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
             }
 
@@ -226,25 +226,25 @@ struct WorkoutDetailSheet: View {
                         }) {
                             Image(systemName: isCompleted ? "checkmark.circle.fill" : "circle")
                                 .font(.system(size: 22))
-                                .foregroundStyle(isCompleted ? .green : .white.opacity(0.2))
+                                .foregroundStyle(isCompleted ? Color.green : Color(.tertiaryLabel))
                         }
                     } else {
                         Text("\(index + 1)")
                             .font(.system(.caption, design: .rounded, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                             .frame(width: 24, height: 24)
-                            .background(Color.white.opacity(0.06))
+                            .background(Color.primary.opacity(0.06))
                             .clipShape(Circle())
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(exercise.name)
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(isCompleted ? .white.opacity(0.4) : .white)
-                            .strikethrough(isCompleted, color: .white.opacity(0.3))
+                            .foregroundStyle(isCompleted ? .secondary : .primary)
+                            .strikethrough(isCompleted, color: .secondary)
                         Text(exercise.muscleGroup)
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                     }
 
                     Spacer()
@@ -252,14 +252,14 @@ struct WorkoutDetailSheet: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("\(exercise.sets) sets")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(isCompleted ? 0.3 : 0.6))
+                            .foregroundStyle(isCompleted ? .tertiary : .secondary)
                         Text(exercise.reps)
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(isCompleted ? 0.15 : 0.3))
+                            .foregroundStyle(isCompleted ? .quaternary : .tertiary)
                     }
                 }
                 .padding(14)
-                .background(isCompleted ? Color.green.opacity(0.04) : Color.white.opacity(0.04))
+                .background(isCompleted ? Color.green.opacity(0.04) : Color.primary.opacity(0.04))
                 .clipShape(.rect(cornerRadius: 14))
                 .sensoryFeedback(.impact(flexibility: .soft), trigger: isCompleted)
             }
@@ -315,10 +315,10 @@ struct WorkoutDetailSheet: View {
                         Text("Finish Early (\(completedExercises.count)/\(workout.exercises.count))")
                             .font(.headline)
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(Color.white.opacity(0.1))
+                    .background(Color.primary.opacity(0.1))
                     .clipShape(.rect(cornerRadius: 16))
                 }
             }
@@ -333,7 +333,7 @@ struct WorkoutDetailSheet: View {
                     .foregroundStyle(.yellow.opacity(0.7))
                 Text("Tips")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
 
             VStack(alignment: .leading, spacing: 6) {
@@ -346,19 +346,19 @@ struct WorkoutDetailSheet: View {
             }
         }
         .padding(16)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
     }
 
     private func tipRow(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Circle()
-                .fill(.white.opacity(0.2))
+                .fill(Color.primary.opacity(0.2))
                 .frame(width: 5, height: 5)
                 .padding(.top, 6)
             Text(text)
                 .font(.caption)
-                .foregroundStyle(.white.opacity(0.45))
+                .foregroundStyle(.secondary)
         }
     }
 

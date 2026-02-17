@@ -55,7 +55,7 @@ struct FocusAreaDetailSheet: View {
             VStack(spacing: 6) {
                 Text(area)
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
 
                 HStack(spacing: 6) {
                     Image(systemName: priority.icon)
@@ -79,7 +79,7 @@ struct FocusAreaDetailSheet: View {
             HStack {
                 Text("Current Score")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
                 Spacer()
                 Text(String(format: "%.1f/10", score))
                     .font(.system(.title3, design: .rounded, weight: .bold))
@@ -89,7 +89,7 @@ struct FocusAreaDetailSheet: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.08))
+                        .fill(Color.primary.opacity(0.08))
                         .frame(height: 8)
                     Capsule()
                         .fill(
@@ -105,7 +105,7 @@ struct FocusAreaDetailSheet: View {
             .frame(height: 8)
         }
         .padding(18)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
     }
 
@@ -117,17 +117,17 @@ struct FocusAreaDetailSheet: View {
                     .foregroundStyle(.blue)
                 Text("Why This Matters")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
 
             Text(whyText)
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
     }
 
@@ -139,32 +139,32 @@ struct FocusAreaDetailSheet: View {
                     .foregroundStyle(.green)
                 Text("Recommended Exercises")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.primary)
             }
 
             ForEach(Array(exercises.enumerated()), id: \.offset) { index, exercise in
                 HStack(spacing: 14) {
                     Text("\(index + 1)")
                         .font(.system(.caption2, design: .rounded, weight: .bold))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.secondary)
                         .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.08))
+                        .background(Color.primary.opacity(0.08))
                         .clipShape(Circle())
 
                     Text(exercise)
                         .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.white.opacity(0.8))
+                        .foregroundStyle(.primary.opacity(0.8))
 
                     Spacer()
                 }
                 .padding(12)
-                .background(Color.white.opacity(0.04))
+                .background(Color.primary.opacity(0.04))
                 .clipShape(.rect(cornerRadius: 12))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.white.opacity(0.04))
+        .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 16))
     }
 
