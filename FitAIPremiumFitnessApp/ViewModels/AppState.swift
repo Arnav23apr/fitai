@@ -60,6 +60,54 @@ class AppState {
         scanHistory = ScanHistoryService.shared.loadAll()
     }
 
+    var emailConfirmationNeeded: Bool = false
+
+    func signInWithEmail(email: String, password: String) async {
+        isAuthenticating = true
+        authError = nil
+        emailConfirmationNeeded = false
+        do {
+            let session = try await SupabaseAuthService.shared.signInWithEmail(email: email, password: password)
+            isLoggedIn = true
+            if let userEmail = session.user.email {
+                profile.email = userEmail
+            }
+            let meta = session.user.userMetadata
+            let fullName = meta["full_name"]?.stringValue ?? meta["name"]?.stringValue
+            if let name = fullName, !name.isEmpty {
+                profile.name = name
+            } else if profile.name.isEmpty {
+                profile.name = "Athlete"
+            }
+            saveProfile()
+        } catch {
+            authError = error.localizedDescription
+        }
+        isAuthenticating = false
+    }
+
+    func signUpWithEmail(email: String, password: String) async {
+        isAuthenticating = true
+        authError = nil
+        emailConfirmationNeeded = false
+        do {
+            let session = try await SupabaseAuthService.shared.signUpWithEmail(email: email, password: password)
+            isLoggedIn = true
+            if let userEmail = session.user.email {
+                profile.email = userEmail
+            }
+            if profile.name.isEmpty {
+                profile.name = "Athlete"
+            }
+            saveProfile()
+        } catch let error as AuthError where error == .emailConfirmationRequired {
+            emailConfirmationNeeded = true
+        } catch {
+            authError = error.localizedDescription
+        }
+        isAuthenticating = false
+    }
+
     func signInWithGoogle() async {
         isAuthenticating = true
         authError = nil
