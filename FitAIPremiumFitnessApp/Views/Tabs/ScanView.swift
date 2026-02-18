@@ -469,8 +469,7 @@ struct ScanResultsSheet: View {
                     VStack(spacing: 20) {
                         scoreSection(result)
                         bodyCompositionSection(result)
-                        strengthsSection(result)
-                        weaknessesSection(result)
+                        muscleHeatmapSection(result)
                         summarySection(result)
                         recommendationsSection(result)
 
@@ -633,56 +632,47 @@ struct ScanResultsSheet: View {
         .clipShape(.rect(cornerRadius: 14))
     }
 
-    private func strengthsSection(_ result: ScanResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private func muscleHeatmapSection(_ result: ScanResult) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 6) {
-                Image(systemName: "checkmark.seal.fill")
+                Image(systemName: "figure.stand")
                     .font(.system(size: 13))
-                    .foregroundStyle(.green)
-                Text(L.t("strengths", lang))
+                    .foregroundStyle(.blue)
+                Text(L.t("strengths", lang) + " & " + L.t("areasToImprove", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
             }
-            FlowLayout(spacing: 8) {
-                ForEach(result.strongPoints, id: \.self) { point in
-                    Text(point)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.green)
-                        .lineLimit(2)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.green.opacity(0.12))
-                        .clipShape(.rect(cornerRadius: 8))
+
+            MuscleHeatmapView(
+                strongPoints: result.strongPoints,
+                weakPoints: result.weakPoints
+            )
+            .frame(maxWidth: .infinity)
+
+            if !result.strongPoints.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(result.strongPoints.prefix(3), id: \.self) { point in
+                        HStack(spacing: 8) {
+                            Circle().fill(.green).frame(width: 6, height: 6)
+                            Text(point)
+                                .font(.caption)
+                                .foregroundStyle(.green.opacity(0.9))
+                                .lineLimit(2)
+                        }
+                    }
                 }
             }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
-    }
 
-    private func weaknessesSection(_ result: ScanResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "target")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.orange)
-                Text(L.t("areasToImprove", lang))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(result.weakPoints, id: \.self) { point in
-                    HStack(alignment: .top, spacing: 8) {
-                        Circle()
-                            .fill(.orange)
-                            .frame(width: 6, height: 6)
-                            .padding(.top, 6)
-                        Text(point)
-                            .font(.subheadline)
-                            .foregroundStyle(.orange)
-                            .fixedSize(horizontal: false, vertical: true)
+            if !result.weakPoints.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(result.weakPoints.prefix(3), id: \.self) { point in
+                        HStack(spacing: 8) {
+                            Circle().fill(.orange).frame(width: 6, height: 6)
+                            Text(point)
+                                .font(.caption)
+                                .foregroundStyle(.orange.opacity(0.9))
+                                .lineLimit(2)
+                        }
                     }
                 }
             }
