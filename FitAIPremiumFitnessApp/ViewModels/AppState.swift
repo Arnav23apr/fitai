@@ -229,6 +229,12 @@ class AppState {
         profile.currentStreak = max(profile.currentStreak, streak)
     }
 
+    func addBonusPoints(_ points: Int) {
+        profile.points += points
+        updateTier()
+        saveProfile()
+    }
+
     private func updateTier() {
         let pts = profile.points
         if pts >= 10000 {
