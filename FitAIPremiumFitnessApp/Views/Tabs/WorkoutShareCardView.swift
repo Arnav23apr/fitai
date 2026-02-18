@@ -20,24 +20,10 @@ struct WorkoutShareCardView: View {
 
     private var volumeString: String {
         let vol = Int(data.totalVolume)
-        if vol >= 1000 {
-            let formatted = NumberFormatter()
-            formatted.numberStyle = .decimal
-            formatted.groupingSeparator = ","
-            return formatted.string(from: NSNumber(value: vol)) ?? "\(vol)"
-        }
-        return "\(vol)"
-    }
-
-    private var focusEmoji: String {
-        let focus = data.focusAreas.first?.lowercased() ?? ""
-        if focus.contains("chest") { return "💪" }
-        if focus.contains("back") { return "🔱" }
-        if focus.contains("leg") || focus.contains("glute") { return "🦵" }
-        if focus.contains("shoulder") { return "🏋️" }
-        if focus.contains("arm") || focus.contains("bicep") || focus.contains("tricep") { return "💪" }
-        if focus.contains("core") || focus.contains("ab") { return "🔥" }
-        return "💪"
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.groupingSeparator = ","
+        return formatter.string(from: NSNumber(value: vol)) ?? "\(vol)"
     }
 
     private var focusLabel: String {
@@ -47,228 +33,108 @@ struct WorkoutShareCardView: View {
         return data.focusAreas.prefix(2).joined(separator: " & ") + " Day"
     }
 
-    private var primaryMuscle: String {
-        data.focusAreas.first?.lowercased() ?? "chest"
+    private var workoutIconName: String {
+        let focus = data.focusAreas.joined(separator: " ").lowercased()
+        if focus.contains("chest") || focus.contains("push") || focus.contains("bench") {
+            return "WorkoutIconBench"
+        }
+        if focus.contains("back") || focus.contains("pull") {
+            return "WorkoutIconGym"
+        }
+        if focus.contains("leg") || focus.contains("glute") || focus.contains("quad") || focus.contains("squat") {
+            return "WorkoutIconSquat"
+        }
+        if focus.contains("shoulder") || focus.contains("overhead") || focus.contains("press") {
+            return "WorkoutIconOverhead"
+        }
+        if focus.contains("arm") || focus.contains("bicep") || focus.contains("tricep") {
+            return "WorkoutIconBicep"
+        }
+        if focus.contains("core") || focus.contains("ab") {
+            return "WorkoutIconAbs"
+        }
+        if focus.contains("upper") {
+            return "WorkoutIconDumbbell"
+        }
+        if focus.contains("lower") {
+            return "WorkoutIconSquat"
+        }
+        return "WorkoutIconDumbbell"
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            headerSection
-                .padding(.top, 28)
+            Spacer().frame(height: 40)
 
-            Spacer().frame(height: 28)
+            VStack(spacing: 4) {
+                Text("Volume Lifted")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
 
-            volumeSection
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(volumeString)
+                        .font(.system(size: 52, weight: .bold))
+                        .foregroundStyle(.white)
+                    Text("kg")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.45))
+                }
+            }
 
-            Spacer().frame(height: 24)
+            Spacer().frame(height: 32)
 
-            focusSection
+            VStack(spacing: 4) {
+                Text("Workout Focus")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
 
-            Spacer().frame(height: 20)
-
-            silhouetteSection
+                Text(focusLabel)
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.white)
+            }
 
             if data.prCount > 0 {
-                Spacer().frame(height: 20)
-                prSection
+                Spacer().frame(height: 32)
+
+                VStack(spacing: 4) {
+                    Text("New PR")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
+
+                    if let prName = data.prExerciseNames.first {
+                        Text(prName)
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.white)
+
+                        if data.prBestWeight > 0 {
+                            Text("\(Int(data.prBestWeight)) kg × \(data.prBestReps)")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                    }
+                }
             }
 
-            Spacer().frame(height: 28)
+            Spacer().frame(height: 40)
 
-            brandingSection
-                .padding(.bottom, 24)
+            Image(workoutIconName)
+                .resizable()
+                .renderingMode(.template)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 64, height: 64)
+                .foregroundStyle(Color(red: 0.0, green: 0.85, blue: 0.55))
+
+            Spacer().frame(height: 10)
+
+            Image("FitAILogoWhite")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(height: 28)
+                .opacity(0.5)
+
+            Spacer().frame(height: 40)
         }
         .frame(width: 340)
-        .background(
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.black.opacity(0.55))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [.white.opacity(0.25), .white.opacity(0.05), .white.opacity(0.15)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                )
-        )
-    }
-
-    private var headerSection: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 10, weight: .bold))
-                Text("FITAI WORKOUT SUMMARY")
-                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                    .tracking(2)
-            }
-            .foregroundStyle(.white.opacity(0.5))
-        }
-    }
-
-    private var volumeSection: some View {
-        VStack(spacing: 2) {
-            Text("TOTAL VOLUME")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .tracking(2)
-                .foregroundStyle(.white.opacity(0.45))
-
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(volumeString)
-                    .font(.system(size: 64, weight: .black, design: .rounded))
-                    .foregroundStyle(.white)
-                Text("kg")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.4))
-            }
-
-            Text("moved today")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.4))
-        }
-    }
-
-    private var focusSection: some View {
-        VStack(spacing: 8) {
-            Rectangle()
-                .fill(.white.opacity(0.08))
-                .frame(width: 60, height: 1)
-
-            HStack(spacing: 6) {
-                Text("WORKOUT FOCUS")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .tracking(1.5)
-                    .foregroundStyle(.white.opacity(0.4))
-            }
-
-            Text("\(focusEmoji) \(focusLabel)")
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-        }
-    }
-
-    private var silhouetteSection: some View {
-        ZStack {
-            Image(systemName: "figure.stand")
-                .font(.system(size: 90, weight: .ultraLight))
-                .foregroundStyle(.white.opacity(0.08))
-
-            muscleGlow
-        }
-        .frame(height: 120)
-    }
-
-    @ViewBuilder
-    private var muscleGlow: some View {
-        let muscle = primaryMuscle
-        if muscle.contains("chest") || muscle.contains("push") {
-            glowDot(offset: CGSize(width: 0, height: -22), color: .cyan)
-        } else if muscle.contains("back") || muscle.contains("pull") {
-            glowDot(offset: CGSize(width: 0, height: -16), color: .blue)
-        } else if muscle.contains("shoulder") {
-            HStack(spacing: 30) {
-                glowDot(offset: .zero, color: .orange)
-                glowDot(offset: .zero, color: .orange)
-            }
-            .offset(y: -30)
-        } else if muscle.contains("leg") || muscle.contains("glute") || muscle.contains("quad") {
-            VStack(spacing: 0) {
-                Spacer()
-                HStack(spacing: 14) {
-                    glowDot(offset: .zero, color: .green)
-                    glowDot(offset: .zero, color: .green)
-                }
-            }
-            .offset(y: 16)
-        } else if muscle.contains("arm") || muscle.contains("bicep") || muscle.contains("tricep") {
-            HStack(spacing: 44) {
-                glowDot(offset: .zero, color: .purple)
-                glowDot(offset: .zero, color: .purple)
-            }
-            .offset(y: -14)
-        } else if muscle.contains("core") || muscle.contains("ab") {
-            glowDot(offset: CGSize(width: 0, height: 2), color: .red)
-        } else {
-            glowDot(offset: CGSize(width: 0, height: -10), color: .cyan)
-        }
-    }
-
-    private func glowDot(offset: CGSize, color: Color) -> some View {
-        Circle()
-            .fill(
-                RadialGradient(
-                    colors: [color.opacity(0.6), color.opacity(0.2), color.opacity(0)],
-                    center: .center,
-                    startRadius: 2,
-                    endRadius: 28
-                )
-            )
-            .frame(width: 56, height: 56)
-            .blur(radius: 6)
-            .offset(offset)
-    }
-
-    private var prSection: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                Text("🏆")
-                    .font(.system(size: 18))
-                Text("NEW PR")
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .tracking(1)
-                    .foregroundStyle(Color(red: 1, green: 0.84, blue: 0.3))
-            }
-
-            if let prName = data.prExerciseNames.first {
-                Text(prName)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.9))
-
-                if data.prBestWeight > 0 {
-                    Text("\(Int(data.prBestWeight)) kg × \(data.prBestReps)")
-                        .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.5))
-                }
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(red: 1, green: 0.84, blue: 0.3).opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color(red: 1, green: 0.84, blue: 0.3).opacity(0.15), lineWidth: 1)
-                )
-        )
-        .padding(.horizontal, 24)
-    }
-
-    private var brandingSection: some View {
-        HStack(spacing: 6) {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(
-                    LinearGradient(
-                        colors: [.green, .cyan],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: 18, height: 18)
-                .overlay {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.black)
-                }
-                .clipShape(.rect(cornerRadius: 4))
-            Text("FitAI")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .foregroundStyle(.white.opacity(0.3))
-        }
     }
 }
 
@@ -277,7 +143,6 @@ struct WorkoutShareOverlay: View {
     let onDismiss: () -> Void
 
     @State private var cardAppeared: Bool = false
-    @State private var isSharing: Bool = false
 
     var body: some View {
         ZStack {
@@ -287,7 +152,7 @@ struct WorkoutShareOverlay: View {
 
             VStack(spacing: 24) {
                 WorkoutShareCardView(data: data)
-                    .shadow(color: .cyan.opacity(0.15), radius: 40, y: 10)
+                    .shadow(color: .green.opacity(0.15), radius: 40, y: 10)
                     .scaleEffect(cardAppeared ? 1 : 0.85)
                     .opacity(cardAppeared ? 1 : 0)
 
