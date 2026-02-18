@@ -824,6 +824,15 @@ struct WorkoutDetailSheet: View {
     private func buildShareData() -> WorkoutShareCardData {
         let totalVolume = exerciseVolumes.values.reduce(0, +)
         let completedNames = workout.exercises.filter { completedExercises.contains($0.id) }.map(\.name)
+
+        var bestWeight: Double = 0
+        var bestReps: Int = 0
+        if let firstName = prExerciseNames.first {
+            let history = ExerciseLogService.shared.history(for: firstName)
+            bestWeight = history.personalBestWeight
+            bestReps = history.personalBestReps
+        }
+
         return WorkoutShareCardData(
             workoutName: workout.name,
             focusAreas: workout.focusAreas,
@@ -834,7 +843,9 @@ struct WorkoutDetailSheet: View {
             totalSets: workout.exercises.filter { completedExercises.contains($0.id) }.reduce(0) { $0 + $1.sets },
             prCount: exercisePRs.count,
             prExerciseNames: prExerciseNames,
-            pointsEarned: workoutPoints
+            pointsEarned: workoutPoints,
+            prBestWeight: bestWeight,
+            prBestReps: bestReps
         )
     }
 }
