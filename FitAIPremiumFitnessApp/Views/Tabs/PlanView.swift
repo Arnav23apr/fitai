@@ -824,7 +824,7 @@ struct PlanView: View {
                         selectedDay = workout
                     }
                 }) {
-                    workoutRow(workout, isToday: index == todayIndex)
+                    workoutRow(workout, isToday: index == todayIndex, cardIndex: index)
                 }
                 .disabled(workout.isRestDay)
                 .sensoryFeedback(.selection, trigger: selectedDay?.id)
@@ -832,118 +832,179 @@ struct PlanView: View {
         }
     }
 
-    private func workoutRow(_ workout: WorkoutDay, isToday: Bool) -> some View {
+    private func workoutRow(_ workout: WorkoutDay, isToday: Bool, cardIndex: Int) -> some View {
         let completed = appState.isDayCompleted(workout.dayLabel)
         let accentColor = workoutAccentColor(workout)
+        let bgColor: Color = completed ? Color.green.opacity(0.04) : (isToday ? accentColor.opacity(0.06) : Color.primary.opacity(0.04))
+
+        return VStack(spacing: 0) {
+            workoutRowMain(workout: workout, isToday: isToday, completed: completed, accentColor: accentColor)
+            workoutRowMuscles(workout: workout, completed: completed)
+        }
+        .background(bgColor)
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            isToday && !completed ?
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(accentColor.opacity(0.15), lineWidth: 1) : nil
+        )
+        .opacity(completed ? 0.75 : 1)
+        .animation(.spring(duration: 0.35), value: completed)
+    }
+
+    private func workoutRowMain(workout: WorkoutDay, isToday: Bool, completed: Bool, accentColor: Color) -> some View {
+        let totalSetsCount = workout.exercises.reduce(0) { $0 + $1.sets }
+        let xpReward = 100 + workout.exercises.count * 10
 
         return HStack(spacing: 14) {
-            VStack(spacing: 2) {
-                Text(workout.dayLabel)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(isToday ? .primary : .tertiary)
-                if isToday {
-                    Circle()
-                        .fill(accentColor)
-                        .frame(width: 4, height: 4)
-                }
+            workoutDayLabel(dayLabel: workout.dayLabel, isToday: isToday, accentColor: accentColor)
+            workoutIcon(workout: workout, completed: completed, accentColor: accentColor)
+            workoutInfo(workout: workout, completed: completed, totalSetsCount: totalSetsCount)
+            Spacer()
+            if !workout.isRestDay {
+                workoutTrailing(workout: workout, completed: completed, accentColor: accentColor, xpReward: xpReward)
             }
-            .frame(width: 32)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+    }
 
-            ZStack {
-                Image(systemName: workout.icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(
-                        completed ? Color.green :
-                        workout.isRestDay ? Color(.tertiaryLabel) : accentColor
-                    )
-                    .frame(width: 38, height: 38)
-                    .background(
-                        completed ? Color.green.opacity(0.12) :
-                        accentColor.opacity(0.12)
-                    )
-                    .clipShape(Circle())
+    private func workoutDayLabel(dayLabel: String, isToday: Bool, accentColor: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(dayLabel)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(isToday ? .primary : .tertiary)
+            if isToday {
+                Circle()
+                    .fill(accentColor)
+                    .frame(width: 4, height: 4)
+            }
+        }
+        .frame(width: 32)
+    }
 
+    private func workoutIcon(workout: WorkoutDay, completed: Bool, accentColor: Color) -> some View {
+        let iconColor: Color = completed ? .green : (workout.isRestDay ? Color(.tertiaryLabel) : accentColor)
+        let iconBg: Color = completed ? Color.green.opacity(0.12) : accentColor.opacity(0.12)
+
+        return ZStack {
+            Image(systemName: workout.icon)
+                .font(.system(size: 16))
+                .foregroundStyle(iconColor)
+                .frame(width: 42, height: 42)
+                .background(iconBg)
+                .clipShape(Circle())
+
+            if completed {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.green)
+                    .background(Circle().fill(Color(.systemBackground)).frame(width: 12, height: 12))
+                    .offset(x: 16, y: 16)
+            }
+        }
+    }
+
+    private func workoutInfo(workout: WorkoutDay, completed: Bool, totalSetsCount: Int) -> some View {
+        let nameColor: Color = completed ? .secondary : (workout.isRestDay ? Color(.tertiaryLabel) : .primary)
+
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(workout.name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(nameColor)
                 if completed {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.green)
-                        .background(Circle().fill(Color(.systemBackground)).frame(width: 12, height: 12))
-                        .offset(x: 14, y: 14)
+                    workoutBadge(text: L.t("doneLabel", lang), color: .green)
+                } else if workout.isWeakPointFocus {
+                    workoutBadge(text: L.t("focusLabel", lang), color: .orange)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            if !workout.isRestDay {
                 HStack(spacing: 6) {
-                    Text(workout.name)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(
-                            completed ? .secondary :
-                            workout.isRestDay ? .tertiary : .primary
-                        )
-                    if completed {
-                        Text(L.t("doneLabel", lang))
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.green)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.green.opacity(0.15))
-                            .clipShape(.capsule)
-                    } else if workout.isWeakPointFocus {
-                        Text(L.t("focusLabel", lang))
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.orange)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.orange.opacity(0.15))
-                            .clipShape(.capsule)
-                    }
+                    Label("\(estimatedMinutes(workout))m", systemImage: "clock")
+                    Label("\(totalSetsCount)", systemImage: "square.stack.fill")
+                    Label("\(workout.exercises.count)", systemImage: "list.bullet")
                 }
-
-                if !workout.isRestDay {
-                    HStack(spacing: 8) {
-                        Text(workout.focusAreas.joined(separator: " · "))
-                            .lineLimit(1)
-                        Text("·")
-                        Text("\(estimatedMinutes(workout))min")
-                    }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.tertiary)
+            } else {
+                Text(workout.focusAreas.joined(separator: " · "))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
-                } else {
-                    Text(workout.focusAreas.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                }
-            }
-
-            Spacer()
-
-            if !workout.isRestDay {
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(workout.exercises.count)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                    Text(workoutDifficulty(workout))
-                        .font(.system(size: 9))
-                        .foregroundStyle(accentColor.opacity(0.6))
-                }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.quaternary)
             }
         }
-        .padding(13)
-        .background(
-            completed ? Color.green.opacity(0.04) :
-            isToday ? accentColor.opacity(0.06) : Color.primary.opacity(0.04)
-        )
-        .clipShape(.rect(cornerRadius: 14))
-        .overlay(
-            isToday && !completed ?
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(accentColor.opacity(0.15), lineWidth: 1) : nil
-        )
+    }
+
+    private func workoutBadge(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.15))
+            .clipShape(.capsule)
+    }
+
+    private func workoutTrailing(workout: WorkoutDay, completed: Bool, accentColor: Color, xpReward: Int) -> some View {
+        let diff = workoutDifficultyLevel(workout)
+        return HStack(spacing: 8) {
+            VStack(alignment: .trailing, spacing: 4) {
+                HStack(spacing: 2) {
+                    ForEach(0..<5, id: \.self) { i in
+                        Circle()
+                            .fill(i < diff ? accentColor : Color.primary.opacity(0.08))
+                            .frame(width: 4, height: 4)
+                    }
+                }
+                if !completed {
+                    Text("+\(xpReward)")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(.yellow)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color.yellow.opacity(0.12))
+                        .clipShape(.capsule)
+                }
+            }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 10))
+                .foregroundStyle(.quaternary)
+        }
+    }
+
+    @ViewBuilder
+    private func workoutRowMuscles(workout: WorkoutDay, completed: Bool) -> some View {
+        if !workout.isRestDay && !completed {
+            let muscles = Array(Set(workout.exercises.map(\.muscleGroup))).prefix(3)
+            HStack(spacing: 6) {
+                ForEach(Array(muscles), id: \.self) { muscle in
+                    let isWeak = appState.profile.weakPoints.contains(where: { $0.lowercased() == muscle.lowercased() })
+                    let chipColor: Color = isWeak ? .orange : Color(.quaternaryLabel)
+                    let chipBg: Color = isWeak ? Color.orange.opacity(0.08) : Color.primary.opacity(0.03)
+                    Text(muscle)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(chipColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(chipBg)
+                        .clipShape(.capsule)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
+        }
+    }
+
+    private func workoutDifficultyLevel(_ workout: WorkoutDay) -> Int {
+        let totalSets = workout.exercises.reduce(0) { $0 + $1.sets }
+        if totalSets >= 24 { return 5 }
+        if totalSets >= 20 { return 4 }
+        if totalSets >= 14 { return 3 }
+        if totalSets >= 8 { return 2 }
+        return 1
     }
 
     // MARK: - Next Scan Reminder
