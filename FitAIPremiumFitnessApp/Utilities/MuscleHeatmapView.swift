@@ -8,16 +8,19 @@ struct MuscleHeatmapView: View {
     private var strongMuscles: Set<String> { extractMuscles(from: strongPoints) }
     private var weakMuscles: Set<String> { extractMuscles(from: weakPoints) }
 
+    private let strongColor = Color(red: 1.0, green: 0.35, blue: 0.48)
+    private let weakColor = Color(red: 1.0, green: 0.78, blue: 0.22)
+
     var body: some View {
         VStack(spacing: compact ? 4 : 14) {
             HStack(spacing: compact ? 14 : 32) {
-                BodyFigureCanvas(
+                BodyFigureView(
                     strongMuscles: strongMuscles,
                     weakMuscles: weakMuscles,
                     isFront: true,
                     compact: compact
                 )
-                BodyFigureCanvas(
+                BodyFigureView(
                     strongMuscles: strongMuscles,
                     weakMuscles: weakMuscles,
                     isFront: false,
@@ -30,15 +33,18 @@ struct MuscleHeatmapView: View {
 
     private var legendRow: some View {
         HStack(spacing: 16) {
-            legendDot(color: Color(red: 0.93, green: 0.47, blue: 0.56), text: "Strengths")
-            legendDot(color: Color(red: 1.0, green: 0.78, blue: 0.12), text: "Needs Work")
-            legendDot(color: Color(white: 0.82), text: "Neutral")
+            legendDot(color: strongColor, text: "Strengths")
+            legendDot(color: weakColor, text: "Needs Work")
+            legendDot(color: Color(white: 0.55), text: "Neutral")
         }
     }
 
     private func legendDot(color: Color, text: String) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 8, height: 8)
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color.opacity(0.8))
+                .frame(width: 8, height: 8)
+                .shadow(color: color.opacity(0.5), radius: 3)
             Text(text).font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -70,7 +76,7 @@ struct MuscleHeatmapView: View {
     }
 }
 
-private struct BodyFigureCanvas: View {
+private struct BodyFigureView: View {
     let strongMuscles: Set<String>
     let weakMuscles: Set<String>
     let isFront: Bool
@@ -78,19 +84,11 @@ private struct BodyFigureCanvas: View {
 
     @Environment(\.colorScheme) private var colorScheme
 
+    private let strongColor = Color(red: 1.0, green: 0.35, blue: 0.48)
+    private let weakColor = Color(red: 1.0, green: 0.78, blue: 0.22)
+
     private var baseColor: Color {
-        colorScheme == .dark ? Color(white: 0.2) : Color(white: 0.82)
-    }
-
-    private let strongColor = Color(red: 0.93, green: 0.35, blue: 0.45)
-    private let weakColor = Color(red: 1.0, green: 0.72, blue: 0.18)
-
-    nonisolated private struct Region {
-        let muscle: String
-        let cx: CGFloat
-        let cy: CGFloat
-        let w: CGFloat
-        let h: CGFloat
+        colorScheme == .dark ? Color(white: 0.18) : Color(white: 0.78)
     }
 
     nonisolated private struct BodyPart {
@@ -100,102 +98,103 @@ private struct BodyFigureCanvas: View {
         let h: CGFloat
     }
 
+    nonisolated private struct MuscleRegion {
+        let muscle: String
+        let cx: CGFloat
+        let cy: CGFloat
+        let w: CGFloat
+        let h: CGFloat
+    }
+
     private static let silhouette: [BodyPart] = [
-        BodyPart(cx: 0.50, cy: 0.060, w: 0.20, h: 0.080),
-        BodyPart(cx: 0.50, cy: 0.115, w: 0.10, h: 0.030),
-        BodyPart(cx: 0.50, cy: 0.165, w: 0.50, h: 0.055),
-        BodyPart(cx: 0.50, cy: 0.240, w: 0.40, h: 0.110),
-        BodyPart(cx: 0.50, cy: 0.330, w: 0.34, h: 0.070),
-        BodyPart(cx: 0.50, cy: 0.390, w: 0.38, h: 0.055),
-        BodyPart(cx: 0.20, cy: 0.235, w: 0.090, h: 0.130),
-        BodyPart(cx: 0.80, cy: 0.235, w: 0.090, h: 0.130),
-        BodyPart(cx: 0.16, cy: 0.365, w: 0.070, h: 0.110),
-        BodyPart(cx: 0.84, cy: 0.365, w: 0.070, h: 0.110),
-        BodyPart(cx: 0.14, cy: 0.450, w: 0.050, h: 0.035),
-        BodyPart(cx: 0.86, cy: 0.450, w: 0.050, h: 0.035),
-        BodyPart(cx: 0.40, cy: 0.520, w: 0.155, h: 0.185),
-        BodyPart(cx: 0.60, cy: 0.520, w: 0.155, h: 0.185),
-        BodyPart(cx: 0.39, cy: 0.730, w: 0.115, h: 0.165),
-        BodyPart(cx: 0.61, cy: 0.730, w: 0.115, h: 0.165),
-        BodyPart(cx: 0.38, cy: 0.870, w: 0.095, h: 0.040),
-        BodyPart(cx: 0.62, cy: 0.870, w: 0.095, h: 0.040),
+        BodyPart(cx: 0.50, cy: 0.058, w: 0.19, h: 0.078),
+        BodyPart(cx: 0.50, cy: 0.112, w: 0.09, h: 0.028),
+        BodyPart(cx: 0.50, cy: 0.162, w: 0.48, h: 0.052),
+        BodyPart(cx: 0.50, cy: 0.235, w: 0.38, h: 0.105),
+        BodyPart(cx: 0.50, cy: 0.325, w: 0.32, h: 0.065),
+        BodyPart(cx: 0.50, cy: 0.385, w: 0.36, h: 0.050),
+        BodyPart(cx: 0.21, cy: 0.230, w: 0.085, h: 0.125),
+        BodyPart(cx: 0.79, cy: 0.230, w: 0.085, h: 0.125),
+        BodyPart(cx: 0.17, cy: 0.360, w: 0.065, h: 0.105),
+        BodyPart(cx: 0.83, cy: 0.360, w: 0.065, h: 0.105),
+        BodyPart(cx: 0.15, cy: 0.445, w: 0.045, h: 0.032),
+        BodyPart(cx: 0.85, cy: 0.445, w: 0.045, h: 0.032),
+        BodyPart(cx: 0.41, cy: 0.515, w: 0.150, h: 0.180),
+        BodyPart(cx: 0.59, cy: 0.515, w: 0.150, h: 0.180),
+        BodyPart(cx: 0.40, cy: 0.725, w: 0.110, h: 0.160),
+        BodyPart(cx: 0.60, cy: 0.725, w: 0.110, h: 0.160),
+        BodyPart(cx: 0.39, cy: 0.865, w: 0.090, h: 0.038),
+        BodyPart(cx: 0.61, cy: 0.865, w: 0.090, h: 0.038),
     ]
 
-    private static let frontMuscles: [Region] = [
-        Region(muscle: "chest", cx: 0.42, cy: 0.210, w: 0.15, h: 0.060),
-        Region(muscle: "chest", cx: 0.58, cy: 0.210, w: 0.15, h: 0.060),
-        Region(muscle: "shoulders", cx: 0.27, cy: 0.168, w: 0.12, h: 0.042),
-        Region(muscle: "shoulders", cx: 0.73, cy: 0.168, w: 0.12, h: 0.042),
-        Region(muscle: "biceps", cx: 0.20, cy: 0.240, w: 0.070, h: 0.100),
-        Region(muscle: "biceps", cx: 0.80, cy: 0.240, w: 0.070, h: 0.100),
-        Region(muscle: "forearms", cx: 0.16, cy: 0.365, w: 0.055, h: 0.085),
-        Region(muscle: "forearms", cx: 0.84, cy: 0.365, w: 0.055, h: 0.085),
-        Region(muscle: "core", cx: 0.50, cy: 0.310, w: 0.18, h: 0.095),
-        Region(muscle: "quads", cx: 0.40, cy: 0.520, w: 0.125, h: 0.155),
-        Region(muscle: "quads", cx: 0.60, cy: 0.520, w: 0.125, h: 0.155),
+    private static let frontMuscles: [MuscleRegion] = [
+        MuscleRegion(muscle: "chest", cx: 0.42, cy: 0.205, w: 0.15, h: 0.058),
+        MuscleRegion(muscle: "chest", cx: 0.58, cy: 0.205, w: 0.15, h: 0.058),
+        MuscleRegion(muscle: "shoulders", cx: 0.28, cy: 0.165, w: 0.11, h: 0.040),
+        MuscleRegion(muscle: "shoulders", cx: 0.72, cy: 0.165, w: 0.11, h: 0.040),
+        MuscleRegion(muscle: "biceps", cx: 0.21, cy: 0.235, w: 0.065, h: 0.095),
+        MuscleRegion(muscle: "biceps", cx: 0.79, cy: 0.235, w: 0.065, h: 0.095),
+        MuscleRegion(muscle: "forearms", cx: 0.17, cy: 0.360, w: 0.050, h: 0.080),
+        MuscleRegion(muscle: "forearms", cx: 0.83, cy: 0.360, w: 0.050, h: 0.080),
+        MuscleRegion(muscle: "core", cx: 0.50, cy: 0.305, w: 0.17, h: 0.090),
+        MuscleRegion(muscle: "quads", cx: 0.41, cy: 0.515, w: 0.120, h: 0.150),
+        MuscleRegion(muscle: "quads", cx: 0.59, cy: 0.515, w: 0.120, h: 0.150),
     ]
 
-    private static let backMuscles: [Region] = [
-        Region(muscle: "traps", cx: 0.50, cy: 0.145, w: 0.24, h: 0.050),
-        Region(muscle: "shoulders", cx: 0.27, cy: 0.168, w: 0.12, h: 0.042),
-        Region(muscle: "shoulders", cx: 0.73, cy: 0.168, w: 0.12, h: 0.042),
-        Region(muscle: "back", cx: 0.50, cy: 0.255, w: 0.32, h: 0.115),
-        Region(muscle: "triceps", cx: 0.20, cy: 0.255, w: 0.070, h: 0.090),
-        Region(muscle: "triceps", cx: 0.80, cy: 0.255, w: 0.070, h: 0.090),
-        Region(muscle: "glutes", cx: 0.44, cy: 0.410, w: 0.13, h: 0.060),
-        Region(muscle: "glutes", cx: 0.56, cy: 0.410, w: 0.13, h: 0.060),
-        Region(muscle: "hamstrings", cx: 0.40, cy: 0.545, w: 0.125, h: 0.140),
-        Region(muscle: "hamstrings", cx: 0.60, cy: 0.545, w: 0.125, h: 0.140),
-        Region(muscle: "calves", cx: 0.39, cy: 0.740, w: 0.090, h: 0.120),
-        Region(muscle: "calves", cx: 0.61, cy: 0.740, w: 0.090, h: 0.120),
+    private static let backMuscles: [MuscleRegion] = [
+        MuscleRegion(muscle: "traps", cx: 0.50, cy: 0.142, w: 0.22, h: 0.048),
+        MuscleRegion(muscle: "shoulders", cx: 0.28, cy: 0.165, w: 0.11, h: 0.040),
+        MuscleRegion(muscle: "shoulders", cx: 0.72, cy: 0.165, w: 0.11, h: 0.040),
+        MuscleRegion(muscle: "back", cx: 0.50, cy: 0.250, w: 0.30, h: 0.110),
+        MuscleRegion(muscle: "triceps", cx: 0.21, cy: 0.250, w: 0.065, h: 0.085),
+        MuscleRegion(muscle: "triceps", cx: 0.79, cy: 0.250, w: 0.065, h: 0.085),
+        MuscleRegion(muscle: "glutes", cx: 0.44, cy: 0.405, w: 0.12, h: 0.055),
+        MuscleRegion(muscle: "glutes", cx: 0.56, cy: 0.405, w: 0.12, h: 0.055),
+        MuscleRegion(muscle: "hamstrings", cx: 0.41, cy: 0.540, w: 0.120, h: 0.135),
+        MuscleRegion(muscle: "hamstrings", cx: 0.59, cy: 0.540, w: 0.120, h: 0.135),
+        MuscleRegion(muscle: "calves", cx: 0.40, cy: 0.735, w: 0.085, h: 0.115),
+        MuscleRegion(muscle: "calves", cx: 0.60, cy: 0.735, w: 0.085, h: 0.115),
     ]
+
+    private let figureHeight: CGFloat = 280
+    private let compactHeight: CGFloat = 170
+
+    private var height: CGFloat { compact ? compactHeight : figureHeight }
 
     var body: some View {
         VStack(spacing: 6) {
-            Canvas { context, size in
-                let w = size.width
-                let h = size.height
+            GeometryReader { geo in
+                let w = geo.size.width
+                let h = geo.size.height
 
-                for part in Self.silhouette {
-                    let rect = CGRect(
-                        x: (part.cx - part.w / 2) * w,
-                        y: (part.cy - part.h / 2) * h,
-                        width: part.w * w,
-                        height: part.h * h
-                    )
-                    context.fill(Capsule().path(in: rect), with: .color(baseColor))
-                }
-
-                let regions = isFront ? Self.frontMuscles : Self.backMuscles
-                for region in regions {
-                    let color: Color
-                    if strongMuscles.contains(region.muscle) {
-                        color = strongColor
-                    } else if weakMuscles.contains(region.muscle) {
-                        color = weakColor
-                    } else {
-                        continue
+                ZStack {
+                    Canvas { context, size in
+                        for part in Self.silhouette {
+                            let rect = CGRect(
+                                x: (part.cx - part.w / 2) * size.width,
+                                y: (part.cy - part.h / 2) * size.height,
+                                width: part.w * size.width,
+                                height: part.h * size.height
+                            )
+                            context.fill(Capsule().path(in: rect), with: .color(baseColor))
+                        }
                     }
 
-                    let glowRect = CGRect(
-                        x: (region.cx - region.w * 0.7) * w,
-                        y: (region.cy - region.h * 0.7) * h,
-                        width: region.w * 1.4 * w,
-                        height: region.h * 1.4 * h
-                    )
-                    context.fill(Ellipse().path(in: glowRect), with: .color(color.opacity(0.2)))
-
-                    let rect = CGRect(
-                        x: (region.cx - region.w / 2) * w,
-                        y: (region.cy - region.h / 2) * h,
-                        width: region.w * w,
-                        height: region.h * h
-                    )
-                    context.fill(Ellipse().path(in: rect), with: .color(color.opacity(0.8)))
+                    let regions = isFront ? Self.frontMuscles : Self.backMuscles
+                    ForEach(Array(regions.enumerated()), id: \.offset) { _, region in
+                        if let color = colorFor(region.muscle) {
+                            heatSpot(
+                                cx: region.cx, cy: region.cy,
+                                rw: region.w, rh: region.h,
+                                color: color, containerW: w, containerH: h
+                            )
+                        }
+                    }
                 }
             }
             .aspectRatio(0.45, contentMode: .fit)
-            .frame(height: compact ? 170 : 280)
+            .frame(height: height)
+            .clipped()
 
             if !compact {
                 Text(isFront ? "Front" : "Back")
@@ -203,5 +202,55 @@ private struct BodyFigureCanvas: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func colorFor(_ muscle: String) -> Color? {
+        if strongMuscles.contains(muscle) { return strongColor }
+        if weakMuscles.contains(muscle) { return weakColor }
+        return nil
+    }
+
+    private func heatSpot(cx: CGFloat, cy: CGFloat, rw: CGFloat, rh: CGFloat, color: Color, containerW: CGFloat, containerH: CGFloat) -> some View {
+        let blurAmount: CGFloat = compact ? 6 : 10
+        let outerScale: CGFloat = 1.8
+        let innerScale: CGFloat = 1.0
+
+        let posX = cx * containerW
+        let posY = cy * containerH
+        let spotW = rw * containerW
+        let spotH = rh * containerH
+
+        return ZStack {
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [color.opacity(0.35), color.opacity(0.12), color.opacity(0)],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: max(spotW, spotH) * outerScale * 0.5
+                    )
+                )
+                .frame(width: spotW * outerScale, height: spotH * outerScale)
+                .blur(radius: blurAmount * 1.2)
+
+            Ellipse()
+                .fill(
+                    RadialGradient(
+                        colors: [color.opacity(0.55), color.opacity(0.25), color.opacity(0)],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: max(spotW, spotH) * 0.5
+                    )
+                )
+                .frame(width: spotW * innerScale * 1.3, height: spotH * innerScale * 1.3)
+                .blur(radius: blurAmount * 0.6)
+
+            Ellipse()
+                .fill(color.opacity(0.6))
+                .frame(width: spotW * 0.6, height: spotH * 0.6)
+                .blur(radius: blurAmount * 0.3)
+        }
+        .position(x: posX, y: posY)
+        .allowsHitTesting(false)
     }
 }
