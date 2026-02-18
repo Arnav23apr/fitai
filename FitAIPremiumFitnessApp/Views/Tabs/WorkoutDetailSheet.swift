@@ -19,6 +19,9 @@ struct WorkoutDetailSheet: View {
     @State private var showPointsFloat: Bool = false
     @State private var floatingPoints: Int = 0
     @State private var completionAnimating: Bool = false
+    @State private var showShareCard: Bool = false
+    @State private var exerciseVolumes: [String: Double] = [:]
+    @State private var prExerciseNames: [String] = []
 
     private let logService = ExerciseLogService.shared
 
@@ -99,19 +102,22 @@ struct WorkoutDetailSheet: View {
                     handleExerciseCompletion(exercise: exercise, sets: completedSets, hitPR: hitPR)
                 }
             }
-            .alert("Workout Complete!", isPresented: $showCompletionAlert) {
-                Button("Finish") { dismiss() }
-            } message: {
-                let mins = elapsedSeconds / 60
-                let prText = earnedPRPoints > 0 ? " (includes \(earnedPRPoints) PR bonus!)" : ""
-                Text("You completed \(completedExercises.count)/\(workout.exercises.count) exercises in \(mins) minutes. +\(workoutPoints) points!\(prText)")
-            }
-            .sensoryFeedback(.success, trigger: showCompletionAlert)
+            .sensoryFeedback(.success, trigger: showShareCard)
         }
         .overlay(alignment: .top) {
             if showPointsFloat {
                 pointsFloatView
             }
+        }
+        .fullScreenCover(isPresented: $showShareCard) {
+            WorkoutShareOverlay(
+                data: buildShareData(),
+                onDismiss: {
+                    showShareCard = false
+                    dismiss()
+                }
+            )
+            .background(ClearBackground())
         }
         .onDisappear { timer?.invalidate() }
     }
@@ -716,9 +722,12 @@ struct WorkoutDetailSheet: View {
         )
         logService.saveLog(log)
 
+        exerciseVolumes[exercise.id] = log.computedVolume
+
         if hitPR {
             earnedPRPoints += 50
             exercisePRs.insert(exercise.id)
+            prExerciseNames.append(exercise.name)
             showFloatingPoints(50)
         }
     }
@@ -751,7 +760,7 @@ struct WorkoutDetailSheet: View {
             appState.addBonusPoints(earnedPRPoints)
         }
 
-        showCompletionAlert = true
+        showShareCard = true
     }
 
     private func loadWhyExplanation() {
@@ -811,4 +820,32 @@ struct WorkoutDetailSheet: View {
         case .neutral: return .secondary
         }
     }
+
+    private func buildShareData() -> WorkoutShareCardData {
+        let totalVolume = exerciseVolumes.values.reduce(0, +)
+        let completedNames = workout.exercises.filter { completedExercises.contains($0.id) }.map(\.name)
+        return WorkoutShareCardData(
+            workoutName: workout.name,
+            focusAreas: workout.focusAreas,
+            totalVolume: totalVolume,
+            duration: max(elapsedSeconds / 60, 1),
+            exercisesCompleted: completedExercises.count,
+            totalExercises: workout.exercises.count,
+            totalSets: workout.exercises.filter { completedExercises.contains($0.id) }.reduce(0) { $0 + $1.sets },
+            prCount: exercisePRs.count,
+            prExerciseNames: prExerciseNames,
+            pointsEarned: workoutPoints
+        )
+    }
+}
+
+struct ClearBackground: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView()
+        Task { @MainActor in
+            view.superview?.superview?.backgroundColor = .clear
+        }
+        return view
+    }
+    func updateUIView(_ uiView: UIView, context: Context) {}
 }
