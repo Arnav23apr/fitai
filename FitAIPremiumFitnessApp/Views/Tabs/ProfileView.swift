@@ -8,6 +8,7 @@ struct ProfileView: View {
     @State private var showLanguagePicker: Bool = false
     @State private var showHealthAlert: Bool = false
     @State private var notificationsEnabled: Bool = true
+    @State private var showCurrentPlan: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -33,19 +34,21 @@ struct ProfileView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if appState.profile.isPremium {
-                        Text("PRO")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(.black)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(
-                                LinearGradient(
-                                    colors: [.yellow, .orange],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
+                        Button { showCurrentPlan = true } label: {
+                            Text("PRO")
+                                .font(.caption.weight(.bold))
+                                .foregroundStyle(.black)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(
+                                    LinearGradient(
+                                        colors: [.yellow, .orange],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
                                 )
-                            )
-                            .clipShape(.rect(cornerRadius: 8))
+                                .clipShape(.rect(cornerRadius: 8))
+                        }
                     }
                 }
             }
@@ -54,6 +57,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
+            }
+            .sheet(isPresented: $showCurrentPlan) {
+                CurrentPlanSheet()
             }
             .sheet(isPresented: $showLanguagePicker) {
                 LanguagePickerSheet()
