@@ -11,6 +11,7 @@ struct CompeteView: View {
     @State private var challengesExpanded: Bool = false
     @State private var showFriends: Bool = false
     @State private var friendVM = FriendViewModel()
+    @State private var showRankProgression: Bool = false
 
     private var currentTier: CompeteTier { CompeteTier.current(for: appState.profile.points) }
     private var nextTier: CompeteTier? { CompeteTier.next(for: appState.profile.points) }
@@ -120,6 +121,10 @@ struct CompeteView: View {
             .sheet(isPresented: $showFriends) {
                 FriendsView()
             }
+            .sheet(isPresented: $showRankProgression) {
+                RankProgressionSheet(currentPoints: appState.profile.points)
+                    .presentationDetents([.large])
+            }
             .onAppear {
                 friendVM.loadSampleData()
                 if !appState.profile.username.isEmpty {
@@ -133,9 +138,14 @@ struct CompeteView: View {
 
     private var heroSection: some View {
         VStack(spacing: 20) {
-            TierBadgeView(tier: currentTier.name, points: appState.profile.points, size: 90)
+            Button {
+                    showRankProgression = true
+                } label: {
+                    TierBadgeView(tier: currentTier.name, points: appState.profile.points, size: 90)
+                }
                 .opacity(appeared ? 1 : 0)
                 .scaleEffect(appeared ? 1 : 0.5)
+                .sensoryFeedback(.impact(weight: .light), trigger: showRankProgression)
 
             VStack(spacing: 6) {
                 Text(currentTier.name.uppercased())
