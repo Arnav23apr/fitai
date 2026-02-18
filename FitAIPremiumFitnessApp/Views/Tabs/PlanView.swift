@@ -519,37 +519,11 @@ struct PlanView: View {
     }
 
     private var bodyDiagramView: some View {
-        HStack(spacing: 3) {
-            let weakLower = appState.profile.weakPoints.lowercased()
-            VStack(spacing: 2) {
-                Circle()
-                    .fill(Color.primary.opacity(0.15))
-                    .frame(width: 14, height: 14)
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(weakLower.contains(where: { "chest,back,core,ab".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
-                    .frame(width: 18, height: 22)
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
-                        .frame(width: 7, height: 24)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
-                        .frame(width: 7, height: 24)
-                }
-            }
-
-            VStack(spacing: 4) {
-                ForEach(appState.profile.weakPoints.prefix(3), id: \.self) { point in
-                    Text(point)
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.15))
-                        .clipShape(.rect(cornerRadius: 3))
-                }
-            }
-        }
+        MuscleHeatmapView(
+            strongPoints: appState.profile.strongPoints,
+            weakPoints: appState.profile.weakPoints,
+            compact: true
+        )
     }
 
     private var promptScanCard: some View {
