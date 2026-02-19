@@ -93,9 +93,22 @@ struct ProfileView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(appState.profile.name.isEmpty ? "Athlete" : appState.profile.name)
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(.primary)
+                HStack(spacing: 6) {
+                    Text(appState.profile.name.isEmpty ? "Athlete" : appState.profile.name)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    if appState.profile.isPremium {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.yellow, .orange],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    }
+                }
 
                 if !appState.profile.username.isEmpty {
                     Text("@\(appState.profile.username)")
