@@ -13,6 +13,7 @@ struct WorkoutShareCardData {
     let pointsEarned: Int
     let prBestWeight: Double
     let prBestReps: Int
+    var weightUnit: String = "kg"
 }
 
 struct WorkoutShareCardView: View {
@@ -75,7 +76,7 @@ struct WorkoutShareCardView: View {
                     Text(volumeString)
                         .font(.system(size: 52, weight: .bold))
                         .foregroundStyle(.white)
-                    Text("kg")
+                    Text(data.weightUnit)
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.45))
                 }
@@ -107,7 +108,7 @@ struct WorkoutShareCardView: View {
                             .foregroundStyle(.white)
 
                         if data.prBestWeight > 0 {
-                            Text("\(Int(data.prBestWeight)) kg × \(data.prBestReps)")
+                            Text("\(Int(data.prBestWeight)) \(data.weightUnit) × \(data.prBestReps)")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(.white.opacity(0.5))
                         }

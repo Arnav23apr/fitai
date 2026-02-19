@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SetLoggingSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     let exercise: Exercise
     let onComplete: ([SetLog], Bool) -> Void
 
@@ -19,6 +20,10 @@ struct SetLoggingSheet: View {
 
     private var history: ExerciseHistory {
         exerciseLogService.history(for: exercise.name)
+    }
+
+    private var weightUnit: String {
+        appState.profile.usesMetric ? "kg" : "lbs"
     }
 
     private var allSetsCompleted: Bool {
@@ -126,7 +131,7 @@ struct SetLoggingSheet: View {
 
             HStack(spacing: 0) {
                 statPill(
-                    value: history.personalBestWeight > 0 ? "\(Int(history.personalBestWeight))kg" : "—",
+                    value: history.personalBestWeight > 0 ? "\(Int(history.personalBestWeight))\(weightUnit)" : "—",
                     label: "Best Weight",
                     color: .orange
                 )
@@ -375,7 +380,7 @@ struct SetLoggingSheet: View {
         let fieldBg = Color.primary.opacity(isDisabled ? 0.02 : 0.06)
         return HStack(spacing: 8) {
             VStack(spacing: 2) {
-                Text("WEIGHT")
+                Text(weightUnit.uppercased())
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.tertiary)
                 TextField("0", value: Binding(
