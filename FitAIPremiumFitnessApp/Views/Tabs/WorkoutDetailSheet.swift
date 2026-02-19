@@ -529,7 +529,7 @@ struct WorkoutDetailSheet: View {
                         if history.logs.count > 0 {
                             if let last = history.lastSession {
                                 HStack(spacing: 3) {
-                                    Text("Last: \(Int(last.bestSetWeight))kg")
+                                    Text("Last: \(Int(last.bestSetWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
                                         .font(.system(size: 10, weight: .medium))
                                         .foregroundStyle(.secondary)
                                 }
@@ -539,7 +539,7 @@ struct WorkoutDetailSheet: View {
                                 Image(systemName: history.volumeTrend.icon)
                                     .font(.system(size: 8, weight: .bold))
                                     .foregroundStyle(trendColor(history.volumeTrend))
-                                Text("Best: \(Int(history.personalBestWeight))kg")
+                                Text("Best: \(Int(history.personalBestWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
                                     .font(.system(size: 10, weight: .medium))
                                     .foregroundStyle(trendColor(history.volumeTrend))
                             }
@@ -845,7 +845,8 @@ struct WorkoutDetailSheet: View {
             prExerciseNames: prExerciseNames,
             pointsEarned: workoutPoints,
             prBestWeight: bestWeight,
-            prBestReps: bestReps
+            prBestReps: bestReps,
+            weightUnit: appState.profile.usesMetric ? "kg" : "lbs"
         )
     }
 }

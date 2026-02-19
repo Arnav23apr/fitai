@@ -305,6 +305,8 @@ struct ProfileView: View {
             VStack(spacing: 0) {
                 settingsToggle(title: L.t("notifications", lang), icon: "bell.fill", isOn: $notificationsEnabled)
                 Divider().padding(.leading, 52)
+                weightUnitRow
+                Divider().padding(.leading, 52)
                 settingsRow(title: L.t("appleHealth", lang), icon: "heart.fill", iconColor: .pink) {
                     showHealthAlert = true
                 }
@@ -338,6 +340,32 @@ struct ProfileView: View {
                 .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(.rect(cornerRadius: 16))
             }
+        }
+    }
+
+    private var weightUnitRow: some View {
+        Button {
+            appState.profile.usesMetric.toggle()
+            appState.saveProfile()
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "scalemass.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+                Text(L.t("weightUnit", lang))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text(appState.profile.usesMetric ? "kg" : "lbs")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
     }
 
