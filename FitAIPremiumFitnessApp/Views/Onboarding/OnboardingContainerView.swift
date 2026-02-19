@@ -39,6 +39,10 @@ struct OnboardingContainerView: View {
                     ReferralCodeView(onContinue: { advance() })
                 case .signUp:
                     SignUpView(onContinue: { advance() })
+                case .enableNotifications:
+                    EnableNotificationsView(onContinue: { advance() })
+                case .ratingPrompt:
+                    RatingPromptView(onContinue: { advance() })
                 case .paywall:
                     PaywallView(
                         onSubscribe: {
