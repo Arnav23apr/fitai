@@ -305,6 +305,8 @@ struct ProfileView: View {
             VStack(spacing: 0) {
                 settingsToggle(title: L.t("notifications", lang), icon: "bell.fill", isOn: $notificationsEnabled)
                 Divider().padding(.leading, 52)
+                darkModeToggle
+                Divider().padding(.leading, 52)
                 weightUnitRow
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("appleHealth", lang), icon: "heart.fill", iconColor: .pink) {
@@ -341,6 +343,30 @@ struct ProfileView: View {
                 .clipShape(.rect(cornerRadius: 16))
             }
         }
+    }
+
+    private var darkModeToggle: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "moon.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .frame(width: 28)
+            Text(L.t("darkMode", lang))
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            Toggle("", isOn: Binding(
+                get: { appState.profile.forceDarkMode },
+                set: { newValue in
+                    appState.profile.forceDarkMode = newValue
+                    appState.saveProfile()
+                }
+            ))
+            .tint(.green)
+            .labelsHidden()
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
     }
 
     private var weightUnitRow: some View {
