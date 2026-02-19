@@ -7,14 +7,21 @@ struct RatingPromptView: View {
     @Environment(\.requestReview) private var requestReview
     var onContinue: () -> Void
     @State private var appeared: Bool = false
+    @State private var ratingService = AppStoreRatingService.shared
 
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
 
-    private let testimonials: [(name: String, review: String)] = [
-        ("Jake S.", "I gained 8 kg of muscle in 3 months! The AI coach knew exactly what I needed."),
-        ("Maria L.", "Finally an app that actually personalizes workouts. Not just random exercises."),
-        ("Alex R.", "The compete feature keeps me motivated every single day. Addicted!")
+    private let testimonials: [(name: String, review: String, avatarURL: String)] = [
+        ("Jake Sullivan", "I gained 8 kg of muscle in 3 months! The AI coach knew exactly what I needed.", "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face"),
+        ("Maria Lopez", "Finally an app that actually personalizes workouts. Not just random exercises.", "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face"),
+        ("Alex Rodriguez", "The compete feature keeps me motivated every single day. Addicted!", "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=face")
+    ]
+
+    private let peopleAvatarURLs: [String] = [
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face",
+        "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&h=120&fit=crop&crop=face"
     ]
 
     var body: some View {
@@ -41,14 +48,7 @@ struct RatingPromptView: View {
 
                         HStack(spacing: -12) {
                             ForEach(0..<3, id: \.self) { index in
-                                Circle()
-                                    .fill(isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
-                                    .frame(width: 56, height: 56)
-                                    .overlay {
-                                        Image(systemName: avatarIcon(for: index))
-                                            .font(.system(size: 22))
-                                            .foregroundStyle(.primary.opacity(0.6))
-                                    }
+                                avatarCircle(url: peopleAvatarURLs[index])
                                     .overlay(
                                         Circle().strokeBorder(Color(.systemBackground), lineWidth: 3)
                                     )
@@ -65,7 +65,7 @@ struct RatingPromptView: View {
 
                     VStack(spacing: 12) {
                         ForEach(Array(testimonials.enumerated()), id: \.offset) { index, testimonial in
-                            testimonialCard(name: testimonial.name, review: testimonial.review)
+                            testimonialCard(name: testimonial.name, review: testimonial.review, avatarURL: testimonial.avatarURL)
                                 .opacity(appeared ? 1 : 0)
                                 .animation(.easeOut(duration: 0.5).delay(Double(index) * 0.1 + 0.3), value: appeared)
                         }
@@ -105,6 +105,9 @@ struct RatingPromptView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 requestReview()
             }
+            Task {
+                await ratingService.fetchRating(appId: "6744088934")
+            }
         }
     }
 
@@ -116,7 +119,7 @@ struct RatingPromptView: View {
 
             VStack(spacing: 2) {
                 HStack(spacing: 6) {
-                    Text("4.8")
+                    Text(ratingService.formattedRating)
                         .font(.system(.title2, design: .default, weight: .bold))
                         .foregroundStyle(.primary)
 
@@ -128,7 +131,7 @@ struct RatingPromptView: View {
                         }
                     }
                 }
-                Text(L.t("appRatingsCount", lang))
+                Text("\(ratingService.formattedCount) App Ratings")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -147,17 +150,44 @@ struct RatingPromptView: View {
         )
     }
 
-    private func testimonialCard(name: String, review: String) -> some View {
+    private func avatarCircle(url: String) -> some View {
+        Color(.secondarySystemBackground)
+            .frame(width: 56, height: 56)
+            .overlay {
+                AsyncImage(url: URL(string: url)) { phase in
+                    if let image = phase.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Color(.systemGray5)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+            .clipShape(Circle())
+    }
+
+    private func testimonialCard(name: String, review: String, avatarURL: String) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Circle()
-                    .fill(isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
+                Color(.secondarySystemBackground)
                     .frame(width: 40, height: 40)
                     .overlay {
-                        Text(String(name.prefix(1)))
-                            .font(.headline)
-                            .foregroundStyle(.primary.opacity(0.6))
+                        AsyncImage(url: URL(string: avatarURL)) { phase in
+                            if let image = phase.image {
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } else {
+                                Text(String(name.prefix(1)))
+                                    .font(.headline)
+                                    .foregroundStyle(.primary.opacity(0.6))
+                            }
+                        }
+                        .allowsHitTesting(false)
                     }
+                    .clipShape(Circle())
 
                 Text(name)
                     .font(.subheadline.weight(.semibold))
@@ -186,13 +216,5 @@ struct RatingPromptView: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05), lineWidth: 1)
         )
-    }
-
-    private func avatarIcon(for index: Int) -> String {
-        switch index {
-        case 0: return "person.fill"
-        case 1: return "figure.run"
-        default: return "dumbbell.fill"
-        }
     }
 }

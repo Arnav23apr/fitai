@@ -807,6 +807,17 @@ struct CompeteView: View {
                     Text(appState.profile.name.isEmpty ? "You" : appState.profile.name)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.primary)
+                    if appState.profile.isPremium {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.yellow, .orange],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                    }
                     Text("(You)")
                         .font(.caption2)
                         .foregroundStyle(.green.opacity(0.6))
