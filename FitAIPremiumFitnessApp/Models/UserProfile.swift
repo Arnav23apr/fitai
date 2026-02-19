@@ -35,4 +35,5 @@ nonisolated struct UserProfile: Codable, Sendable {
     var completedDaysThisWeek: [String] = []
     var weekStartDate: Date? = nil
     var customPhotoData: Data? = nil
+    var forceDarkMode: Bool = false
 }

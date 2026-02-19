@@ -9,6 +9,7 @@ struct FitAIPremiumFitnessAppApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
+                .preferredColorScheme(appState.profile.forceDarkMode ? .dark : nil)
                 .onOpenURL { url in
                     supabaseAuth.handle(url)
                 }
