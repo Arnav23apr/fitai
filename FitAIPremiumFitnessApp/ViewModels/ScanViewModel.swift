@@ -56,14 +56,13 @@ class ScanViewModel {
             Be generous and motivating — most people should score 7+. This is about their POTENTIAL, not current state.
             """
 
-            var userPrompt = "Analyze this physique photo. "
-            if !profile.primaryGoal.isEmpty {
-                userPrompt += "My goal is: \(profile.primaryGoal). "
-            }
-            if !profile.trainingExperience.isEmpty {
-                userPrompt += "Experience level: \(profile.trainingExperience). "
-            }
-            userPrompt += "Gender: \(profile.gender.isEmpty ? "Not specified" : profile.gender)."
+            let profileContext = ProfileContextBuilder.buildContext(from: profile)
+            var userPrompt = """
+            Analyze this physique photo. Here is my profile:
+            \(profileContext)
+            
+            Consider my age, body stats, goals, and experience level when scoring and giving recommendations.
+            """
 
             let object = try await aiService.analyzeImageWithSchema(
                 imageBase64: frontBase64,

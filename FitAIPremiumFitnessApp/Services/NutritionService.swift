@@ -13,18 +13,15 @@ class NutritionService {
         Respond ONLY with JSON, no markdown.
         """
 
-        var userPrompt = "Create a daily meal plan for me."
-        if !profile.primaryGoal.isEmpty {
-            userPrompt += " Goal: \(profile.primaryGoal)."
-        }
-        userPrompt += " Weight: \(Int(profile.weightKg))kg. Height: \(Int(profile.heightCm))cm."
-        if !profile.gender.isEmpty {
-            userPrompt += " Gender: \(profile.gender)."
-        }
-        userPrompt += " Workouts per week: \(profile.workoutsPerWeek)."
-        if !profile.trainingExperience.isEmpty {
-            userPrompt += " Experience: \(profile.trainingExperience)."
-        }
+        let profileContext = ProfileContextBuilder.buildContext(from: profile)
+        let userPrompt = """
+        Create a daily meal plan tailored to my profile:
+        \(profileContext)
+        
+        Adjust calories, macros, and meal timing based on my goals, body stats, activity level, and training schedule. \
+        If my goal is muscle building, prioritize protein. If fat loss, create a moderate deficit. \
+        Consider my training experience and workout frequency for caloric needs.
+        """
 
         let messages = [
             ChatAPIMessage(role: "system", text: systemPrompt),

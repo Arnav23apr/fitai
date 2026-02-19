@@ -18,23 +18,15 @@ class WorkoutPlanService {
         Respond ONLY with the JSON array, no markdown or explanation.
         """
 
-        var userPrompt = "Create a personalized weekly workout plan."
-        userPrompt += " Workouts per week: \(profile.workoutsPerWeek)."
-        userPrompt += " Training location: \(profile.trainingLocation.isEmpty ? "Gym" : profile.trainingLocation)."
-        if !profile.primaryGoal.isEmpty {
-            userPrompt += " Primary goal: \(profile.primaryGoal)."
-        }
-        if !profile.trainingExperience.isEmpty {
-            userPrompt += " Experience level: \(profile.trainingExperience)."
-        }
-        if !profile.weakPoints.isEmpty {
-            userPrompt += " Weak points to prioritize: \(profile.weakPoints.joined(separator: ", "))."
-        }
-        if !profile.strongPoints.isEmpty {
-            userPrompt += " Strong points: \(profile.strongPoints.joined(separator: ", "))."
-        }
-        userPrompt += " Gender: \(profile.gender.isEmpty ? "Not specified" : profile.gender)."
-        userPrompt += " Height: \(Int(profile.heightCm))cm, Weight: \(Int(profile.weightKg))kg."
+        let profileContext = ProfileContextBuilder.buildContext(from: profile)
+        let userPrompt = """
+        Create a personalized weekly workout plan based on my profile:
+        \(profileContext)
+        
+        Tailor the exercises, volume, and intensity to my experience level, goals, body stats, and training location. \
+        If I have weak points, prioritize exercises that target them. \
+        Adjust difficulty based on my training confidence and experience.
+        """
 
         let messages = [
             ChatAPIMessage(role: "system", text: systemPrompt),
