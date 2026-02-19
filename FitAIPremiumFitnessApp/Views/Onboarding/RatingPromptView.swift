@@ -102,6 +102,9 @@ struct RatingPromptView: View {
             withAnimation(.easeOut(duration: 0.6)) {
                 appeared = true
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                requestReview()
+            }
             Task {
                 await ratingService.fetchRating(appId: "6744088934")
             }
