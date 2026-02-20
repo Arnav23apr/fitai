@@ -2,28 +2,8 @@ import SwiftUI
 
 struct OnboardingContainerView: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.colorScheme) private var colorScheme
     @State private var currentStep: OnboardingStep = .welcome
     @State private var paywallSkipped: Bool = false
-    @State private var navigationDirection: Edge = .trailing
-
-    private var isDark: Bool { colorScheme == .dark }
-
-    private let trackedSteps: [OnboardingStep] = [
-        .gender, .workoutsPerWeek, .trainingExperience, .trainingLocation,
-        .primaryGoal, .dateOfBirth, .heightWeight, .holdingBack, .goals,
-        .confidence, .resultsGraph, .enableNotifications, .ratingPrompt,
-        .referralCode, .signUp
-    ]
-
-    private var showNavBar: Bool {
-        trackedSteps.contains(currentStep)
-    }
-
-    private var progress: CGFloat {
-        guard let idx = trackedSteps.firstIndex(of: currentStep) else { return 0 }
-        return CGFloat(idx + 1) / CGFloat(trackedSteps.count)
-    }
 
     var body: some View {
         ZStack {
@@ -32,37 +12,37 @@ struct OnboardingContainerView: View {
             Group {
                 switch currentStep {
                 case .welcome:
-                    WelcomeView(onContinue: { advanceForward() }, onLogin: { currentStep = .signUp })
+                    WelcomeView(onContinue: { advance() }, onLogin: { currentStep = .signUp })
                 case .gender:
-                    GenderView(onContinue: { advanceForward() })
+                    GenderView(onContinue: { advance() })
                 case .workoutsPerWeek:
-                    WorkoutsPerWeekView(onContinue: { advanceForward() })
+                    WorkoutsPerWeekView(onContinue: { advance() })
                 case .trainingExperience:
-                    TrainingExperienceView(onContinue: { advanceForward() })
+                    TrainingExperienceView(onContinue: { advance() })
                 case .trainingLocation:
-                    TrainingLocationView(onContinue: { advanceForward() })
+                    TrainingLocationView(onContinue: { advance() })
                 case .primaryGoal:
-                    PrimaryGoalView(onContinue: { advanceForward() })
+                    PrimaryGoalView(onContinue: { advance() })
                 case .dateOfBirth:
-                    DateOfBirthView(onContinue: { advanceForward() })
+                    DateOfBirthView(onContinue: { advance() })
                 case .heightWeight:
-                    HeightWeightView(onContinue: { advanceForward() })
+                    HeightWeightView(onContinue: { advance() })
                 case .holdingBack:
-                    HoldingBackView(onContinue: { advanceForward() })
+                    HoldingBackView(onContinue: { advance() })
                 case .goals:
-                    GoalsView(onContinue: { advanceForward() })
+                    GoalsView(onContinue: { advance() })
                 case .confidence:
-                    ConfidenceView(onContinue: { advanceForward() })
+                    ConfidenceView(onContinue: { advance() })
                 case .resultsGraph:
-                    ResultsGraphView(onContinue: { advanceForward() })
+                    ResultsGraphView(onContinue: { advance() })
                 case .referralCode:
-                    ReferralCodeView(onContinue: { advanceForward() })
+                    ReferralCodeView(onContinue: { advance() })
                 case .signUp:
-                    SignUpView(onContinue: { advanceForward() })
+                    SignUpView(onContinue: { advance() })
                 case .enableNotifications:
-                    EnableNotificationsView(onContinue: { advanceForward() })
+                    EnableNotificationsView(onContinue: { advance() })
                 case .ratingPrompt:
-                    RatingPromptView(onContinue: { advanceForward() })
+                    RatingPromptView(onContinue: { advance() })
                 case .paywall:
                     PaywallView(
                         onSubscribe: {
@@ -81,46 +61,14 @@ struct OnboardingContainerView: View {
                 }
             }
             .transition(.asymmetric(
-                insertion: .move(edge: navigationDirection).combined(with: .opacity),
-                removal: .move(edge: navigationDirection == .trailing ? .leading : .trailing).combined(with: .opacity)
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
             ))
-
-            if showNavBar {
-                VStack {
-                    onboardingNavBar
-                    Spacer()
-                }
-            }
         }
         .animation(.snappy(duration: 0.4), value: currentStep)
     }
 
-    private var onboardingNavBar: some View {
-        HStack(spacing: 14) {
-            Button {
-                goBack()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isDark ? .white.opacity(0.8) : .black.opacity(0.7))
-                    .frame(width: 40, height: 40)
-                    .background {
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
-                    }
-            }
-            .sensoryFeedback(.impact(flexibility: .soft), trigger: currentStep)
-
-            OnboardingProgressBar(progress: progress, isDark: isDark)
-        }
-        .padding(.horizontal, 16)
-        .padding(.top, 4)
-        .transition(.opacity.combined(with: .move(edge: .top)))
-    }
-
-    private func advanceForward() {
-        navigationDirection = .trailing
+    private func advance() {
         let allSteps = OnboardingStep.allCases
         guard let currentIndex = allSteps.firstIndex(of: currentStep),
               currentIndex + 1 < allSteps.count else {
@@ -133,34 +81,5 @@ struct OnboardingContainerView: View {
         } else {
             currentStep = nextStep
         }
-    }
-
-    private func goBack() {
-        navigationDirection = .leading
-        let allSteps = OnboardingStep.allCases
-        guard let currentIndex = allSteps.firstIndex(of: currentStep),
-              currentIndex > 0 else { return }
-        let previousStep = allSteps[currentIndex - 1]
-        currentStep = previousStep
-    }
-}
-
-struct OnboardingProgressBar: View {
-    let progress: CGFloat
-    let isDark: Bool
-
-    var body: some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(isDark ? Color.white.opacity(0.1) : Color.black.opacity(0.08))
-
-                Capsule()
-                    .fill(isDark ? Color.white : Color.black)
-                    .frame(width: max(geo.size.height, geo.size.width * progress))
-                    .animation(.spring(duration: 0.5, bounce: 0.15), value: progress)
-            }
-        }
-        .frame(height: 5)
     }
 }
