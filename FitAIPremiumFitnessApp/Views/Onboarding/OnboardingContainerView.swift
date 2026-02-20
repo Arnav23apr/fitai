@@ -13,7 +13,7 @@ struct OnboardingContainerView: View {
 
     private var shouldShowHeader: Bool {
         switch currentStep {
-        case .welcome, .paywall, .spinWheel:
+        case .welcome, .signUp, .paywall, .spinWheel:
             return false
         default:
             return true
@@ -139,8 +139,18 @@ struct OnboardingContainerView: View {
                 }
             }
 
-            Color.clear
-                .frame(width: 36, height: 36)
+            Button {
+                goBack()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+            }
+            .sensoryFeedback(.impact(flexibility: .soft, intensity: 0.5), trigger: backTapCount)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
