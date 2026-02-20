@@ -138,6 +138,9 @@ struct OnboardingContainerView: View {
                     .frame(height: 5)
                 }
             }
+
+            Color.clear
+                .frame(width: 36, height: 36)
         }
         .padding(.horizontal, 20)
         .padding(.top, 8)
