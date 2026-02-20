@@ -16,24 +16,10 @@ struct SignUpView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: onContinue) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 30, height: 30)
-                        .background(Color(.tertiarySystemFill))
-                        .clipShape(Circle())
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-
             Text(L.t("logIn", lang))
                 .font(.system(.title2, design: .default, weight: .bold))
                 .foregroundStyle(.primary)
-                .padding(.top, 8)
+                .padding(.top, 52)
 
             Spacer()
 

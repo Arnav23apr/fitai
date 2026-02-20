@@ -34,7 +34,7 @@ struct RatingPromptView: View {
                             .foregroundStyle(.primary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.top, 32)
+                    .padding(.top, 56)
                     .opacity(appeared ? 1 : 0)
 
                     ratingBadge
