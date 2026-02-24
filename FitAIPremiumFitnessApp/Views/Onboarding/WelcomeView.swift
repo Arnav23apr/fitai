@@ -68,19 +68,13 @@ struct WelcomeView: View {
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
 
-                Text(L.t("yourPersonalCoach", lang))
+                Text(L.t("scanPlanCompete", lang))
                     .font(.system(.largeTitle, design: .default, weight: .bold))
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 15)
 
-                Text(L.t("scanPlanCompete", lang))
-                    .font(.system(.title3, design: .default, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .opacity(appeared ? 1 : 0)
-                    .offset(y: appeared ? 0 : 15)
             }
 
             Spacer()
