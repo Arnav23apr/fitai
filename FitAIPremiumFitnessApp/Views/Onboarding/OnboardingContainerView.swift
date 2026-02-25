@@ -86,16 +86,18 @@ struct OnboardingContainerView: View {
             ))
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            OnboardingHeaderView(
-                progress: progress,
-                canGoBack: !stepHistory.isEmpty,
-                showsCloseButton: currentStep == .signUp,
-                onBack: { goBack() },
-                onClose: { goTo(.welcome, shouldRecordHistory: false) }
-            )
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
-            .padding(.bottom, 18)
+            if currentStep != .welcome {
+                OnboardingHeaderView(
+                    progress: progress,
+                    canGoBack: !stepHistory.isEmpty,
+                    showsCloseButton: currentStep == .signUp,
+                    onBack: { goBack() },
+                    onClose: { goTo(.welcome, shouldRecordHistory: false) }
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 18)
+            }
         }
         .animation(.snappy(duration: 0.4), value: currentStep)
     }
