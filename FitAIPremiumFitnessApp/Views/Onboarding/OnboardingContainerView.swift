@@ -135,7 +135,7 @@ struct OnboardingContainerView: View {
     }
 }
 
-
+// MARK: - Onboarding Header
 struct OnboardingHeaderView: View {
     let progress: Double
     let canGoBack: Bool
