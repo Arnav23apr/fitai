@@ -12,6 +12,8 @@ class AppState {
     var authError: String? = nil
     var isLoggedIn: Bool = false
     var scanHistory: [ScanHistoryEntry] = []
+    var shouldShowPremiumWelcome: Bool = UserDefaults.standard.bool(forKey: "shouldShowPremiumWelcome")
+    var shouldShowPremiumTour: Bool = UserDefaults.standard.bool(forKey: "shouldShowPremiumTour")
 
     init() {
         scanHistory = ScanHistoryService.shared.loadAll()
@@ -45,6 +47,25 @@ class AppState {
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
         saveProfile()
+    }
+
+    func activatePremiumExperience() {
+        profile.isPremium = true
+        shouldShowPremiumWelcome = true
+        shouldShowPremiumTour = true
+        UserDefaults.standard.set(true, forKey: "shouldShowPremiumWelcome")
+        UserDefaults.standard.set(true, forKey: "shouldShowPremiumTour")
+        saveProfile()
+    }
+
+    func dismissPremiumWelcome() {
+        shouldShowPremiumWelcome = false
+        UserDefaults.standard.set(false, forKey: "shouldShowPremiumWelcome")
+    }
+
+    func completePremiumTour() {
+        shouldShowPremiumTour = false
+        UserDefaults.standard.set(false, forKey: "shouldShowPremiumTour")
     }
 
     func saveScanResult(_ result: ScanResult) {
@@ -146,6 +167,8 @@ class AppState {
         UserDefaults.standard.removeObject(forKey: "userProfile")
         UserDefaults.standard.removeObject(forKey: "cachedAIPlan")
         UserDefaults.standard.removeObject(forKey: "cachedMealPlan")
+        UserDefaults.standard.removeObject(forKey: "shouldShowPremiumWelcome")
+        UserDefaults.standard.removeObject(forKey: "shouldShowPremiumTour")
         ScanHistoryService.shared.clear()
         profile = UserProfile()
         scanHistory = []
