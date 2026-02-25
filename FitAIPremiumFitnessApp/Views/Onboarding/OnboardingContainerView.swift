@@ -67,7 +67,7 @@ struct OnboardingContainerView: View {
                 case .paywall:
                     PaywallView(
                         onSubscribe: {
-                            appState.profile.isPremium = true
+                            appState.activatePremiumExperience()
                             appState.completeOnboarding()
                         },
                         onSkip: {
