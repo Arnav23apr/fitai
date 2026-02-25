@@ -86,18 +86,17 @@ struct OnboardingContainerView: View {
             ))
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if currentStep != .welcome {
-                OnboardingHeaderView(
-                    progress: progress,
-                    canGoBack: !stepHistory.isEmpty,
-                    showsCloseButton: currentStep == .signUp,
-                    onBack: { goBack() },
-                    onClose: { goTo(.welcome, shouldRecordHistory: false) }
-                )
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 18)
-            }
+            OnboardingHeaderView(
+                progress: progress,
+                canGoBack: !stepHistory.isEmpty,
+                showsProgressBar: currentStep != .welcome,
+                showsCloseButton: currentStep == .signUp,
+                onBack: { goBack() },
+                onClose: { goTo(.welcome, shouldRecordHistory: false) }
+            )
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
+            .padding(.bottom, 18)
         }
         .animation(.snappy(duration: 0.4), value: currentStep)
     }
@@ -139,6 +138,7 @@ struct OnboardingContainerView: View {
 struct OnboardingHeaderView: View {
     let progress: Double
     let canGoBack: Bool
+    let showsProgressBar: Bool
     let showsCloseButton: Bool
     let onBack: () -> Void
     let onClose: () -> Void
@@ -155,8 +155,14 @@ struct OnboardingHeaderView: View {
             }
             .frame(width: 44, height: 44)
 
-            SegmentedOnboardingProgressBar(progress: progress)
-                .frame(maxWidth: .infinity)
+            Group {
+                if showsProgressBar {
+                    SegmentedOnboardingProgressBar(progress: progress)
+                } else {
+                    Color.clear
+                }
+            }
+            .frame(maxWidth: .infinity)
 
             Group {
                 if showsCloseButton {
