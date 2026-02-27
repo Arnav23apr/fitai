@@ -16,27 +16,27 @@
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = FitAIPremiumFitnessApp;
+			remoteInfo = FitAIScanPlanCompete;
 		};
 		105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = FitAIPremiumFitnessApp;
+			remoteInfo = FitAIScanPlanCompete;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitAIPremiumFitnessApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAIPremiumFitnessAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAIPremiumFitnessAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC57A2E9EAD3100EA8BCF /* FitAIScanPlanCompete.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitAIScanPlanCompete.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5892E9EAD3200EA8BCF /* FitAIScanPlanCompeteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAIScanPlanCompeteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5932E9EAD3200EA8BCF /* FitAIScanPlanCompeteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAIScanPlanCompeteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */ = {
+		105FC57C2E9EAD3100EA8BCF /* FitAIScanPlanCompete */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FitAIPremiumFitnessApp;
+			path = FitAIScanPlanCompete;
 			sourceTree = "<group>";
 		};
 		105FC58C2E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */ = {
@@ -80,7 +80,7 @@
 		105FC5712E9EAD3100EA8BCF = {
 			isa = PBXGroup;
 			children = (
-				105FC57C2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */,
+				105FC57C2E9EAD3100EA8BCF /* FitAIScanPlanCompete */,
 				105FC58C2E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */,
 				105FC5962E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
@@ -90,9 +90,9 @@
 		105FC57B2E9EAD3100EA8BCF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */,
-				105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */,
-				105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */,
+				105FC57A2E9EAD3100EA8BCF /* FitAIScanPlanCompete.app */,
+				105FC5892E9EAD3200EA8BCF /* FitAIScanPlanCompeteTests.xctest */,
+				105FC5932E9EAD3200EA8BCF /* FitAIScanPlanCompeteUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -100,9 +100,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */ = {
+		105FC5792E9EAD3100EA8BCF /* FitAIScanPlanCompete */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessApp" */;
+			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIScanPlanCompete" */;
 			buildPhases = (
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
@@ -113,19 +113,19 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				105FC57C2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */,
+				105FC57C2E9EAD3100EA8BCF /* FitAIScanPlanCompete */,
 			);
-			name = FitAIPremiumFitnessApp;
+			name = FitAIScanPlanCompete;
 			packageProductDependencies = (
 				XX7F1BC1206458B4E90481XX /* Auth */,
 			);
-			productName = FitAIPremiumFitnessApp;
-			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */;
+			productName = FitAIScanPlanCompete;
+			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAIScanPlanCompete.app */;
 			productType = "com.apple.product-type.application";
 		};
-		105FC5882E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */ = {
+		105FC5882E9EAD3200EA8BCF /* FitAIScanPlanCompete */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppTests" */;
+			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIScanPlanCompete" */;
 			buildPhases = (
 				105FC5852E9EAD3200EA8BCF /* Sources */,
 				105FC5862E9EAD3200EA8BCF /* Frameworks */,
@@ -139,16 +139,16 @@
 			fileSystemSynchronizedGroups = (
 				105FC58C2E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */,
 			);
-			name = FitAIPremiumFitnessAppTests;
+			name = FitAIScanPlanCompete;
 			packageProductDependencies = (
 			);
-			productName = FitAIPremiumFitnessAppTests;
-			productReference = 105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */;
+			productName = FitAIScanPlanCompete;
+			productReference = 105FC5892E9EAD3200EA8BCF /* FitAIScanPlanCompeteTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		105FC5922E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */ = {
+		105FC5922E9EAD3200EA8BCF /* FitAIScanPlanCompete */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppUITests" */;
+			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIScanPlanCompete" */;
 			buildPhases = (
 				105FC58F2E9EAD3200EA8BCF /* Sources */,
 				105FC5902E9EAD3200EA8BCF /* Frameworks */,
@@ -162,11 +162,11 @@
 			fileSystemSynchronizedGroups = (
 				105FC5962E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */,
 			);
-			name = FitAIPremiumFitnessAppUITests;
+			name = FitAIScanPlanCompete;
 			packageProductDependencies = (
 			);
-			productName = FitAIPremiumFitnessAppUITests;
-			productReference = 105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */;
+			productName = FitAIScanPlanCompete;
+			productReference = 105FC5932E9EAD3200EA8BCF /* FitAIScanPlanCompeteUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -192,7 +192,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAIPremiumFitnessApp" */;
+			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAIScanPlanCompete" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -206,9 +206,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */,
-				105FC5882E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */,
-				105FC5922E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */,
+				105FC5792E9EAD3100EA8BCF /* FitAIScanPlanCompete */,
+				105FC5882E9EAD3200EA8BCF /* FitAIScanPlanCompete */,
+				105FC5922E9EAD3200EA8BCF /* FitAIScanPlanCompete */,
 			);
 			packageReferences = (
 				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
@@ -267,12 +267,12 @@
 /* Begin PBXTargetDependency section */
 		105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */;
+			target = 105FC5792E9EAD3100EA8BCF /* FitAIScanPlanCompete */;
 			targetProxy = 105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 		105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */;
+			target = 105FC5792E9EAD3100EA8BCF /* FitAIScanPlanCompete */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -422,7 +422,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-premium-fitness";
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-SPC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -457,7 +457,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-premium-fitness";
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-SPC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -479,7 +479,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-premium-fitness.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-SPC.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -501,7 +501,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-premium-fitness.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-SPC.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -521,7 +521,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-premium-fitness.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-SPC.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -541,7 +541,7 @@
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-premium-fitness.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fit-ai-SPC.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -556,7 +556,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAIPremiumFitnessApp" */ = {
+		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAIScanPlanCompete" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59B2E9EAD3200EA8BCF /* Debug */,
@@ -565,7 +565,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessApp" */ = {
+		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIScanPlanCompete" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59E2E9EAD3200EA8BCF /* Debug */,
@@ -574,7 +574,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppTests" */ = {
+		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIScanPlanCompete" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A12E9EAD3200EA8BCF /* Debug */,
@@ -583,7 +583,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppUITests" */ = {
+		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIScanPlanCompete" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
