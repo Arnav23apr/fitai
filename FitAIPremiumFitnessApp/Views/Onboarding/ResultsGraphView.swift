@@ -25,11 +25,6 @@ struct ResultsGraphView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-            }
-            .padding(.top, 16)
-
             VStack(alignment: .leading, spacing: 8) {
                 Text(L.t("fitAICreates", lang))
                     .font(.system(.largeTitle, design: .default, weight: .bold))
@@ -38,7 +33,7 @@ struct ResultsGraphView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 24)
-            .padding(.top, 16)
+            .padding(.top, 60)
             .opacity(appeared ? 1 : 0)
             .offset(y: appeared ? 0 : 20)
 
