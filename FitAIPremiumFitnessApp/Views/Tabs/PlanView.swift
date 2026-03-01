@@ -169,6 +169,7 @@ struct PlanView: View {
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color.cyan.opacity(0.08), lineWidth: 1)
         )
+        .tourAnchor(.planSummaryCard)
     }
 
     private var planBasisItems: [(icon: String, text: String, color: Color)] {
@@ -319,6 +320,7 @@ struct PlanView: View {
                     }
                 }
                 .padding(20)
+                .tourAnchor(.planTodayWorkout)
                 .background(
                     LinearGradient(
                         colors: [accentColor.opacity(0.08), Color.clear],

@@ -3,6 +3,7 @@ import PhotosUI
 
 struct ProfileView: View {
     @Environment(AppState.self) private var appState
+    @Environment(TourManager.self) private var tourManager
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
     @State private var showLanguagePicker: Bool = false
@@ -17,6 +18,7 @@ struct ProfileView: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
                     userCard
+                        .tourAnchor(.profileUserCard)
                     statsCard
                     if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
                         limitedOfferCard
@@ -323,9 +325,12 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {}
+                Divider().padding(.leading, 52)
+                restartTourRow
             }
             .background(Color(.secondarySystemGroupedBackground))
             .clipShape(.rect(cornerRadius: 16))
+            .tourAnchor(.profileSettings)
 
             Button(action: {
                 appState.logout()
@@ -343,6 +348,29 @@ struct ProfileView: View {
                 .clipShape(.rect(cornerRadius: 16))
             }
         }
+    }
+
+    private var restartTourRow: some View {
+        Button {
+            tourManager.restartTour()
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "questionmark.circle.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.blue)
+                    .frame(width: 28)
+                Text("Restart Tour")
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .tourAnchor(.profileRestartTour)
     }
 
     private var darkModeToggle: some View {

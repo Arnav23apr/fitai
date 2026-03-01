@@ -134,6 +134,7 @@ struct ScanView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
+            .tourAnchor(.scanReadyCard)
 
             HStack(spacing: 12) {
                 photoSourceCard(
@@ -184,6 +185,7 @@ struct ScanView: View {
             }
             .disabled(viewModel.frontImage == nil || viewModel.isAnalyzing)
             .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.isAnalyzing)
+            .tourAnchor(.scanAnalyzeButton)
 
             if let error = viewModel.errorMessage {
                 HStack(spacing: 8) {
@@ -216,6 +218,7 @@ struct ScanView: View {
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
             }
+            .tourAnchor(.scanPhotoGuidelines)
         }
         .padding(20)
         .background(Color(.secondarySystemGroupedBackground))
