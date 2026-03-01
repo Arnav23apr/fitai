@@ -10,9 +10,9 @@ struct TourOverlayView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
 
-            if tourManager.isActive, !tourManager.isTransitioning,
+            if tourManager.isActive, tourManager.stepReady,
                let step = tourManager.currentStep,
-               let frame = tourManager.currentAnchorFrame {
+               let frame = tourManager.currentAnchorFrame, frame != .zero {
                 spotlightRing(for: frame)
                     .transition(.opacity)
 
@@ -34,9 +34,9 @@ struct TourOverlayView: View {
             }
         }
         .animation(.spring(duration: 0.4), value: tourManager.currentStepIndex)
+        .animation(.spring(duration: 0.35), value: tourManager.stepReady)
         .animation(.spring(duration: 0.35), value: tourManager.isActive)
         .animation(.spring(duration: 0.35), value: tourManager.showWelcome)
-        .animation(.spring(duration: 0.3), value: tourManager.isTransitioning)
     }
 
     private var welcomeCard: some View {
