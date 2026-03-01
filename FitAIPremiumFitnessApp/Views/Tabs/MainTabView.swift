@@ -29,7 +29,7 @@ struct MainTabView: View {
         .opacity(appeared ? 1 : 0)
         .overlay {
             TourOverlayView()
-                .allowsHitTesting(tourManager.isActive || tourManager.showWelcome)
+                .allowsHitTesting(tourManager.showWelcome || (tourManager.isActive && tourManager.stepReady))
         }
         .onAppear {
             let tabBarAppearance = UITabBarAppearance()

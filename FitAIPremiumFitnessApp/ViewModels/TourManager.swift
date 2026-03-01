@@ -9,9 +9,11 @@ class TourManager {
     var showWelcome: Bool = false
     var selectedTab: Int = 0
     var isTransitioning: Bool = false
+    var stepReady: Bool = false
 
     private let completedKey = "tourCompleted"
     private let skippedKey = "tourSkipped"
+    private var waitTask: Task<Void, Never>?
 
     var hasCompletedTour: Bool {
         UserDefaults.standard.bool(forKey: completedKey)
@@ -46,10 +48,11 @@ class TourManager {
     func startTour() {
         withAnimation(.spring(duration: 0.4)) {
             showWelcome = false
-            currentStepIndex = 1
-            isActive = true
         }
+        currentStepIndex = 1
+        isActive = true
         navigateToStepTab()
+        waitForAnchorThenShow()
     }
 
     func restartTour() {
@@ -57,6 +60,7 @@ class TourManager {
         UserDefaults.standard.set(false, forKey: skippedKey)
         anchorFrames = [:]
         currentStepIndex = 0
+        stepReady = false
         withAnimation(.spring(duration: 0.4)) {
             showWelcome = true
         }
@@ -77,69 +81,64 @@ class TourManager {
             return
         }
 
+        stepReady = false
+        waitTask?.cancel()
+
         let nextStep = TourStep.allSteps[nextIndex]
         let needsTabSwitch = nextStep.targetTab != TourStep.allSteps[currentStepIndex].targetTab
 
+        currentStepIndex = nextIndex
+
         if needsTabSwitch {
             isTransitioning = true
-            withAnimation(.spring(duration: 0.3)) {
-                currentStepIndex = nextIndex
-            }
             if let tab = nextStep.targetTab {
                 selectedTab = tab
             }
-            Task {
-                try? await Task.sleep(for: .milliseconds(500))
-                withAnimation(.spring(duration: 0.35)) {
-                    isTransitioning = false
-                }
-            }
-        } else {
-            withAnimation(.spring(duration: 0.35)) {
-                currentStepIndex = nextIndex
-            }
         }
+
+        waitForAnchorThenShow()
     }
 
     func back() {
         guard isActive, currentStepIndex > 1 else { return }
         let prevIndex = currentStepIndex - 1
+
+        stepReady = false
+        waitTask?.cancel()
+
         let prevStep = TourStep.allSteps[prevIndex]
         let needsTabSwitch = prevStep.targetTab != TourStep.allSteps[currentStepIndex].targetTab
 
+        currentStepIndex = prevIndex
+
         if needsTabSwitch {
             isTransitioning = true
-            withAnimation(.spring(duration: 0.3)) {
-                currentStepIndex = prevIndex
-            }
             if let tab = prevStep.targetTab {
                 selectedTab = tab
             }
-            Task {
-                try? await Task.sleep(for: .milliseconds(500))
-                withAnimation(.spring(duration: 0.35)) {
-                    isTransitioning = false
-                }
-            }
-        } else {
-            withAnimation(.spring(duration: 0.35)) {
-                currentStepIndex = prevIndex
-            }
         }
+
+        waitForAnchorThenShow()
     }
 
     func skipTour() {
+        waitTask?.cancel()
         withAnimation(.spring(duration: 0.35)) {
             isActive = false
             showWelcome = false
+            stepReady = false
+            isTransitioning = false
         }
         UserDefaults.standard.set(true, forKey: skippedKey)
         UserDefaults.standard.set(true, forKey: completedKey)
     }
 
     func completeTour() {
+        waitTask?.cancel()
         withAnimation(.spring(duration: 0.35)) {
             isActive = false
+            stepReady = false
+            isTransitioning = false
         }
         UserDefaults.standard.set(true, forKey: completedKey)
     }
@@ -153,5 +152,30 @@ class TourManager {
     private func navigateToStepTab() {
         guard let step = currentStep, let tab = step.targetTab else { return }
         selectedTab = tab
+    }
+
+    private func waitForAnchorThenShow() {
+        waitTask?.cancel()
+        waitTask = Task {
+            let anchorID = TourStep.allSteps[currentStepIndex].anchorID
+            let minDelay: Duration = isTransitioning ? .milliseconds(400) : .milliseconds(150)
+            try? await Task.sleep(for: minDelay)
+            if Task.isCancelled { return }
+
+            var attempts = 0
+            let maxAttempts = 30
+            while anchorFrames[anchorID] == nil || anchorFrames[anchorID] == .zero {
+                attempts += 1
+                if attempts >= maxAttempts || Task.isCancelled { break }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+
+            if Task.isCancelled { return }
+
+            withAnimation(.spring(duration: 0.35)) {
+                isTransitioning = false
+                stepReady = true
+            }
+        }
     }
 }
