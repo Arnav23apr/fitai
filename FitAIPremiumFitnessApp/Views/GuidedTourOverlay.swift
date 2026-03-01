@@ -27,10 +27,20 @@ nonisolated enum TourStep: Int, CaseIterable, Sendable {
         }
     }
 
+    var accentColor: Color {
+        switch self {
+        case .scan: Color.cyan
+        case .plan: Color.blue
+        case .compete: Color(red: 1.0, green: 0.82, blue: 0.0)
+        case .coach: Color.green
+        case .ready: Color.green
+        }
+    }
+
     var title: String {
         switch self {
-        case .scan: "Scan"
-        case .plan: "Plan"
+        case .scan: "Body Scan"
+        case .plan: "Your Plan"
         case .compete: "Compete"
         case .coach: "AI Coach"
         case .ready: "You're Ready"
@@ -58,170 +68,291 @@ struct GuidedTourOverlay: View {
     @Binding var selectedTab: Int
     @State private var currentStep: TourStep = .scan
     @State private var appeared: Bool = false
+    @State private var cardScale: CGFloat = 0.88
+    @State private var cardOpacity: Double = 0
+
+    private let nonReadySteps = TourStep.allCases.filter { $0 != .ready }
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(appeared ? 0.7 : 0)
-                .ignoresSafeArea()
-                .allowsHitTesting(true)
+        GeometryReader { geo in
+            ZStack(alignment: .top) {
+                dimLayer
 
-            if currentStep == .ready {
-                readyCard
-                    .transition(.scale(scale: 0.9).combined(with: .opacity))
-            } else {
-                tooltipView
-                    .transition(.opacity)
-            }
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
 
-            VStack {
-                HStack {
-                    Spacer()
+                    cardContainer
+                        .padding(.horizontal, 22)
+                        .scaleEffect(cardScale)
+                        .opacity(cardOpacity)
+
+                    Spacer(minLength: 0)
+
                     if currentStep != .ready {
-                        Button {
-                            hapticLight()
-                            dismiss()
-                        } label: {
-                            Text("Skip Tour")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.white.opacity(0.6))
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(.ultraThinMaterial.opacity(0.4))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(PremiumButtonStyle())
+                        tabSpotlightBar
+                            .padding(.bottom, max(geo.safeAreaInsets.bottom + 4, 16))
+                    } else {
+                        Spacer().frame(height: max(geo.safeAreaInsets.bottom + 30, 50))
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 60)
-                Spacer()
+
+                if currentStep != .ready {
+                    skipButton
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.horizontal, 20)
+                        .padding(.top, geo.safeAreaInsets.top + 14)
+                }
             }
         }
+        .ignoresSafeArea()
         .onAppear {
-            withAnimation(.easeOut(duration: 0.4)) {
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.80)) {
                 appeared = true
+                cardScale = 1.0
+                cardOpacity = 1.0
             }
         }
-        .animation(.smooth(duration: 0.35), value: currentStep)
+        .animation(.spring(response: 0.42, dampingFraction: 0.80), value: currentStep)
     }
 
-    private var tooltipView: some View {
+    // MARK: - Dim Layer
+
+    private var dimLayer: some View {
+        ZStack {
+            Color.black
+                .opacity(appeared ? 0.78 : 0)
+                .ignoresSafeArea()
+                .animation(.easeOut(duration: 0.45), value: appeared)
+
+            Rectangle()
+                .fill(.ultraThinMaterial.opacity(appeared ? 0.18 : 0))
+                .ignoresSafeArea()
+                .animation(.easeOut(duration: 0.5), value: appeared)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Card Container
+
+    @ViewBuilder
+    private var cardContainer: some View {
+        if currentStep == .ready {
+            readyCard
+                .transition(
+                    .asymmetric(
+                        insertion: .scale(scale: 0.88).combined(with: .opacity),
+                        removal: .scale(scale: 0.96).combined(with: .opacity)
+                    )
+                )
+        } else {
+            tourCard(for: currentStep)
+                .id(currentStep.rawValue)
+                .transition(
+                    .asymmetric(
+                        insertion: .move(edge: .trailing).combined(with: .opacity),
+                        removal: .move(edge: .leading).combined(with: .opacity)
+                    )
+                )
+        }
+    }
+
+    // MARK: - Tour Card
+
+    private func tourCard(for step: TourStep) -> some View {
         VStack(spacing: 0) {
-            Spacer()
+            sheenHighlight(cornerRadius: 28)
 
-            VStack(spacing: 20) {
-                ZStack {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.green.opacity(0.2), Color.clear],
-                                center: .center,
-                                startRadius: 5,
-                                endRadius: 35
-                            )
-                        )
-                        .frame(width: 72, height: 72)
+            VStack(spacing: 24) {
+                iconBadge(for: step)
 
-                    Image(systemName: currentStep.icon)
-                        .font(.system(size: 28, weight: .medium))
+                VStack(spacing: 9) {
+                    Text(step.title)
+                        .font(.system(.title2, design: .default, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 56, height: 56)
-                        .background {
-                            Circle()
-                                .fill(.ultraThinMaterial.opacity(0.6))
-                                .overlay {
-                                    Circle()
-                                        .strokeBorder(
-                                            LinearGradient(
-                                                colors: [.white.opacity(0.3), .white.opacity(0.05)],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            lineWidth: 1
-                                        )
-                                }
-                        }
-                }
-
-                VStack(spacing: 8) {
-                    Text(currentStep.title)
-                        .font(.system(.title3, design: .default, weight: .bold))
-                        .foregroundStyle(.white)
-
-                    Text(currentStep.message)
-                        .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.65))
                         .multilineTextAlignment(.center)
-                        .lineSpacing(3)
+
+                    Text(step.message)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.62))
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
-                stepIndicator
+                stepDots
 
                 Button {
-                    hapticLight()
+                    hapticImpact(.light)
                     advanceStep()
                 } label: {
                     Text("Next")
                         .font(.system(.subheadline, weight: .semibold))
                         .foregroundStyle(.black)
-                        .frame(width: 160, height: 44)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
                         .background {
-                            Capsule().fill(.white)
+                            Capsule()
+                                .fill(.white)
+                                .shadow(color: .white.opacity(0.22), radius: 14, y: 5)
                         }
                         .clipShape(Capsule())
                 }
                 .buttonStyle(PremiumButtonStyle())
             }
-            .padding(.vertical, 32)
-            .padding(.horizontal, 28)
-            .background {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(.ultraThinMaterial.opacity(0.5))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 24)
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color.white.opacity(0.1), Color.white.opacity(0.02)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 24)
-                            .strokeBorder(
-                                LinearGradient(
-                                    colors: [.white.opacity(0.2), .white.opacity(0.04)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ),
-                                lineWidth: 1
-                            )
-                    }
-            }
-            .padding(.horizontal, 32)
+            .padding(.top, 6)
+            .padding(.bottom, 30)
+            .padding(.horizontal, 26)
+        }
+        .tourCardGlass(cornerRadius: 28)
+    }
 
-            Spacer()
+    // MARK: - Icon Badge
 
-            tabHighlight
-                .padding(.bottom, 8)
+    private func iconBadge(for step: TourStep) -> some View {
+        ZStack {
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [step.accentColor.opacity(0.30), .clear],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 46
+                    )
+                )
+                .frame(width: 92, height: 92)
+
+            Image(systemName: step.icon)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(step.accentColor)
+                .frame(width: 64, height: 64)
+                .iconCircleGlass()
+                .shadow(color: step.accentColor.opacity(0.25), radius: 12, y: 4)
         }
     }
 
-    private var stepIndicator: some View {
-        let steps = TourStep.allCases.filter { $0 != .ready }
-        return HStack(spacing: 6) {
-            ForEach(steps, id: \.rawValue) { step in
+    // MARK: - Sheen Highlight
+
+    private func sheenHighlight(cornerRadius: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: cornerRadius)
+            .fill(
+                LinearGradient(
+                    colors: [.white.opacity(0.10), .clear],
+                    startPoint: .topLeading,
+                    endPoint: UnitPoint(x: 0.5, y: 0.35)
+                )
+            )
+            .frame(height: 3)
+            .clipShape(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .inset(by: 1)
+            )
+            .padding(.horizontal, 1)
+    }
+
+    // MARK: - Step Dots
+
+    private var stepDots: some View {
+        HStack(spacing: 5) {
+            ForEach(nonReadySteps, id: \.rawValue) { step in
+                let isActive = step == currentStep
                 Capsule()
-                    .fill(step == currentStep ? Color.white : Color.white.opacity(0.2))
-                    .frame(width: step == currentStep ? 20 : 8, height: 4)
+                    .fill(isActive ? Color.white : Color.white.opacity(0.20))
+                    .frame(width: isActive ? 24 : 7, height: 5)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.72), value: currentStep)
             }
         }
     }
 
-    private var tabHighlight: some View {
-        let tabNames: [(String, String)] = [
+    // MARK: - Ready Card
+
+    private var readyCard: some View {
+        VStack(spacing: 0) {
+            sheenHighlight(cornerRadius: 32)
+
+            VStack(spacing: 26) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [Color.green.opacity(0.32), .clear],
+                                center: .center,
+                                startRadius: 4,
+                                endRadius: 58
+                            )
+                        )
+                        .frame(width: 116, height: 116)
+
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 52))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.green, Color(red: 0.0, green: 0.75, blue: 0.38)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .shadow(color: .green.opacity(0.40), radius: 22, y: 6)
+                }
+
+                VStack(spacing: 10) {
+                    Text("You're Ready")
+                        .font(.system(.title, design: .default, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+
+                    Text("Let's build something elite.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.60))
+                        .multilineTextAlignment(.center)
+                }
+
+                Button {
+                    hapticImpact(.medium)
+                    dismiss()
+                } label: {
+                    Text("Enter Fit AI")
+                        .font(.system(.headline, weight: .semibold))
+                        .foregroundStyle(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 52)
+                        .background {
+                            Capsule()
+                                .fill(.white)
+                                .shadow(color: .white.opacity(0.20), radius: 18, y: 7)
+                        }
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(PremiumButtonStyle())
+                .padding(.top, 2)
+            }
+            .padding(.top, 6)
+            .padding(.bottom, 34)
+            .padding(.horizontal, 26)
+        }
+        .tourCardGlass(cornerRadius: 32)
+    }
+
+    // MARK: - Skip Button
+
+    private var skipButton: some View {
+        Button {
+            hapticImpact(.light)
+            dismiss()
+        } label: {
+            Text("Skip Tour")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.78))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .skipPillGlass()
+        }
+        .buttonStyle(PremiumButtonStyle())
+    }
+
+    // MARK: - Tab Spotlight Bar
+
+    private var tabSpotlightBar: some View {
+        let tabDefs: [(String, String)] = [
             ("camera.viewfinder", "Scan"),
             ("calendar.badge.clock", "Plan"),
             ("trophy.fill", "Compete"),
@@ -229,149 +360,199 @@ struct GuidedTourOverlay: View {
         ]
 
         return HStack(spacing: 0) {
-            ForEach(0..<tabNames.count, id: \.self) { index in
-                let isHighlighted = currentStep.tabIndex == index
-                VStack(spacing: 4) {
-                    Image(systemName: tabNames[index].0)
-                        .font(.system(size: 20))
-                    Text(tabNames[index].1)
-                        .font(.system(size: 10))
-                }
-                .foregroundStyle(isHighlighted ? .white : .white.opacity(0.25))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background {
-                    if isHighlighted {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.white.opacity(0.1))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(.white.opacity(0.2), lineWidth: 1)
-                            }
-                            .padding(.horizontal, 4)
-                    }
-                }
+            ForEach(0..<tabDefs.count, id: \.self) { i in
+                let isActive = currentStep.tabIndex == i
+                tabItem(
+                    icon: tabDefs[i].0,
+                    label: tabDefs[i].1,
+                    isActive: isActive,
+                    accent: isActive ? currentStep.accentColor : .white
+                )
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
         .background {
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial.opacity(0.3))
+            RoundedRectangle(cornerRadius: 22)
+                .fill(.ultraThinMaterial.opacity(0.20))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 22)
+                        .strokeBorder(.white.opacity(0.09), lineWidth: 0.5)
+                }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
     }
 
-    private var readyCard: some View {
-        VStack(spacing: 28) {
+    private func tabItem(icon: String, label: String, isActive: Bool, accent: Color) -> some View {
+        VStack(spacing: 4) {
             ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color.green.opacity(0.25), Color.clear],
-                            center: .center,
-                            startRadius: 10,
-                            endRadius: 50
-                        )
-                    )
-                    .frame(width: 100, height: 100)
-
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.green, .green.opacity(0.7)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .shadow(color: .green.opacity(0.3), radius: 16, y: 4)
-            }
-
-            VStack(spacing: 10) {
-                Text("You're Ready")
-                    .font(.system(.title, design: .default, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Text("Let's build something elite.")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.65))
-            }
-
-            Button {
-                hapticLight()
-                dismiss()
-            } label: {
-                Text("Enter Fit AI")
-                    .font(.system(.headline, weight: .semibold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background {
-                        Capsule().fill(.white)
-                            .shadow(color: .white.opacity(0.15), radius: 16, y: 6)
-                    }
-                    .clipShape(Capsule())
-            }
-            .buttonStyle(PremiumButtonStyle())
-            .padding(.horizontal, 8)
-        }
-        .padding(.vertical, 36)
-        .padding(.horizontal, 28)
-        .background {
-            RoundedRectangle(cornerRadius: 28)
-                .fill(.ultraThinMaterial.opacity(0.5))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 28)
+                if isActive {
+                    Circle()
                         .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.1), Color.white.opacity(0.02)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                            RadialGradient(
+                                colors: [accent.opacity(0.40), .clear],
+                                center: .center,
+                                startRadius: 0,
+                                endRadius: 30
                             )
                         )
+                        .frame(width: 60, height: 60)
+                        .transition(.scale.combined(with: .opacity))
+
+                    Circle()
+                        .fill(.white.opacity(0.10))
+                        .overlay {
+                            Circle().strokeBorder(.white.opacity(0.20), lineWidth: 0.5)
+                        }
+                        .frame(width: 40, height: 40)
+                        .transition(.scale.combined(with: .opacity))
                 }
-                .overlay {
-                    RoundedRectangle(cornerRadius: 28)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [.white.opacity(0.2), .white.opacity(0.04)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
-                        )
-                }
+
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: isActive ? .semibold : .regular))
+                    .foregroundStyle(isActive ? accent : .white.opacity(0.18))
+                    .scaleEffect(isActive ? 1.12 : 1.0)
+            }
+            .frame(width: 60, height: 44)
+
+            Text(label)
+                .font(.system(size: 10, weight: isActive ? .semibold : .regular))
+                .foregroundStyle(isActive ? .white.opacity(0.88) : .white.opacity(0.18))
         }
-        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity)
+        .animation(.spring(response: 0.38, dampingFraction: 0.72), value: isActive)
     }
 
+    // MARK: - Actions
+
     private func advanceStep() {
-        let allSteps = TourStep.allCases
-        guard let idx = allSteps.firstIndex(of: currentStep),
-              idx + 1 < allSteps.count else {
+        let all = TourStep.allCases
+        guard let idx = all.firstIndex(of: currentStep), idx + 1 < all.count else {
             dismiss()
             return
         }
-        currentStep = allSteps[idx + 1]
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
+            currentStep = all[idx + 1]
+        }
         if let tabIdx = currentStep.tabIndex {
             selectedTab = tabIdx
         }
     }
 
     private func dismiss() {
-        withAnimation(.easeOut(duration: 0.3)) {
+        withAnimation(.easeOut(duration: 0.30)) {
             appeared = false
+            cardScale = 0.92
+            cardOpacity = 0
         }
         Task {
-            try? await Task.sleep(for: .seconds(0.3))
+            try? await Task.sleep(for: .seconds(0.35))
             isShowing = false
             UserDefaults.standard.set(true, forKey: "hasSeenGuidedTour")
         }
     }
 
-    private func hapticLight() {
-        let gen = UIImpactFeedbackGenerator(style: .light)
+    private func hapticImpact(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let gen = UIImpactFeedbackGenerator(style: style)
         gen.impactOccurred()
+    }
+}
+
+// MARK: - Glass Modifiers
+
+private extension View {
+    @ViewBuilder
+    func tourCardGlass(cornerRadius: CGFloat = 28) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self.background {
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.13), .white.opacity(0.02)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.30), .white.opacity(0.06)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
+                    .shadow(color: .black.opacity(0.45), radius: 44, y: 22)
+                    .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+            }
+        }
+    }
+
+    @ViewBuilder
+    func iconCircleGlass() -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(in: .circle)
+        } else {
+            self.background {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.20), .white.opacity(0.04)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        Circle()
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.32), .white.opacity(0.06)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    }
+                    .shadow(color: .black.opacity(0.22), radius: 10, y: 4)
+            }
+        }
+    }
+
+    @ViewBuilder
+    func skipPillGlass() -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(in: .capsule)
+        } else {
+            self.background {
+                Capsule()
+                    .fill(.ultraThinMaterial.opacity(0.65))
+                    .overlay {
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.10), .white.opacity(0.02)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                    .overlay {
+                        Capsule()
+                            .strokeBorder(.white.opacity(0.14), lineWidth: 0.5)
+                    }
+            }
+        }
     }
 }
