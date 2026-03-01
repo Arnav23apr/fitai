@@ -2,37 +2,35 @@ import SwiftUI
 
 struct MainTabView: View {
     @Environment(AppState.self) private var appState
+    @Environment(TourManager.self) private var tourManager
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selectedTab: Int = 0
     @State private var appeared: Bool = false
-    @State private var showTour: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
-        ZStack {
-            TabView(selection: $selectedTab) {
-                Tab(L.t("scan", lang), systemImage: "camera.viewfinder", value: 0) {
-                    ScanView()
-                }
-                Tab(L.t("plan", lang), systemImage: "calendar.badge.clock", value: 1) {
-                    PlanView()
-                }
-                Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 2) {
-                    CompeteView()
-                }
-                Tab(L.t("profile", lang), systemImage: "person.fill", value: 3) {
-                    ProfileView()
-                }
+        @Bindable var tour = tourManager
+        TabView(selection: $tour.selectedTab) {
+            Tab(L.t("scan", lang), systemImage: "camera.viewfinder", value: 0) {
+                ScanView()
             }
-            .tint(.primary)
-
-            if showTour {
-                GuidedTourOverlay(isShowing: $showTour, selectedTab: $selectedTab)
-                    .transition(.opacity)
+            Tab(L.t("plan", lang), systemImage: "calendar.badge.clock", value: 1) {
+                PlanView()
+            }
+            Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 2) {
+                CompeteView()
+            }
+            Tab(L.t("profile", lang), systemImage: "person.fill", value: 3) {
+                ProfileView()
             }
         }
+        .tint(.primary)
+        .tourAnchor(.tabBar)
         .opacity(appeared ? 1 : 0)
+        .overlay {
+            TourOverlayView()
+                .allowsHitTesting(tourManager.isActive || tourManager.showWelcome)
+        }
         .onAppear {
             let tabBarAppearance = UITabBarAppearance()
             tabBarAppearance.configureWithDefaultBackground()
@@ -43,16 +41,7 @@ struct MainTabView: View {
                 appeared = true
             }
 
-            if appState.showGuidedTour && !UserDefaults.standard.bool(forKey: "hasSeenGuidedTour") {
-                Task {
-                    try? await Task.sleep(for: .seconds(0.6))
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        showTour = true
-                    }
-                    appState.showGuidedTour = false
-                }
-            }
+            tourManager.checkAndShowWelcome()
         }
-        .animation(.smooth(duration: 0.3), value: showTour)
     }
 }

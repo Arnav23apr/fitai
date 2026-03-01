@@ -146,6 +146,7 @@ struct CompeteView: View {
                 .opacity(appeared ? 1 : 0)
                 .scaleEffect(appeared ? 1 : 0.5)
                 .sensoryFeedback(.impact(weight: .light), trigger: showRankProgression)
+                .tourAnchor(.competeRankBadge)
 
             VStack(spacing: 6) {
                 Text(currentTier.name.uppercased())
@@ -572,6 +573,7 @@ struct CompeteView: View {
             ForEach(Array(visibleChallenges.enumerated()), id: \.element.id) { index, challenge in
                 challengeRow(challenge, index: index)
             }
+            .tourAnchor(.competeChallenges)
 
             if challenges.count > 2 {
                 Button {
@@ -693,6 +695,7 @@ struct CompeteView: View {
                     .foregroundStyle(.primary)
                 Spacer()
             }
+            .tourAnchor(.competeLeaderboard)
 
             HStack(spacing: 4) {
                 ForEach(LeaderboardTab.allCases, id: \.rawValue) { tab in
