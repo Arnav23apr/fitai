@@ -17,6 +17,14 @@ struct ContentView: View {
             } else if !appState.hasCompletedOnboarding {
                 OnboardingContainerView()
                     .transition(.opacity)
+            } else if appState.showWelcomePro {
+                WelcomeProView {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        appState.showWelcomePro = false
+                        appState.showGuidedTour = true
+                    }
+                }
+                .transition(.opacity)
             } else {
                 MainTabView()
                     .transition(.opacity)
@@ -24,5 +32,6 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.4), value: appState.showSplash)
         .animation(.easeInOut(duration: 0.4), value: appState.hasCompletedOnboarding)
+        .animation(.easeInOut(duration: 0.4), value: appState.showWelcomePro)
     }
 }

@@ -7,6 +7,8 @@ class AppState {
     var hasCompletedOnboarding: Bool = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
 
     var showSplash: Bool = true
+    var showWelcomePro: Bool = false
+    var showGuidedTour: Bool = false
     var profile: UserProfile = AppState.loadProfile()
     var isAuthenticating: Bool = false
     var authError: String? = nil
