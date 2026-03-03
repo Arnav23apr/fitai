@@ -15,20 +15,23 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    userCard
-                        .tourAnchor(.profileUserCard)
-                    statsCard
-                    if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
-                        limitedOfferCard
+            ScrollViewReader { scrollProxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        userCard
+                            .tourAnchor(.profileUserCard)
+                        statsCard
+                        if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
+                            limitedOfferCard
+                        }
+                        scanHistorySection
+                        settingsSection
                     }
-                    scanHistorySection
-                    settingsSection
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 32)
+                    .tourAutoScroll(tab: 3, proxy: scrollProxy)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 32)
             }
             .background(Color(.systemBackground))
             .navigationTitle(L.t("profile", lang))

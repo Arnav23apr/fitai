@@ -6,6 +6,7 @@ struct TourAnchorModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
+            .id(id.rawValue)
             .background(
                 GeometryReader { geo in
                     Color.clear

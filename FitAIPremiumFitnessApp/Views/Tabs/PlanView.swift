@@ -60,38 +60,41 @@ struct PlanView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    planSummaryCard
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+            ScrollViewReader { scrollProxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        planSummaryCard
+                            .transition(.opacity.combined(with: .move(edge: .top)))
 
-                    todayGoalHero
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        todayGoalHero
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
 
-                    weeklyStreakSection
+                        weeklyStreakSection
 
-                    if appState.profile.latestScore != nil {
-                        scanInsightCard
-                    } else {
-                        promptScanCard
+                        if appState.profile.latestScore != nil {
+                            scanInsightCard
+                        } else {
+                            promptScanCard
+                        }
+
+                        if appState.profile.latestScore != nil && !appState.profile.weakPoints.isEmpty {
+                            focusAreasSection
+                        }
+
+                        competeIntegrationCard
+
+                        weeklyPlanSection
+
+                        nextScanReminderCard
+
+                        weeklySummaryCard
                     }
-
-                    if appState.profile.latestScore != nil && !appState.profile.weakPoints.isEmpty {
-                        focusAreasSection
-                    }
-
-                    competeIntegrationCard
-
-                    weeklyPlanSection
-
-                    nextScanReminderCard
-
-                    weeklySummaryCard
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 100)
+                    .opacity(appeared ? 1 : 0)
+                    .tourAutoScroll(tab: 1, proxy: scrollProxy)
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 8)
-                .padding(.bottom, 100)
-                .opacity(appeared ? 1 : 0)
             }
             .background(Color(.systemBackground))
             .overlay(alignment: .bottomTrailing) {

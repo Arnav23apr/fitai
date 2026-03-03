@@ -10,6 +10,7 @@ class TourManager {
     var selectedTab: Int = 0
     var isTransitioning: Bool = false
     var stepReady: Bool = false
+    var scrollToAnchor: TourAnchorID? = nil
 
     private let completedKey = "tourCompleted"
     private let skippedKey = "tourSkipped"
@@ -161,6 +162,11 @@ class TourManager {
             let anchorID = TourStep.allSteps[currentStepIndex].anchorID
             let minDelay: Duration = isTransitioning ? .milliseconds(400) : .milliseconds(150)
             try? await Task.sleep(for: minDelay)
+            if Task.isCancelled { return }
+
+            scrollToAnchor = anchorID
+
+            try? await Task.sleep(for: .milliseconds(300))
             if Task.isCancelled { return }
 
             var attempts = 0

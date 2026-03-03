@@ -18,17 +18,20 @@ struct ScanView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 16) {
-                    headerSection
-                    latestScoreCard
-                    readyToScanCard
-                    transformationCard
-                    tipsCard
+            ScrollViewReader { scrollProxy in
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        headerSection
+                        latestScoreCard
+                        readyToScanCard
+                        transformationCard
+                        tipsCard
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 32)
+                    .tourAutoScroll(tab: 0, proxy: scrollProxy)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
-                .padding(.bottom, 32)
             }
             .background(Color(.systemBackground))
             .toolbar(.hidden, for: .navigationBar)
