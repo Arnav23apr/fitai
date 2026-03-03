@@ -37,6 +37,7 @@ struct TourOverlayView: View {
         .animation(.spring(duration: 0.35), value: tourManager.stepReady)
         .animation(.spring(duration: 0.35), value: tourManager.isActive)
         .animation(.spring(duration: 0.35), value: tourManager.showWelcome)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var welcomeCard: some View {

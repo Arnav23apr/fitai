@@ -160,23 +160,29 @@ class TourManager {
         waitTask?.cancel()
         waitTask = Task {
             let anchorID = TourStep.allSteps[currentStepIndex].anchorID
-            let minDelay: Duration = isTransitioning ? .milliseconds(400) : .milliseconds(150)
+
+            anchorFrames[anchorID] = nil
+
+            let minDelay: Duration = isTransitioning ? .milliseconds(500) : .milliseconds(200)
             try? await Task.sleep(for: minDelay)
             if Task.isCancelled { return }
 
             scrollToAnchor = anchorID
 
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(600))
             if Task.isCancelled { return }
 
             var attempts = 0
-            let maxAttempts = 30
+            let maxAttempts = 40
             while anchorFrames[anchorID] == nil || anchorFrames[anchorID] == .zero {
                 attempts += 1
                 if attempts >= maxAttempts || Task.isCancelled { break }
                 try? await Task.sleep(for: .milliseconds(100))
             }
 
+            if Task.isCancelled { return }
+
+            try? await Task.sleep(for: .milliseconds(100))
             if Task.isCancelled { return }
 
             withAnimation(.spring(duration: 0.35)) {
