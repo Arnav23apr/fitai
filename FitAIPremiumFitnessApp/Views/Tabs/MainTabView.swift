@@ -26,16 +26,13 @@ struct MainTabView: View {
         }
         .tint(.primary)
         .opacity(appeared ? 1 : 0)
-        .background {
-            GeometryReader { geo in
-                let totalHeight = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
-                let tabBarHeight: CGFloat = 49 + geo.safeAreaInsets.bottom
-                Color.clear
-                    .frame(width: geo.size.width, height: tabBarHeight)
-                    .position(x: geo.size.width / 2, y: totalHeight - tabBarHeight / 2 - geo.safeAreaInsets.top)
-                    .tourAnchor(.tabBar)
-                    .allowsHitTesting(false)
-            }
+        .overlay(alignment: .bottom) {
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .frame(height: 49)
+                .padding(.bottom, 34)
+                .tourAnchor(.tabBar)
+                .allowsHitTesting(false)
         }
         .overlay {
             TourOverlayView()
