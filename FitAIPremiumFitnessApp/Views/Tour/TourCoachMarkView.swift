@@ -29,10 +29,18 @@ struct TourCoachMarkView: View {
     }
 
     var body: some View {
-        let screenWidth = UIScreen.main.bounds.width
-        let popupWidth: CGFloat = min(screenWidth - 40, 340)
+        let screen = UIScreen.main.bounds
+        let popupWidth: CGFloat = min(screen.width - 40, 340)
+        let estimatedHalfHeight: CGFloat = 90
         let centerX = anchorFrame.midX
-        let popupX = max(popupWidth / 2 + 20, min(centerX, screenWidth - popupWidth / 2 - 20))
+        let popupX = max(popupWidth / 2 + 20, min(centerX, screen.width - popupWidth / 2 - 20))
+
+        let rawY: CGFloat = placement == .below
+            ? anchorFrame.maxY + 14 + estimatedHalfHeight
+            : anchorFrame.minY - 14 - estimatedHalfHeight
+        let safeMinY: CGFloat = 110 + estimatedHalfHeight
+        let safeMaxY: CGFloat = screen.height - 100 - estimatedHalfHeight
+        let clampedY = max(safeMinY, min(rawY, safeMaxY))
 
         VStack(spacing: 0) {
             if placement == .below {
@@ -49,9 +57,7 @@ struct TourCoachMarkView: View {
         }
         .position(
             x: popupX,
-            y: placement == .below
-                ? anchorFrame.maxY + 16 + 80
-                : anchorFrame.minY - 16 - 80
+            y: clampedY
         )
         .opacity(appeared ? 1 : 0)
         .scaleEffect(appeared ? 1 : 0.92)
