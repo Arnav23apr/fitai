@@ -118,26 +118,7 @@ struct TourOverlayView: View {
     }
 
     private func spotlightRing(for frame: CGRect) -> some View {
-        let inset: CGFloat = -6
-        let expandedFrame = frame.insetBy(dx: inset, dy: inset)
-
-        return RoundedRectangle(cornerRadius: 14)
-            .strokeBorder(
-                LinearGradient(
-                    colors: [
-                        Color.blue.opacity(0.5),
-                        Color.cyan.opacity(0.3),
-                        Color.blue.opacity(0.2)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                ),
-                lineWidth: 2
-            )
-            .frame(width: expandedFrame.width, height: expandedFrame.height)
-            .position(x: expandedFrame.midX, y: expandedFrame.midY)
-            .shadow(color: Color.blue.opacity(0.2), radius: 8)
-            .allowsHitTesting(false)
+        AppleIntelligenceGlowBorder(frame: frame, cornerRadius: 14)
     }
 
     private var skipPill: some View {

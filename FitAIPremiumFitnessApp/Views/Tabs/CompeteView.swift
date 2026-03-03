@@ -70,6 +70,7 @@ struct CompeteView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { scrollProxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
                     heroSection
@@ -111,6 +112,8 @@ struct CompeteView: View {
                         .padding(.bottom, 40)
                 }
                 .padding(.top, 8)
+                .tourAutoScroll(tab: 2, proxy: scrollProxy)
+            }
             }
             .background(Color(.systemBackground))
             .navigationTitle(L.t("compete", lang))
