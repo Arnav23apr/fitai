@@ -120,7 +120,11 @@ struct TourOverlayView: View {
 
     private func spotlightRing(for frame: CGRect) -> some View {
         let isTabBar = tourManager.currentStep?.anchorID == .tabBar
-        return AppleIntelligenceGlowBorder(frame: frame, cornerRadius: isTabBar ? 28 : 14)
+        return AppleIntelligenceGlowBorder(
+            frame: frame,
+            cornerRadius: isTabBar ? 28 : 14,
+            glowSpread: isTabBar ? 16 : 28
+        )
     }
 
     private var skipPill: some View {

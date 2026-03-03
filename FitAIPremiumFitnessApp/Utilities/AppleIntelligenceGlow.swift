@@ -4,24 +4,17 @@ import Combine
 struct AppleIntelligenceGlowBorder: View {
     let frame: CGRect
     let cornerRadius: CGFloat
+    var glowSpread: CGFloat = 28
 
     @State private var gradientStops: [Gradient.Stop] = AppleIntelligenceGlowBorder.randomStops()
 
     private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        let glowSpread: CGFloat = 28
-
-        Canvas { context, size in
-            context.addFilter(.blur(radius: 0))
-        }
-        .frame(width: 0, height: 0)
-        .hidden()
-
         ZStack {
-            outerGlow(spread: glowSpread, lineWidth: 24, blur: 22)
-            outerGlow(spread: glowSpread, lineWidth: 14, blur: 10)
-            outerGlow(spread: glowSpread, lineWidth: 6, blur: 4)
+            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.85, blur: glowSpread * 0.78)
+            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.5, blur: glowSpread * 0.35)
+            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.21, blur: glowSpread * 0.14)
             outerGlow(spread: glowSpread, lineWidth: 2.5, blur: 0)
         }
         .mask {

@@ -20,6 +20,10 @@ struct TourCoachMarkView: View {
         return .below
     }
 
+    private var anchorGap: CGFloat {
+        step.anchorID == .tabBar ? 32 : 14
+    }
+
     private var arrowOffset: CGFloat {
         let screenWidth = UIScreen.main.bounds.width
         let centerX = anchorFrame.midX
@@ -36,8 +40,8 @@ struct TourCoachMarkView: View {
         let popupX = max(popupWidth / 2 + 20, min(centerX, screen.width - popupWidth / 2 - 20))
 
         let rawY: CGFloat = placement == .below
-            ? anchorFrame.maxY + 14 + estimatedHalfHeight
-            : anchorFrame.minY - 14 - estimatedHalfHeight
+            ? anchorFrame.maxY + anchorGap + estimatedHalfHeight
+            : anchorFrame.minY - anchorGap - estimatedHalfHeight
         let safeMinY: CGFloat = 110 + estimatedHalfHeight
         let safeMaxY: CGFloat = screen.height - 100 - estimatedHalfHeight
         let clampedY = max(safeMinY, min(rawY, safeMaxY))
