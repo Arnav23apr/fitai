@@ -51,6 +51,7 @@ class TourManager {
         }
         currentStepIndex = 1
         isActive = true
+        isTransitioning = true
         navigateToStepTab()
         waitForAnchorThenShow()
     }

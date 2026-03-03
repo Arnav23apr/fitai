@@ -25,8 +25,13 @@ struct MainTabView: View {
             }
         }
         .tint(.primary)
-        .tourAnchor(.tabBar)
         .opacity(appeared ? 1 : 0)
+        .overlay(alignment: .bottom) {
+            Color.clear
+                .frame(height: 83)
+                .tourAnchor(.tabBar)
+                .allowsHitTesting(false)
+        }
         .overlay {
             TourOverlayView()
                 .allowsHitTesting(tourManager.showWelcome || (tourManager.isActive && tourManager.stepReady))
