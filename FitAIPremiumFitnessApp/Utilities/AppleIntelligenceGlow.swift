@@ -2,126 +2,65 @@ import SwiftUI
 import Combine
 
 struct AppleIntelligenceGlowBorder: View {
-    @State private var gradientStops: [Gradient.Stop] = AppleIntelligenceGlowBorder.generateGradientStops()
+    let frame: CGRect
+    let cornerRadius: CGFloat
+    var glowSpread: CGFloat = 28
+
+    @State private var gradientStops: [Gradient.Stop] = AppleIntelligenceGlowBorder.randomStops()
+
+    private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
 
     var body: some View {
         ZStack {
-            EffectNoBlur(gradientStops: gradientStops, width: 6)
-                .onAppear {
-                    // Start a timer to update the gradient stops every second
-                    Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
-                        withAnimation(.easeInOut(duration: 0.5)) {
-                            gradientStops = AppleIntelligenceGlowBorder.generateGradientStops()
-                        }
-                    }
-                }
-            Effect(gradientStops: gradientStops, width: 9, blur: 4)
-                .onAppear {
-                    // Start a timer to update the gradient stops every second
-                    Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
-                        withAnimation(.easeInOut(duration: 0.6)) {
-                            gradientStops = AppleIntelligenceGlowBorder.generateGradientStops()
-                        }
-                    }
-                }
-            Effect(gradientStops: gradientStops, width: 11, blur: 12)
-                .onAppear {
-                    // Start a timer to update the gradient stops every second
-                    Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
-                        withAnimation(.easeInOut(duration: 0.8)) {
-                            gradientStops = AppleIntelligenceGlowBorder.generateGradientStops()
-                        }
-                    }
-                }
-            Effect(gradientStops: gradientStops, width: 15, blur: 15)
-                .onAppear {
-                    // Start a timer to update the gradient stops every second
-                    Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                        withAnimation(.easeInOut(duration: 1)) {
-                            gradientStops = AppleIntelligenceGlowBorder.generateGradientStops()
-                        }
-                    }
-                }
+            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.85, blur: glowSpread * 0.78)
+            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.5, blur: glowSpread * 0.35)
+            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.21, blur: glowSpread * 0.14)
+            outerGlow(spread: glowSpread, lineWidth: 2.5, blur: 0)
         }
+        .mask {
+            Rectangle()
+                .fill(.white)
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .frame(width: frame.width, height: frame.height)
+                        .position(x: frame.midX, y: frame.midY)
+                        .blendMode(.destinationOut)
+                }
+                .compositingGroup()
+        }
+        .onReceive(timer) { _ in
+            withAnimation(.easeInOut(duration: 0.6)) {
+                gradientStops = Self.randomStops()
+            }
+        }
+        .allowsHitTesting(false)
     }
-    
-    // Function to generate random gradient stops
-    static func generateGradientStops() -> [Gradient.Stop] {
+
+    private func outerGlow(spread: CGFloat, lineWidth: CGFloat, blur: CGFloat) -> some View {
+        let expandedWidth = frame.width + spread
+        let expandedHeight = frame.height + spread
+
+        return RoundedRectangle(cornerRadius: cornerRadius + spread / 2)
+            .stroke(
+                AngularGradient(
+                    gradient: Gradient(stops: gradientStops),
+                    center: .center
+                ),
+                lineWidth: lineWidth
+            )
+            .frame(width: expandedWidth, height: expandedHeight)
+            .position(x: frame.midX, y: frame.midY)
+            .blur(radius: blur)
+    }
+
+    static func randomStops() -> [Gradient.Stop] {
         [
-            Gradient.Stop(color: Color(hex: "BC82F3"), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(hex: "F5B9EA"), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(hex: "8D9FFF"), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(hex: "FF6778"), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(hex: "FFBA71"), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(hex: "C686FF"), location: Double.random(in: 0...1))
+            Gradient.Stop(color: Color(red: 0.737, green: 0.510, blue: 0.953), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 0.961, green: 0.726, blue: 0.918), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 0.553, green: 0.624, blue: 1.0), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 1.0, green: 0.404, blue: 0.471), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 1.0, green: 0.729, blue: 0.443), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 0.776, green: 0.525, blue: 1.0), location: Double.random(in: 0...1)),
         ].sorted { $0.location < $1.location }
     }
-}
-
-struct Effect: View {
-    var gradientStops: [Gradient.Stop]
-    var width: CGFloat
-    var blur: CGFloat
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 55)
-                .strokeBorder(
-                    AngularGradient(
-                        gradient: Gradient(stops: gradientStops),
-                        center: .center
-                    ),
-                    lineWidth: width
-                )
-                .frame(
-                    width: UIScreen.main.bounds.width,
-                    height: UIScreen.main.bounds.height
-                )
-                .padding(.top, -17)
-                .blur(radius: blur)
-        }
-    }
-}
-
-struct EffectNoBlur: View {
-    var gradientStops: [Gradient.Stop]
-    var width: CGFloat
-
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 55)
-                .strokeBorder(
-                    AngularGradient(
-                        gradient: Gradient(stops: gradientStops),
-                        center: .center
-                    ),
-                    lineWidth: width
-                )
-                .frame(
-                    width: UIScreen.main.bounds.width,
-                    height: UIScreen.main.bounds.height
-                )
-                .padding(.top, -26)
-        }
-    }
-}
-
-extension Color {
-    init(hex: String) {
-        let scanner = Scanner(string: hex)
-        _ = scanner.scanString("#")
-        
-        var hexNumber: UInt64 = 0
-        scanner.scanHexInt64(&hexNumber)
-        
-        let r = Double((hexNumber & 0xff0000) >> 16) / 255
-        let g = Double((hexNumber & 0x00ff00) >> 8) / 255
-        let b = Double(hexNumber & 0x0000ff) / 255
-        
-        self.init(red: r, green: g, blue: b)
-    }
-}
-
-#Preview {
-    AppleIntelligenceGlowBorder()
 }
