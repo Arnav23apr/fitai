@@ -33,6 +33,7 @@ struct TourOverlayView: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+        .ignoresSafeArea()
         .animation(.spring(duration: 0.4), value: tourManager.currentStepIndex)
         .animation(.spring(duration: 0.35), value: tourManager.stepReady)
         .animation(.spring(duration: 0.35), value: tourManager.isActive)

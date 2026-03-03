@@ -166,7 +166,7 @@ class TourManager {
 
             scrollToAnchor = anchorID
 
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: .milliseconds(600))
             if Task.isCancelled { return }
 
             var attempts = 0
