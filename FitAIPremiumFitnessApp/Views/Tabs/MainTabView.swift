@@ -26,18 +26,8 @@ struct MainTabView: View {
         }
         .tint(.primary)
         .opacity(appeared ? 1 : 0)
-        .onGeometryChange(for: CGRect.self, of: { geo in geo.frame(in: .global) }) { screenRect in
-            let screenW = screenRect.width
-            let screenH = screenRect.maxY
-            let safeBottom: CGFloat = 34
-            let tabBarHeight: CGFloat = 49 + safeBottom
-            let tabFrame = CGRect(
-                x: screenRect.minX,
-                y: screenH - tabBarHeight,
-                width: screenW,
-                height: tabBarHeight
-            )
-            tourManager.registerAnchor(.tabBar, frame: tabFrame)
+        .onGeometryChange(for: CGRect.self, of: { geo in geo.frame(in: .global) }) { _ in
+            registerTabBarFrame()
         }
         .overlay {
             TourOverlayView()
@@ -53,7 +43,27 @@ struct MainTabView: View {
                 appeared = true
             }
 
+            registerTabBarFrame()
             tourManager.checkAndShowWelcome()
         }
+    }
+
+    private func registerTabBarFrame() {
+        let screen = UIScreen.main.bounds
+        let safeBottom: CGFloat
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first {
+            safeBottom = window.safeAreaInsets.bottom
+        } else {
+            safeBottom = 34
+        }
+        let tabBarHeight: CGFloat = 49 + safeBottom
+        let frame = CGRect(
+            x: 0,
+            y: screen.height - tabBarHeight,
+            width: screen.width,
+            height: tabBarHeight
+        )
+        tourManager.registerAnchor(.tabBar, frame: frame)
     }
 }
