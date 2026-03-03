@@ -15,7 +15,7 @@ struct TourScrollModifier: ViewModifier {
                     proxy.scrollTo(anchor.rawValue, anchor: .center)
                 }
                 Task {
-                    try? await Task.sleep(for: .milliseconds(100))
+                    try? await Task.sleep(for: .milliseconds(450))
                     tourManager.scrollToAnchor = nil
                 }
             }
