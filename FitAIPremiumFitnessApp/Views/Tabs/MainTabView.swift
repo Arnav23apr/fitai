@@ -26,53 +26,18 @@ struct MainTabView: View {
         }
         .tint(.primary)
         .opacity(appeared ? 1 : 0)
-        .overlay(alignment: .bottom) {
-            GeometryReader { geo in
-                Color.clear
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 1)
-                    .onAppear {
-                        let safeBottom = geo.safeAreaInsets.bottom
-                        let tabBarHeight: CGFloat = 49 + safeBottom
-                        let screenH = geo.frame(in: .global).maxY
-                        let tabFrame = CGRect(
-                            x: geo.frame(in: .global).minX,
-                            y: screenH - tabBarHeight,
-                            width: geo.size.width,
-                            height: tabBarHeight
-                        )
-                        tourManager.registerAnchor(.tabBar, frame: tabFrame)
-                    }
-                    .onChange(of: tourManager.isActive) { _, active in
-                        if active {
-                            let safeBottom = geo.safeAreaInsets.bottom
-                            let tabBarHeight: CGFloat = 49 + safeBottom
-                            let screenH = geo.frame(in: .global).maxY
-                            let tabFrame = CGRect(
-                                x: geo.frame(in: .global).minX,
-                                y: screenH - tabBarHeight,
-                                width: geo.size.width,
-                                height: tabBarHeight
-                            )
-                            tourManager.registerAnchor(.tabBar, frame: tabFrame)
-                        }
-                    }
-                    .onChange(of: tourManager.currentStepIndex) { _, _ in
-                        if tourManager.isActive {
-                            let safeBottom = geo.safeAreaInsets.bottom
-                            let tabBarHeight: CGFloat = 49 + safeBottom
-                            let screenH = geo.frame(in: .global).maxY
-                            let tabFrame = CGRect(
-                                x: geo.frame(in: .global).minX,
-                                y: screenH - tabBarHeight,
-                                width: geo.size.width,
-                                height: tabBarHeight
-                            )
-                            tourManager.registerAnchor(.tabBar, frame: tabFrame)
-                        }
-                    }
-            }
-            .allowsHitTesting(false)
+        .onGeometryChange(for: CGRect.self, of: { geo in geo.frame(in: .global) }) { screenRect in
+            let screenW = screenRect.width
+            let screenH = screenRect.maxY
+            let safeBottom: CGFloat = 34
+            let tabBarHeight: CGFloat = 49 + safeBottom
+            let tabFrame = CGRect(
+                x: screenRect.minX,
+                y: screenH - tabBarHeight,
+                width: screenW,
+                height: tabBarHeight
+            )
+            tourManager.registerAnchor(.tabBar, frame: tabFrame)
         }
         .overlay {
             TourOverlayView()
