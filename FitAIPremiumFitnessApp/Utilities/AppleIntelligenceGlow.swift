@@ -10,14 +10,30 @@ struct AppleIntelligenceGlowBorder: View {
     private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        let inset: CGFloat = -6
-        let expandedFrame = frame.insetBy(dx: inset, dy: inset)
+        let glowSpread: CGFloat = 28
+
+        Canvas { context, size in
+            context.addFilter(.blur(radius: 0))
+        }
+        .frame(width: 0, height: 0)
+        .hidden()
 
         ZStack {
-            glowLayer(expandedFrame: expandedFrame, lineWidth: 15, blur: 15)
-            glowLayer(expandedFrame: expandedFrame, lineWidth: 11, blur: 12)
-            glowLayer(expandedFrame: expandedFrame, lineWidth: 9, blur: 4)
-            sharpLayer(expandedFrame: expandedFrame, lineWidth: 3)
+            outerGlow(spread: glowSpread, lineWidth: 24, blur: 22)
+            outerGlow(spread: glowSpread, lineWidth: 14, blur: 10)
+            outerGlow(spread: glowSpread, lineWidth: 6, blur: 4)
+            outerGlow(spread: glowSpread, lineWidth: 2.5, blur: 0)
+        }
+        .mask {
+            Rectangle()
+                .fill(.white)
+                .overlay {
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .frame(width: frame.width, height: frame.height)
+                        .position(x: frame.midX, y: frame.midY)
+                        .blendMode(.destinationOut)
+                }
+                .compositingGroup()
         }
         .onReceive(timer) { _ in
             withAnimation(.easeInOut(duration: 0.6)) {
@@ -27,31 +43,21 @@ struct AppleIntelligenceGlowBorder: View {
         .allowsHitTesting(false)
     }
 
-    private func glowLayer(expandedFrame: CGRect, lineWidth: CGFloat, blur: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius + 4)
-            .strokeBorder(
-                AngularGradient(
-                    gradient: Gradient(stops: gradientStops),
-                    center: .center
-                ),
-                lineWidth: lineWidth
-            )
-            .frame(width: expandedFrame.width, height: expandedFrame.height)
-            .position(x: expandedFrame.midX, y: expandedFrame.midY)
-            .blur(radius: blur)
-    }
+    private func outerGlow(spread: CGFloat, lineWidth: CGFloat, blur: CGFloat) -> some View {
+        let expandedWidth = frame.width + spread
+        let expandedHeight = frame.height + spread
 
-    private func sharpLayer(expandedFrame: CGRect, lineWidth: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: cornerRadius + 4)
-            .strokeBorder(
+        return RoundedRectangle(cornerRadius: cornerRadius + spread / 2)
+            .stroke(
                 AngularGradient(
                     gradient: Gradient(stops: gradientStops),
                     center: .center
                 ),
                 lineWidth: lineWidth
             )
-            .frame(width: expandedFrame.width, height: expandedFrame.height)
-            .position(x: expandedFrame.midX, y: expandedFrame.midY)
+            .frame(width: expandedWidth, height: expandedHeight)
+            .position(x: frame.midX, y: frame.midY)
+            .blur(radius: blur)
     }
 
     static func randomStops() -> [Gradient.Stop] {

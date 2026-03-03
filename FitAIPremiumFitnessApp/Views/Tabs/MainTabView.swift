@@ -28,7 +28,9 @@ struct MainTabView: View {
         .opacity(appeared ? 1 : 0)
         .overlay(alignment: .bottom) {
             Color.clear
-                .frame(height: 83)
+                .frame(maxWidth: .infinity)
+                .frame(height: 49)
+                .padding(.bottom, 34)
                 .tourAnchor(.tabBar)
                 .allowsHitTesting(false)
         }
