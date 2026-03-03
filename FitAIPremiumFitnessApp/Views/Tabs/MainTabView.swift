@@ -26,7 +26,6 @@ struct MainTabView: View {
         }
         .tint(.primary)
         .opacity(appeared ? 1 : 0)
-        .coordinateSpace(name: "tourRoot")
         .overlay(alignment: .bottom) {
             Color.clear
                 .frame(height: 83)
