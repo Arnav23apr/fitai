@@ -1,5 +1,4 @@
 import SwiftUI
-import Combine
 
 struct AppleIntelligenceGlowBorder: View {
     let frame: CGRect
@@ -8,59 +7,50 @@ struct AppleIntelligenceGlowBorder: View {
 
     @State private var gradientStops: [Gradient.Stop] = AppleIntelligenceGlowBorder.randomStops()
 
-    private let timer = Timer.publish(every: 0.4, on: .main, in: .common).autoconnect()
-
     var body: some View {
+        let cr = cornerRadius + glowSpread / 2
+
         ZStack {
-            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.85, blur: glowSpread * 0.78)
-            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.5, blur: glowSpread * 0.35)
-            outerGlow(spread: glowSpread, lineWidth: glowSpread * 0.21, blur: glowSpread * 0.14)
-            outerGlow(spread: glowSpread, lineWidth: 2.5, blur: 0)
+            glowLayer(lineWidth: 15, blur: 15, cornerRadius: cr)
+            glowLayer(lineWidth: 11, blur: 12, cornerRadius: cr)
+            glowLayer(lineWidth: 9, blur: 4, cornerRadius: cr)
+            glowLayer(lineWidth: 6, blur: 0, cornerRadius: cr)
         }
-        .mask {
-            Rectangle()
-                .fill(.white)
-                .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .frame(width: frame.width, height: frame.height)
-                        .position(x: frame.midX, y: frame.midY)
-                        .blendMode(.destinationOut)
+        .onAppear {
+            Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    gradientStops = Self.randomStops()
                 }
-                .compositingGroup()
-        }
-        .onReceive(timer) { _ in
-            withAnimation(.easeInOut(duration: 0.6)) {
-                gradientStops = Self.randomStops()
             }
         }
         .allowsHitTesting(false)
     }
 
-    private func outerGlow(spread: CGFloat, lineWidth: CGFloat, blur: CGFloat) -> some View {
-        let expandedWidth = frame.width + spread
-        let expandedHeight = frame.height + spread
+    private func glowLayer(lineWidth: CGFloat, blur: CGFloat, cornerRadius: CGFloat) -> some View {
+        let w = frame.width + glowSpread
+        let h = frame.height + glowSpread
 
-        return RoundedRectangle(cornerRadius: cornerRadius + spread / 2)
-            .stroke(
+        return RoundedRectangle(cornerRadius: cornerRadius)
+            .strokeBorder(
                 AngularGradient(
                     gradient: Gradient(stops: gradientStops),
                     center: .center
                 ),
                 lineWidth: lineWidth
             )
-            .frame(width: expandedWidth, height: expandedHeight)
+            .frame(width: w, height: h)
             .position(x: frame.midX, y: frame.midY)
             .blur(radius: blur)
     }
 
     static func randomStops() -> [Gradient.Stop] {
         [
-            Gradient.Stop(color: Color(red: 0.737, green: 0.510, blue: 0.953), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 0.961, green: 0.726, blue: 0.918), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 0.553, green: 0.624, blue: 1.0), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 1.0, green: 0.404, blue: 0.471), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 1.0, green: 0.729, blue: 0.443), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 0.776, green: 0.525, blue: 1.0), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 188/255, green: 130/255, blue: 243/255), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 245/255, green: 185/255, blue: 234/255), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 141/255, green: 159/255, blue: 255/255), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 255/255, green: 103/255, blue: 120/255), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 255/255, green: 186/255, blue: 113/255), location: Double.random(in: 0...1)),
+            Gradient.Stop(color: Color(red: 198/255, green: 134/255, blue: 255/255), location: Double.random(in: 0...1)),
         ].sorted { $0.location < $1.location }
     }
 }
