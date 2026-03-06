@@ -376,50 +376,60 @@ struct SetLoggingSheet: View {
         .frame(width: 28)
     }
 
+    private static let weightValues: [Double] = Array(stride(from: 0.0, through: 300.0, by: 0.5))
+    private static let repsValues: [Int] = Array(0...100)
+
+    private func weightPickerIndex(for weight: Double) -> Int {
+        let clamped = min(max(weight, 0), 300)
+        return Int((clamped * 2).rounded())
+    }
+
     private func setInputFields(index: Int, isDisabled: Bool) -> some View {
-        let fieldBg = Color.primary.opacity(isDisabled ? 0.02 : 0.06)
-        return HStack(spacing: 8) {
-            VStack(spacing: 2) {
+        HStack(spacing: 4) {
+            VStack(spacing: 0) {
                 Text(weightUnit.uppercased())
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.tertiary)
-                TextField("0", value: Binding(
-                    get: { sets[index].weight },
-                    set: { sets[index].weight = $0 }
-                ), format: .number)
-                .font(.system(.body, design: .rounded, weight: .semibold))
-                .multilineTextAlignment(.center)
-                .keyboardType(.decimalPad)
-                .frame(width: 60)
+                Picker("", selection: Binding(
+                    get: { weightPickerIndex(for: sets[index].weight) },
+                    set: { sets[index].weight = Self.weightValues[$0] }
+                )) {
+                    ForEach(Self.weightValues.indices, id: \.self) { i in
+                        let v = Self.weightValues[i]
+                        Text(v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : String(format: "%.1f", v))
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .tag(i)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 70, height: 80)
+                .clipped()
                 .disabled(isDisabled)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 6)
-            .background(fieldBg)
-            .clipShape(.rect(cornerRadius: 10))
 
             Text("×")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.tertiary)
 
-            VStack(spacing: 2) {
+            VStack(spacing: 0) {
                 Text("REPS")
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.tertiary)
-                TextField("0", value: Binding(
+                Picker("", selection: Binding(
                     get: { sets[index].reps },
                     set: { sets[index].reps = $0 }
-                ), format: .number)
-                .font(.system(.body, design: .rounded, weight: .semibold))
-                .multilineTextAlignment(.center)
-                .keyboardType(.numberPad)
-                .frame(width: 60)
+                )) {
+                    ForEach(Self.repsValues, id: \.self) { r in
+                        Text("\(r)")
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .tag(r)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 60, height: 80)
+                .clipped()
                 .disabled(isDisabled)
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 6)
-            .background(fieldBg)
-            .clipShape(.rect(cornerRadius: 10))
         }
     }
 
