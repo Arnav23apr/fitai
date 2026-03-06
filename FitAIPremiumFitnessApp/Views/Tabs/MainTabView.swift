@@ -60,12 +60,15 @@ struct MainTabView: View {
 
         if let tabBar = findTabBar(in: window) {
             let frame = tabBar.convert(tabBar.bounds, to: nil)
-            let inset: CGFloat = 2
+            let safeBottom = window.safeAreaInsets.bottom
+            let visibleHeight = frame.height - safeBottom
+            let hInset: CGFloat = 6
+            let vInset: CGFloat = 4
             let adjusted = CGRect(
-                x: frame.origin.x + inset,
-                y: frame.origin.y + inset,
-                width: frame.width - inset * 2,
-                height: frame.height - inset * 2
+                x: frame.origin.x + hInset,
+                y: frame.origin.y + vInset,
+                width: frame.width - hInset * 2,
+                height: visibleHeight - vInset * 2
             )
             tourManager.registerAnchor(.tabBar, frame: adjusted)
         }
