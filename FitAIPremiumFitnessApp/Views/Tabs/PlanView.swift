@@ -224,20 +224,36 @@ struct PlanView: View {
 
     // MARK: - Today's Goal Hero
 
+    private var isSessionActiveForToday: Bool {
+        session.isActive && !session.workoutName.isEmpty
+    }
+
     private var todayGoalHero: some View {
         Group {
             if let workout = todayWorkout {
                 let isCompleted = appState.isDayCompleted(workout.dayLabel)
-                let accentColor = workoutAccentColor(workout)
+                let baseAccent = workoutAccentColor(workout)
+                let accentColor = isSessionActiveForToday ? Color.green : baseAccent
 
                 VStack(spacing: 0) {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(spacing: 6) {
-                                Text(L.t("todaysGoal", lang))
-                                    .font(.system(size: 10, weight: .heavy, design: .rounded))
-                                    .foregroundStyle(accentColor)
-                                    .tracking(1.2)
+                                if isSessionActiveForToday {
+                                    Text("IN PROGRESS")
+                                        .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(.green)
+                                        .tracking(1.2)
+                                    Circle()
+                                        .fill(.green)
+                                        .frame(width: 6, height: 6)
+                                        .shadow(color: .green.opacity(0.6), radius: 3)
+                                } else {
+                                    Text(L.t("todaysGoal", lang))
+                                        .font(.system(size: 10, weight: .heavy, design: .rounded))
+                                        .foregroundStyle(accentColor)
+                                        .tracking(1.2)
+                                }
                                 if isCompleted {
                                     Image(systemName: "checkmark.seal.fill")
                                         .font(.system(size: 12))
@@ -251,7 +267,12 @@ struct PlanView: View {
 
                             if !workout.isRestDay {
                                 HStack(spacing: 12) {
-                                    Label("\(estimatedMinutes(workout))min", systemImage: "clock")
+                                    if isSessionActiveForToday {
+                                        Label(session.formatTime(session.elapsedSeconds), systemImage: "timer")
+                                            .foregroundStyle(.green)
+                                    } else {
+                                        Label("\(estimatedMinutes(workout))min", systemImage: "clock")
+                                    }
                                     Label(workoutDifficulty(workout), systemImage: "flame")
                                     Label("\(workout.exercises.count)", systemImage: "list.bullet")
                                 }
@@ -268,8 +289,9 @@ struct PlanView: View {
                                     .stroke(Color.primary.opacity(0.06), lineWidth: 5)
                                     .frame(width: 60, height: 60)
 
-                                let exercisesDone = isCompleted ? workout.exercises.count : 0
-                                let progress = workout.exercises.isEmpty ? 0.0 : Double(exercisesDone) / Double(workout.exercises.count)
+                                let exercisesDone = isSessionActiveForToday ? session.completedCount : (isCompleted ? workout.exercises.count : 0)
+                                let totalEx = isSessionActiveForToday ? session.totalExercises : workout.exercises.count
+                                let progress = totalEx == 0 ? 0.0 : Double(exercisesDone) / Double(totalEx)
                                 Circle()
                                     .trim(from: 0, to: progress)
                                     .stroke(
@@ -278,6 +300,7 @@ struct PlanView: View {
                                     )
                                     .frame(width: 60, height: 60)
                                     .rotationEffect(.degrees(-90))
+                                    .animation(.spring(duration: 0.4), value: progress)
 
                                 Image(systemName: isCompleted ? "checkmark" : workout.icon)
                                     .font(.system(size: isCompleted ? 18 : 20))
@@ -290,59 +313,112 @@ struct PlanView: View {
                         Divider()
                             .padding(.vertical, 14)
 
-                        HStack(spacing: 0) {
-                            VStack(spacing: 2) {
-                                Text(isCompleted ? "✓" : "+\(100 + workout.exercises.count * 10)")
-                                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                                    .foregroundStyle(isCompleted ? .green : .yellow)
-                                Text(L.t("xpReward", lang))
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                        if isSessionActiveForToday {
+                            HStack(spacing: 0) {
+                                VStack(spacing: 2) {
+                                    Text(session.formatTime(session.elapsedSeconds))
+                                        .font(.system(.subheadline, design: .monospaced, weight: .bold))
+                                        .foregroundStyle(.green)
+                                    Text("Elapsed")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity)
+
+                                Rectangle()
+                                    .fill(Color.primary.opacity(0.06))
+                                    .frame(width: 1, height: 28)
+
+                                VStack(spacing: 2) {
+                                    Text("\(session.completedCount)/\(session.totalExercises)")
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        .foregroundStyle(.primary)
+                                    Text("Exercises")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity)
+
+                                Rectangle()
+                                    .fill(Color.primary.opacity(0.06))
+                                    .frame(width: 1, height: 28)
+
+                                VStack(spacing: 2) {
+                                    Text(session.currentExerciseName.isEmpty ? "Done" : session.currentExerciseName)
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    Text("Current")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity)
                             }
-                            .frame(maxWidth: .infinity)
+                        } else {
+                            HStack(spacing: 0) {
+                                VStack(spacing: 2) {
+                                    Text(isCompleted ? "✓" : "+\(100 + workout.exercises.count * 10)")
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        .foregroundStyle(isCompleted ? .green : .yellow)
+                                    Text(L.t("xpReward", lang))
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity)
 
-                            Rectangle()
-                                .fill(Color.primary.opacity(0.06))
-                                .frame(width: 1, height: 28)
+                                Rectangle()
+                                    .fill(Color.primary.opacity(0.06))
+                                    .frame(width: 1, height: 28)
 
-                            VStack(spacing: 2) {
-                                Text("\(nextTierPoints - appState.profile.points)")
-                                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                                    .foregroundStyle(.cyan)
-                                Text("to \(nextTierName)")
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
+                                VStack(spacing: 2) {
+                                    Text("\(nextTierPoints - appState.profile.points)")
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        .foregroundStyle(.cyan)
+                                    Text("to \(nextTierName)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity)
+
+                                Rectangle()
+                                    .fill(Color.primary.opacity(0.06))
+                                    .frame(width: 1, height: 28)
+
+                                VStack(spacing: 2) {
+                                    Text(workout.focusAreas.first ?? "–")
+                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    Text(L.t("target", lang))
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .frame(maxWidth: .infinity)
                             }
-                            .frame(maxWidth: .infinity)
-
-                            Rectangle()
-                                .fill(Color.primary.opacity(0.06))
-                                .frame(width: 1, height: 28)
-
-                            VStack(spacing: 2) {
-                                Text(workout.focusAreas.first ?? "–")
-                                    .font(.system(.subheadline, design: .rounded, weight: .bold))
-                                    .foregroundStyle(.primary)
-                                    .lineLimit(1)
-                                Text(L.t("target", lang))
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            .frame(maxWidth: .infinity)
                         }
 
                         if !isCompleted {
                             Button(action: { selectedDay = workout }) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "play.fill")
-                                        .font(.system(size: 12))
-                                    Text(L.t("startWorkout", lang))
+                                    Image(systemName: isSessionActiveForToday ? "arrow.right.circle.fill" : "play.fill")
+                                        .font(.system(size: isSessionActiveForToday ? 16 : 12))
+                                    Text(isSessionActiveForToday ? L.t("resumeWorkout", lang) : L.t("startWorkout", lang))
                                         .font(.subheadline.weight(.bold))
+                                    if isSessionActiveForToday {
+                                        Spacer()
+                                        Text(session.formatTime(session.elapsedSeconds))
+                                            .font(.system(.caption, design: .monospaced, weight: .bold))
+                                            .opacity(0.8)
+                                    }
                                 }
-                                .foregroundStyle(.black)
+                                .foregroundStyle(isSessionActiveForToday ? .white : .black)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 48)
-                                .background(accentColor)
+                                .background(
+                                    isSessionActiveForToday
+                                        ? AnyShapeStyle(LinearGradient(colors: [Color.green, Color.green.opacity(0.85)], startPoint: .leading, endPoint: .trailing))
+                                        : AnyShapeStyle(accentColor)
+                                )
                                 .clipShape(.rect(cornerRadius: 14))
                             }
                             .padding(.top, 14)
@@ -354,7 +430,9 @@ struct PlanView: View {
                 .tourAnchor(.planTodayWorkout)
                 .background(
                     LinearGradient(
-                        colors: [accentColor.opacity(0.08), Color.clear],
+                        colors: isSessionActiveForToday
+                            ? [Color.green.opacity(0.1), Color.green.opacity(0.03)]
+                            : [accentColor.opacity(0.08), Color.clear],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -362,7 +440,10 @@ struct PlanView: View {
                 .clipShape(.rect(cornerRadius: 20))
                 .overlay(
                     RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(accentColor.opacity(0.12), lineWidth: 1)
+                        .strokeBorder(
+                            isSessionActiveForToday ? Color.green.opacity(0.25) : accentColor.opacity(0.12),
+                            lineWidth: isSessionActiveForToday ? 1.5 : 1
+                        )
                 )
             }
         }
