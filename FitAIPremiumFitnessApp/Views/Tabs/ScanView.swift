@@ -107,8 +107,12 @@ struct ScanView: View {
             }
             Spacer()
             Button { showStreakSheet = true } label: {
-                Label("\(appState.profile.currentStreak)", systemImage: "flame.fill")
-                    .font(.subheadline.weight(.semibold))
+                HStack(spacing: 4) {
+                    Image(systemName: "flame.fill")
+                        .foregroundStyle(.orange)
+                    Text("\(appState.profile.currentStreak)")
+                }
+                .font(.subheadline.weight(.semibold))
             }
             .streakGlassButton()
         }
