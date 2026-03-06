@@ -1,6 +1,19 @@
 import SwiftUI
 import PhotosUI
 
+private extension View {
+    @ViewBuilder
+    func streakGlassButton() -> some View {
+        if #available(iOS 26.0, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
+                .buttonBorderShape(.capsule)
+                .tint(.primary)
+        }
+    }
+}
+
 struct ScanView: View {
     @Environment(AppState.self) private var appState
     @Environment(TourManager.self) private var tourManager
@@ -94,14 +107,10 @@ struct ScanView: View {
             }
             Spacer()
             Button { showStreakSheet = true } label: {
-                HStack(spacing: 3) {
-                    Text("🔥")
-                        .font(.system(size: 16))
-                    Text("\(appState.profile.currentStreak)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                }
+                Label("\(appState.profile.currentStreak)", systemImage: "flame.fill")
+                    .font(.subheadline.weight(.semibold))
             }
+            .streakGlassButton()
         }
         .padding(.vertical, 8)
     }
