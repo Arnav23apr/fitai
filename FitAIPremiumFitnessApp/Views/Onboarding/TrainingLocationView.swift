@@ -29,6 +29,12 @@ struct TrainingLocationView: View {
         selected == "Home" || selected == "Both"
     }
 
+    private var canContinue: Bool {
+        if selected.isEmpty { return false }
+        if showEquipment && selectedEquipment.isEmpty { return false }
+        return true
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
@@ -137,10 +143,10 @@ struct TrainingLocationView: View {
                     .foregroundStyle(isDark ? .black : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(selected.isEmpty ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
+                    .background(canContinue ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)))
                     .clipShape(.rect(cornerRadius: 16))
             }
-            .disabled(selected.isEmpty)
+            .disabled(!canContinue)
             .padding(.horizontal, 24)
             .padding(.bottom, 16)
             .opacity(appeared ? 1 : 0)

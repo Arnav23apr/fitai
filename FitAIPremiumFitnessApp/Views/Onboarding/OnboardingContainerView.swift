@@ -69,13 +69,18 @@ struct OnboardingContainerView: View {
                     PaywallView(
                         onSubscribe: {
                             appState.profile.isPremium = true
-                            appState.completeOnboarding()
+                            isGoingBack = false
+                            currentStep = .welcomePro
                         },
                         onSkip: {
                             paywallSkipped = true
                             currentStep = .spinWheel
                         }
                     )
+                case .welcomePro:
+                    WelcomeProView(onContinue: {
+                        appState.completeOnboarding()
+                    })
                 case .spinWheel:
                     SpinWheelView(onContinue: {
                         appState.completeOnboarding()
@@ -115,7 +120,7 @@ struct OnboardingContainerView: View {
             return
         }
         let nextStep = allSteps[currentIndex + 1]
-        if nextStep == .spinWheel {
+        if nextStep == .spinWheel || nextStep == .welcomePro {
             currentStep = .paywall
         } else {
             currentStep = nextStep
