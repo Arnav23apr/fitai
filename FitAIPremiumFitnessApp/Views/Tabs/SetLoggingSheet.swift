@@ -15,8 +15,13 @@ struct SetLoggingSheet: View {
     @State private var showPRCelebration: Bool = false
     @State private var newPR: Bool = false
     @State private var completedSetTrigger: Int = 0
+    @State private var useBodyweight: Bool = false
 
     private let exerciseLogService = ExerciseLogService.shared
+
+    private var isBodyweightEligible: Bool {
+        BodyweightDetector.isBodyweightExercise(exercise.name)
+    }
 
     private var history: ExerciseHistory {
         exerciseLogService.history(for: exercise.name)
@@ -24,6 +29,11 @@ struct SetLoggingSheet: View {
 
     private var weightUnit: String {
         appState.profile.usesMetric ? "kg" : "lbs"
+    }
+
+    private var bodyweightValue: Double {
+        let kg = appState.profile.weightKg
+        return appState.profile.usesMetric ? kg : kg * 2.205
     }
 
     private var allSetsCompleted: Bool {
@@ -40,12 +50,14 @@ struct SetLoggingSheet: View {
 
         let lastSession = ExerciseLogService.shared.lastSession(for: exercise.name)
         var initialSets: [SetLog] = []
+        let wasBW = lastSession?.sets.first?.isBodyweight ?? false
         for i in 0..<exercise.sets {
             let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
             let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
-            initialSets.append(SetLog(weight: prevWeight, reps: prevReps))
+            initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: wasBW))
         }
         _sets = State(initialValue: initialSets)
+        _useBodyweight = State(initialValue: wasBW)
     }
 
     var body: some View {
@@ -53,6 +65,10 @@ struct SetLoggingSheet: View {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 20) {
                     exerciseHeader
+
+                    if isBodyweightEligible {
+                        bodyweightToggleCard
+                    }
 
                     if let last = history.lastSession {
                         previousSessionCard(last)
@@ -96,6 +112,76 @@ struct SetLoggingSheet: View {
         }
         .onDisappear { timer?.invalidate() }
         .sensoryFeedback(.success, trigger: showPRCelebration)
+    }
+
+    // MARK: - Bodyweight Toggle
+
+    private var bodyweightToggleCard: some View {
+        Button {
+            withAnimation(.spring(duration: 0.35)) {
+                useBodyweight.toggle()
+                if useBodyweight {
+                    let bw = bodyweightValue
+                    for i in sets.indices {
+                        if !sets[i].isCompleted {
+                            sets[i].weight = bw
+                            sets[i].isBodyweight = true
+                        }
+                    }
+                } else {
+                    let lastSession = exerciseLogService.lastSession(for: exercise.name)
+                    for i in sets.indices {
+                        if !sets[i].isCompleted {
+                            sets[i].isBodyweight = false
+                            sets[i].weight = lastSession?.sets[safe: i]?.weight ?? 0
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "figure.walk")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(useBodyweight ? .white : .green)
+                    .frame(width: 32, height: 32)
+                    .background(useBodyweight ? Color.green : Color.green.opacity(0.12))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Bodyweight")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(useBodyweight ? "Using your body weight (\(Int(bodyweightValue)) \(weightUnit))" : "Tap to use bodyweight")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                ZStack {
+                    Capsule()
+                        .fill(useBodyweight ? Color.green : Color.primary.opacity(0.1))
+                        .frame(width: 48, height: 28)
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 22, height: 22)
+                        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                        .offset(x: useBodyweight ? 10 : -10)
+                }
+            }
+            .padding(14)
+            .background(
+                useBodyweight ?
+                Color.green.opacity(0.06) : Color.primary.opacity(0.03)
+            )
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                useBodyweight ?
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(Color.green.opacity(0.15), lineWidth: 1) : nil
+            )
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: useBodyweight)
     }
 
     // MARK: - Header
@@ -195,8 +281,14 @@ struct SetLoggingSheet: View {
                         Text("S\(idx + 1)")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.tertiary)
-                        Text("\(Int(set.weight))")
-                            .font(.system(.caption2, design: .rounded, weight: .bold))
+                        if set.isBodyweight {
+                            Text("BW")
+                                .font(.system(.caption2, design: .rounded, weight: .bold))
+                                .foregroundStyle(.green)
+                        } else {
+                            Text("\(Int(set.weight))")
+                                .font(.system(.caption2, design: .rounded, weight: .bold))
+                        }
                         Text("×\(set.reps)")
                             .font(.system(size: 9))
                             .foregroundStyle(.secondary)
@@ -386,25 +478,29 @@ struct SetLoggingSheet: View {
 
     private func setInputFields(index: Int, isDisabled: Bool) -> some View {
         HStack(spacing: 4) {
-            VStack(spacing: 0) {
-                Text(weightUnit.uppercased())
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(.tertiary)
-                Picker("", selection: Binding(
-                    get: { weightPickerIndex(for: sets[index].weight) },
-                    set: { sets[index].weight = Self.weightValues[$0] }
-                )) {
-                    ForEach(Self.weightValues.indices, id: \.self) { i in
-                        let v = Self.weightValues[i]
-                        Text(v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : String(format: "%.1f", v))
-                            .font(.system(.body, design: .rounded, weight: .semibold))
-                            .tag(i)
+            if useBodyweight {
+                bodyweightWeightLabel
+            } else {
+                VStack(spacing: 0) {
+                    Text(weightUnit.uppercased())
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                    Picker("", selection: Binding(
+                        get: { weightPickerIndex(for: sets[index].weight) },
+                        set: { sets[index].weight = Self.weightValues[$0] }
+                    )) {
+                        ForEach(Self.weightValues.indices, id: \.self) { i in
+                            let v = Self.weightValues[i]
+                            Text(v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : String(format: "%.1f", v))
+                                .font(.system(.body, design: .rounded, weight: .semibold))
+                                .tag(i)
+                        }
                     }
+                    .pickerStyle(.wheel)
+                    .frame(width: 70, height: 80)
+                    .clipped()
+                    .disabled(isDisabled)
                 }
-                .pickerStyle(.wheel)
-                .frame(width: 70, height: 80)
-                .clipped()
-                .disabled(isDisabled)
             }
 
             Text("×")
@@ -431,6 +527,23 @@ struct SetLoggingSheet: View {
                 .disabled(isDisabled)
             }
         }
+    }
+
+    private var bodyweightWeightLabel: some View {
+        VStack(spacing: 4) {
+            Text("BW")
+                .font(.system(.caption, design: .rounded, weight: .black))
+                .foregroundStyle(.green)
+            Text("\(Int(bodyweightValue))")
+                .font(.system(.title3, design: .rounded, weight: .bold))
+                .foregroundStyle(.primary)
+            Text(weightUnit)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .frame(width: 70, height: 80)
+        .background(Color.green.opacity(0.08))
+        .clipShape(.rect(cornerRadius: 12))
     }
 
     @ViewBuilder
@@ -469,8 +582,8 @@ struct SetLoggingSheet: View {
     private var addDropSetButton: some View {
         Button {
             withAnimation(.spring(duration: 0.3)) {
-                let lastWeight = sets.last?.weight ?? 0
-                sets.append(SetLog(weight: lastWeight * 0.7, reps: 0, isDropSet: true))
+                let lastWeight = useBodyweight ? bodyweightValue : (sets.last?.weight ?? 0) * 0.7
+                sets.append(SetLog(weight: lastWeight, reps: 0, isDropSet: true, isBodyweight: useBodyweight))
             }
         } label: {
             HStack(spacing: 8) {
@@ -540,13 +653,17 @@ struct SetLoggingSheet: View {
 
     private func completeSet(at index: Int) {
         withAnimation(.spring(duration: 0.35)) {
+            if useBodyweight {
+                sets[index].weight = bodyweightValue
+                sets[index].isBodyweight = true
+            }
             sets[index].isCompleted = true
             sets[index].timestamp = Date()
             completedSetTrigger += 1
 
             let weight = sets[index].weight
             let bestWeight = history.personalBestWeight
-            if weight > bestWeight && bestWeight > 0 {
+            if weight > bestWeight && bestWeight > 0 && !useBodyweight {
                 newPR = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     withAnimation(.spring(duration: 0.5, bounce: 0.4)) {

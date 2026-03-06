@@ -22,6 +22,7 @@ struct ProfileContextBuilder {
         let weightLbs = Int(profile.weightKg * 2.205)
         lines.append("Height: \(heightFt)'\(heightIn)\" (\(heightCm)cm)")
         lines.append("Weight: \(weightLbs)lbs (\(weightKg)kg)")
+        lines.append("Bodyweight for BW exercises: \(weightKg)kg / \(weightLbs)lbs (used automatically for push-ups, pull-ups, dips, etc.)")
 
         if !profile.primaryGoal.isEmpty {
             lines.append("Primary goal: \(profile.primaryGoal)")

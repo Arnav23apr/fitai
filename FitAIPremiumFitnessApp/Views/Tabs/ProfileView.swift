@@ -10,6 +10,7 @@ struct ProfileView: View {
     @State private var showHealthAlert: Bool = false
     @State private var showNotificationSettings: Bool = false
     @State private var showCurrentPlan: Bool = false
+    @State private var showWeightHeightEditor: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -20,6 +21,7 @@ struct ProfileView: View {
                     VStack(spacing: 20) {
                         userCard
                             .tourAnchor(.profileUserCard)
+                        weightHeightCard
                         statsCard
                         if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
                             limitedOfferCard
@@ -73,6 +75,11 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showLanguagePicker) {
                 LanguagePickerSheet()
+            }
+            .sheet(isPresented: $showWeightHeightEditor) {
+                WeightHeightEditorSheet()
+                    .presentationDetents([.fraction(0.65), .large])
+                    .presentationDragIndicator(.visible)
             }
             .alert(L.t("comingSoon", lang), isPresented: $showHealthAlert) {
                 Button(L.t("ok", lang), role: .cancel) {}
@@ -153,6 +160,78 @@ struct ProfileView: View {
         .padding(16)
         .background(Color(.secondarySystemGroupedBackground))
         .clipShape(.rect(cornerRadius: 20))
+    }
+
+    private var weightHeightCard: some View {
+        let profile = appState.profile
+        let isMetric = profile.usesMetric
+        let heightCm = profile.heightCm
+        let weightKg = profile.weightKg
+
+        let heightText: String = {
+            if isMetric {
+                return "\(Int(heightCm)) cm"
+            } else {
+                let feet = Int(heightCm / 30.48)
+                let inches = Int((heightCm / 2.54).truncatingRemainder(dividingBy: 12))
+                return "\(feet)'\(inches)\""
+            }
+        }()
+
+        let weightText: String = {
+            if isMetric {
+                return "\(Int(weightKg)) kg"
+            } else {
+                return "\(Int(weightKg * 2.205)) lbs"
+            }
+        }()
+
+        return Button { showWeightHeightEditor = true } label: {
+            HStack(spacing: 0) {
+                HStack(spacing: 10) {
+                    Image(systemName: "ruler")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.blue)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Height")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(heightText)
+                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Rectangle()
+                    .fill(Color(.separator))
+                    .frame(width: 1, height: 32)
+
+                HStack(spacing: 10) {
+                    Image(systemName: "scalemass.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.green)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Weight")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        Text(weightText)
+                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "pencil")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 16))
+        }
     }
 
     private var statsCard: some View {
