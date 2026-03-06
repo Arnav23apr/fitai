@@ -65,7 +65,7 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents([.fraction(0.75), .large])
                     .presentationDragIndicator(.hidden)
             }
             .sheet(isPresented: $showNotificationSettings) {
