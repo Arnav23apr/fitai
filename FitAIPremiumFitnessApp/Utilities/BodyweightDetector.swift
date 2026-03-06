@@ -58,12 +58,57 @@ struct BodyweightDetector {
         "box jump", "jump squat", "squat jump", "tuck jump",
     ]
 
+    private static let equipmentOnlyExercises: Set<String> = [
+        "bench press", "barbell bench press", "incline bench press", "decline bench press",
+        "dumbbell bench press", "incline dumbbell press", "dumbbell press",
+        "lat pulldown", "cable row", "seated cable row", "cable rows",
+        "cable flyes", "cable fly", "cable crossovers", "cable crossover",
+        "leg press", "leg extension", "leg extensions", "leg curl", "leg curls",
+        "hack squat", "smith machine squat",
+        "tricep pushdowns", "tricep pushdown", "cable tricep pushdown",
+        "overhead tricep extension", "skull crushers", "skull crusher",
+        "preacher curls", "preacher curl", "incline curls", "incline curl",
+        "barbell curls", "barbell curl", "hammer curls", "hammer curl",
+        "barbell rows", "barbell row", "t-bar row", "t-bar rows",
+        "overhead press", "barbell overhead press", "military press",
+        "arnold press", "dumbbell shoulder press",
+        "barbell squat", "front squats", "front squat",
+        "romanian deadlift", "deadlift", "sumo deadlift",
+        "hip thrusts", "hip thrust", "barbell hip thrust",
+        "cable woodchops", "cable woodchop",
+        "cable crunches", "cable crunch",
+        "face pulls", "face pull",
+        "lateral raises", "lateral raise",
+        "rear delt flyes", "rear delt fly", "reverse flyes",
+        "straight arm pulldown", "straight arm pulldowns",
+        "seated calf raise", "seated calf raises",
+    ]
+
+    private static let equipmentKeywords: [String] = [
+        "barbell", "dumbbell", "cable", "machine", "smith",
+        "lat pulldown", "leg press", "leg extension", "leg curl",
+        "hack squat", "preacher", "t-bar",
+    ]
+
     static func isBodyweightExercise(_ name: String) -> Bool {
         let lower = name.lowercased().trimmingCharacters(in: .whitespaces)
         if bodyweightExercises.contains(lower) {
             return true
         }
         for keyword in bodyweightKeywords {
+            if lower.contains(keyword) {
+                return true
+            }
+        }
+        return false
+    }
+
+    static func isEquipmentOnly(_ name: String) -> Bool {
+        let lower = name.lowercased().trimmingCharacters(in: .whitespaces)
+        if equipmentOnlyExercises.contains(lower) {
+            return true
+        }
+        for keyword in equipmentKeywords {
             if lower.contains(keyword) {
                 return true
             }

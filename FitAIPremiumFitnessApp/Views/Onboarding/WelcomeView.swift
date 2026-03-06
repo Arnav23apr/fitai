@@ -126,6 +126,7 @@ struct WelcomeView: View {
             .padding(.bottom, 16)
             .opacity(appeared ? 1 : 0)
         }
+        .background(Color(.systemBackground))
         .onAppear {
             withAnimation(.easeOut(duration: 0.8)) {
                 appeared = true

@@ -28,13 +28,17 @@ nonisolated struct Exercise: Identifiable, Sendable {
     let sets: Int
     let reps: String
     let muscleGroup: String
+    let suggestedWeights: [Double]
+    let suggestedReps: [Int]
 
-    init(id: String = UUID().uuidString, name: String, sets: Int, reps: String, muscleGroup: String) {
+    init(id: String = UUID().uuidString, name: String, sets: Int, reps: String, muscleGroup: String, suggestedWeights: [Double] = [], suggestedReps: [Int] = []) {
         self.id = id
         self.name = name
         self.sets = sets
         self.reps = reps
         self.muscleGroup = muscleGroup
+        self.suggestedWeights = suggestedWeights
+        self.suggestedReps = suggestedReps
     }
 }
 
