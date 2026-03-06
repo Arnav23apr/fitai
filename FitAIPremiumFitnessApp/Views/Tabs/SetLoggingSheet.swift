@@ -810,10 +810,12 @@ struct SetLoggingSheet: View {
         withAnimation(.spring(duration: 0.4)) {
             restTimerActive = true
         }
+        WorkoutSessionManager.shared.updateRestTimer(isResting: true, secondsRemaining: restSecondsRemaining)
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
             Task { @MainActor in
                 if restSecondsRemaining > 0 {
                     restSecondsRemaining -= 1
+                    WorkoutSessionManager.shared.updateRestTimer(isResting: true, secondsRemaining: restSecondsRemaining)
                 } else {
                     stopRestTimer()
                 }
@@ -826,6 +828,7 @@ struct SetLoggingSheet: View {
         withAnimation(.spring(duration: 0.3)) {
             restTimerActive = false
         }
+        WorkoutSessionManager.shared.updateRestTimer(isResting: false, secondsRemaining: 0)
     }
 
     private func saveAndDismiss() {

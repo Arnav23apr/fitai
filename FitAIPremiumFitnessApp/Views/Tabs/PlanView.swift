@@ -9,6 +9,9 @@ struct PlanView: View {
     @State private var selectedFocusItem: FocusAreaItem? = nil
     @State private var appeared: Bool = false
     @State private var coachQuestionSent: String? = nil
+    @State private var hasAutoResumed: Bool = false
+
+    private let session = WorkoutSessionManager.shared
 
     private var workoutPlan: [WorkoutDay] {
         generatePersonalizedPlan()
@@ -120,7 +123,32 @@ struct PlanView: View {
                 withAnimation(.easeOut(duration: 0.5)) {
                     appeared = true
                 }
+                autoResumeIfNeeded()
             }
+            .onChange(of: session.isActive) { _, newValue in
+                if newValue && selectedDay == nil {
+                    autoResumeIfNeeded()
+                }
+            }
+        }
+    }
+
+    private func autoResumeIfNeeded() {
+        guard session.isActive, selectedDay == nil, !hasAutoResumed else { return }
+        hasAutoResumed = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let resumeDay = WorkoutDay(
+                dayLabel: session.workoutDayLabel,
+                name: session.workoutName,
+                focusAreas: session.workoutFocusAreas,
+                icon: session.workoutIcon,
+                isRestDay: false,
+                exercises: zip(session.exerciseIds, session.exerciseNames).map { id, name in
+                    Exercise(id: id, name: name, sets: 3, reps: "8-12", muscleGroup: "")
+                },
+                isWeakPointFocus: session.workoutIsWeakPointFocus
+            )
+            selectedDay = resumeDay
         }
     }
 

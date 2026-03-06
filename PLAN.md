@@ -1,62 +1,72 @@
-# AI Smart Presets, Scan History Graph & Light Theme Fix
+# Resume Workout + Dynamic Island Live Tracking
 
 ## Features
 
-### 1. AI-Powered Weight & Rep Presets (Progressive Overload)
+### 🔄 Resume Workout
 
-- When the AI generates your weekly workout plan, it will also generate **recommended weight and reps for each set** of every exercise — personalized to your height, weight, gender, experience level, goals, and training confidence
-- **First-time users** get smart defaults (e.g. a beginner bench pressing might start at 40kg × 12 reps, while an advanced lifter starts at 100kg × 8 reps)
-- Each week when the plan refreshes, weights **automatically increase slightly** (progressive overload) — e.g. +2.5kg for upper body, +5kg for lower body compound lifts
-- You can always **change any preset value** — the pickers still work exactly as before, just pre-filled with smart suggestions
-- For **bodyweight exercises** (push-ups, pull-ups, dips, etc.), the AI sets appropriate rep ranges instead of weights
-- When you do a **weighted bodyweight exercise** (e.g. weighted push-ups with 25kg), the app calculates your **total load** = your body weight + added weight, and shows it as a note
+- **Persistent workout session** — When you start a workout, your progress (completed exercises, timer, sets logged) is saved automatically so it survives closing the sheet, switching tabs, or even closing the app
+- **Floating resume banner** — A compact pill appears at the bottom of every tab showing the active workout name, elapsed time, and a tap-to-resume action
+- **Auto-reopen on Plan tab** — When you navigate back to the Plan tab, the workout sheet automatically re-opens with all your progress intact
+- **Explicit end required** — The workout only ends when you tap "Complete Workout" or "Finish Early" — never by accident from dismissing the sheet
 
-### 2. Smarter Bodyweight Toggle
+### 🏝️ Dynamic Island & Live Activity
 
-- Exercises that **require gym equipment** (bench press, lat pulldown, cable fly, leg press, etc.) will show the bodyweight toggle **grayed out** with a small note "Requires equipment"
-- Exercises that **can be done with bodyweight** (push-ups, pull-ups, dips, squats, lunges, etc.) keep the toggle working as normal
-- When bodyweight is OFF and the user adds weight to a bodyweight-eligible exercise, the app shows the **total effective weight** (body weight + added weight) as a helpful note below the set
+- **Live Activity starts automatically** when you begin a workout
+- **Compact Dynamic Island** — Left side shows a dumbbell icon, right side shows the elapsed workout timer
+- **Expanded Dynamic Island** — Shows workout name, elapsed timer, current exercise name, progress (e.g. "3/6 exercises done"), and rest timer countdown when active
+- **Lock Screen banner** — Full workout dashboard below the clock: workout name, timer, progress bar, current exercise, and rest countdown
+- **Real-time updates** — Timer ticks every second, rest countdown updates live, exercise progress updates as you complete each one
+- **Auto-ends** when you complete or finish the workout early
 
-### 3. Scan History Graph (Replaces List)
-
-- The scan history list in your Profile is **replaced by a smooth curved line chart** with a gradient fill underneath
-- The line color changes based on score ranges (green for high scores, orange/yellow for mid, red for low)
-- Each scan appears as a **tappable dot/mark** on the graph
-- Tapping a data point opens a **mini detail card** showing the score, date, rank, strong points, and weak points from that scan
-- If you only have one scan, it shows a single point with a horizontal reference line
-- Empty state still shows the "No scans yet" placeholder
-
-### 4. Welcome Screen Light Theme Fix
-
-- The Welcome/onboarding screen will properly adapt to **light mode** — white background, dark text, and correct logo variant
-- Currently it already checks `colorScheme`, but the background color will be verified to use the system background so it works in both themes consistently
+---
 
 ## Design
 
-### Weight Presets
+### Floating Resume Banner
 
-- When opening an exercise for the first time, the weight and rep pickers are **pre-scrolled to the AI-recommended values** instead of starting at 0
-- A subtle "AI Suggested" label appears near the preset values in a small pill badge
-- Returning to an exercise uses your **last logged values** as before (existing behavior preserved)
+- A compact glass-style pill that floats above the tab bar on all screens
+- Shows a green pulsing dot (indicating active), the workout name truncated, and the running timer
+- Tapping it re-opens the workout sheet with all progress restored
+- Slides up with a spring animation when a workout is active, slides away when completed
+- Uses the iOS 26 liquid glass effect (with material fallback for iOS 18)
 
-### Scan History Graph
+### Dynamic Island — Compact
 
-- Smooth curved line with a soft gradient fill from the line color down to transparent
-- Data points shown as small filled circles on the line
-- X-axis shows dates, Y-axis shows score (0–10)
-- Tapping a point expands a floating card with scan details
-- Clean, minimal design matching the existing profile page style
-- Built with Swift Charts for a native iOS look
+- **Leading:** Dumbbell SF Symbol (green tint)
+- **Trailing:** Elapsed time as a running timer (e.g. `12:34`)
 
-### Bodyweight Toggle
+### Dynamic Island — Expanded
 
-- "Requires equipment" toggle is visually dimmed with reduced opacity
-- When doing weighted bodyweight exercises, a small info row shows "Total load: 100kg (75kg BW + 25kg added)" in a subtle card below the set
+- **Leading:** Workout icon + workout name
+- **Trailing:** Running timer
+- **Bottom:** Progress bar showing exercises completed, current exercise name, and rest timer countdown (when resting)
 
-## Pages / Screens
+### Lock Screen Live Activity
 
-- **Profile Tab** — Scan history list replaced with interactive line chart graph
-- **Set Logging Sheet** — Weight/rep pickers pre-filled with AI suggestions; bodyweight toggle disabled for equipment-only exercises; total load display for weighted bodyweight exercises
-- **Workout Plan Generation** — AI prompt updated to also return recommended weights and reps per set for each exercise
-- **Welcome Screen** — Background and text colors properly adapt to light/dark theme
+- Clean card with the workout name and elapsed timer at the top
+- Horizontal progress bar showing exercise completion
+- Current exercise name and "X of Y exercises" label
+- Rest timer countdown displayed prominently when between sets
+
+---
+
+## Technical Scope
+
+### New Screens / Components
+
+- **Floating resume pill** — Overlay on `MainTabView`, visible on all tabs during an active workout
+- **Widget extension target** — Required for Dynamic Island and Live Activity rendering
+
+### Changes to Existing Screens
+
+- **Workout Detail Sheet** — Saves/restores state from a shared session manager instead of local `@State`
+- **Set Logging Sheet** — Updates the shared session when rest timer starts/stops
+- **Main Tab View** — Shows the floating resume pill overlay; auto-reopens workout on Plan tab
+- **Plan View** — Detects active session and re-presents the workout sheet
+
+### Behind the Scenes
+
+- A new workout session manager that persists the active workout state (exercise progress, timer start, rest timer state)
+- Live Activity attributes and content state for ActivityKit integration
+- Timer updates pushed to the Dynamic Island and Lock Screen in real-time
 
