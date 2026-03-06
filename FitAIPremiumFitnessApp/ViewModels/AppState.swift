@@ -58,6 +58,8 @@ class AppState {
         let entry = ScanHistoryEntry(from: result)
         ScanHistoryService.shared.save(entry)
         scanHistory = ScanHistoryService.shared.loadAll()
+
+        NotificationService.shared.reconcileAll(profile: profile, scanHistory: scanHistory)
     }
 
     var emailConfirmationNeeded: Bool = false
@@ -174,6 +176,14 @@ class AppState {
         updateStreak()
         updateTier()
         saveProfile()
+
+        NotificationService.shared.cancelTodaysWorkoutReminder()
+
+        if profile.currentStreak > 0 && profile.currentStreak % 7 == 0 {
+            NotificationService.shared.sendStreakMilestone(streak: profile.currentStreak)
+        }
+
+        NotificationService.shared.reconcileAll(profile: profile, scanHistory: scanHistory)
     }
 
     func isDayCompleted(_ dayLabel: String) -> Bool {

@@ -8,7 +8,7 @@ struct ProfileView: View {
     @State private var showPaywall: Bool = false
     @State private var showLanguagePicker: Bool = false
     @State private var showHealthAlert: Bool = false
-    @State private var notificationsEnabled: Bool = true
+    @State private var showNotificationSettings: Bool = false
     @State private var showCurrentPlan: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
@@ -65,6 +65,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
+            }
+            .sheet(isPresented: $showNotificationSettings) {
+                NotificationSettingsView()
             }
             .sheet(isPresented: $showLanguagePicker) {
                 LanguagePickerSheet()
@@ -308,7 +311,9 @@ struct ProfileView: View {
             }
 
             VStack(spacing: 0) {
-                settingsToggle(title: L.t("notifications", lang), icon: "bell.fill", isOn: $notificationsEnabled)
+                settingsRow(title: L.t("notifications", lang), icon: "bell.fill", iconColor: .secondary) {
+                    showNotificationSettings = true
+                }
                 Divider().padding(.leading, 52)
                 darkModeToggle
                 Divider().padding(.leading, 52)
