@@ -57,7 +57,7 @@ struct WorkoutLiveActivity: Widget {
                     .padding(.top, 2)
                 }
             } compactLeading: {
-                Image(systemName: "dumbbell.fill")
+                Image(systemName: context.state.workoutIcon)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.green)
             } compactTrailing: {
@@ -67,7 +67,7 @@ struct WorkoutLiveActivity: Widget {
                     .monospacedDigit()
                     .frame(width: 44)
             } minimal: {
-                Image(systemName: "dumbbell.fill")
+                Image(systemName: context.state.workoutIcon)
                     .font(.system(size: 11))
                     .foregroundStyle(.green)
             }
