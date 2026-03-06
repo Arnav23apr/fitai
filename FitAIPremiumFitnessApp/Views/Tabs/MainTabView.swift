@@ -58,13 +58,13 @@ struct MainTabView: View {
             safeBottom = 34
         }
         let tabBarVisualHeight: CGFloat = 49
-        let totalTabBarHeight: CGFloat = tabBarVisualHeight + safeBottom
         let insetH: CGFloat = 12
+        let topY = screen.height - tabBarVisualHeight - safeBottom
         let frame = CGRect(
             x: insetH,
-            y: screen.height - totalTabBarHeight - 2,
+            y: topY,
             width: screen.width - insetH * 2,
-            height: tabBarVisualHeight + 8
+            height: tabBarVisualHeight + safeBottom
         )
         tourManager.registerAnchor(.tabBar, frame: frame)
     }
