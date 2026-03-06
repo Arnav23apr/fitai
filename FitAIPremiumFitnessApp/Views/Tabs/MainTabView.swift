@@ -27,7 +27,10 @@ struct MainTabView: View {
         .tint(.primary)
         .opacity(appeared ? 1 : 0)
         .onGeometryChange(for: CGRect.self, of: { geo in geo.frame(in: .global) }) { _ in
-            registerTabBarFrame()
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(50))
+                registerTabBarFrame()
+            }
         }
         .overlay {
             TourOverlayView()
@@ -43,31 +46,40 @@ struct MainTabView: View {
                 appeared = true
             }
 
-            registerTabBarFrame()
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(200))
+                registerTabBarFrame()
+            }
             tourManager.checkAndShowWelcome()
         }
     }
 
     private func registerTabBarFrame() {
-        let screen = UIScreen.main.bounds
-        let safeBottom: CGFloat
-        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first {
-            safeBottom = window.safeAreaInsets.bottom
-        } else {
-            safeBottom = 34
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first else { return }
+
+        if let tabBar = findTabBar(in: window) {
+            let frame = tabBar.convert(tabBar.bounds, to: nil)
+            let inset: CGFloat = 2
+            let adjusted = CGRect(
+                x: frame.origin.x + inset,
+                y: frame.origin.y + inset,
+                width: frame.width - inset * 2,
+                height: frame.height - inset * 2
+            )
+            tourManager.registerAnchor(.tabBar, frame: adjusted)
         }
-        let tabBarPillHeight: CGFloat = 50
-        let bottomPadding: CGFloat = safeBottom > 0 ? 2 : 4
-        let pillBottomY = screen.height - safeBottom + bottomPadding
-        let pillTopY = pillBottomY - tabBarPillHeight
-        let insetH: CGFloat = 16
-        let frame = CGRect(
-            x: insetH,
-            y: pillTopY,
-            width: screen.width - insetH * 2,
-            height: tabBarPillHeight
-        )
-        tourManager.registerAnchor(.tabBar, frame: frame)
+    }
+
+    private func findTabBar(in view: UIView) -> UITabBar? {
+        if let tabBar = view as? UITabBar {
+            return tabBar
+        }
+        for subview in view.subviews {
+            if let found = findTabBar(in: subview) {
+                return found
+            }
+        }
+        return nil
     }
 }
