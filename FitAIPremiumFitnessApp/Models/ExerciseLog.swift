@@ -7,15 +7,17 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
     var isCompleted: Bool
     var isFailure: Bool
     var isDropSet: Bool
+    var isBodyweight: Bool
     var timestamp: Date
 
-    init(id: String = UUID().uuidString, weight: Double = 0, reps: Int = 0, isCompleted: Bool = false, isFailure: Bool = false, isDropSet: Bool = false, timestamp: Date = Date()) {
+    init(id: String = UUID().uuidString, weight: Double = 0, reps: Int = 0, isCompleted: Bool = false, isFailure: Bool = false, isDropSet: Bool = false, isBodyweight: Bool = false, timestamp: Date = Date()) {
         self.id = id
         self.weight = weight
         self.reps = reps
         self.isCompleted = isCompleted
         self.isFailure = isFailure
         self.isDropSet = isDropSet
+        self.isBodyweight = isBodyweight
         self.timestamp = timestamp
     }
 }
