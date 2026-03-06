@@ -122,9 +122,9 @@ struct TourOverlayView: View {
         let isTabBar = tourManager.currentStep?.anchorID == .tabBar
         return AppleIntelligenceGlowBorder(
             frame: frame,
-            cornerRadius: isTabBar ? 99 : 14,
-            glowSpread: isTabBar ? 12 : 28,
-            useCapsule: isTabBar
+            cornerRadius: isTabBar ? 26 : 14,
+            glowSpread: isTabBar ? 8 : 28,
+            useCapsule: false
         )
     }
 
