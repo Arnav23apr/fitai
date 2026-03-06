@@ -69,7 +69,7 @@ struct ScanView: View {
             }
             .sheet(isPresented: $showStreakSheet) {
                 StreakSheet()
-                    .presentationDetents([.medium])
+                    .presentationDetents([.fraction(0.75)])
             }
             .onChange(of: viewModel.frontPickerItem) { _, _ in
                 Task { await viewModel.loadFrontImage() }
