@@ -109,7 +109,13 @@ struct ScanView: View {
             Button { showStreakSheet = true } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.yellow, .orange, .red],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                     Text("\(appState.profile.currentStreak)")
                 }
                 .font(.subheadline.weight(.semibold))
