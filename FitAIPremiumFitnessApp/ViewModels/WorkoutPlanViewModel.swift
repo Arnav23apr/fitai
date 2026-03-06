@@ -48,7 +48,14 @@ class WorkoutPlanViewModel {
                 icon: day.icon,
                 isRestDay: day.isRestDay,
                 exercises: day.exercises.map { ex in
-                    Exercise(name: ex.name, sets: ex.sets, reps: ex.reps, muscleGroup: ex.muscleGroup)
+                    Exercise(
+                        name: ex.name,
+                        sets: ex.sets,
+                        reps: ex.reps,
+                        muscleGroup: ex.muscleGroup,
+                        suggestedWeights: ex.suggestedWeights ?? [],
+                        suggestedReps: ex.suggestedReps ?? []
+                    )
                 },
                 isWeakPointFocus: day.isWeakPointFocus
             )

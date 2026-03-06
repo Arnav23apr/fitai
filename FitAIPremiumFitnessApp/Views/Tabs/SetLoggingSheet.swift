@@ -16,11 +16,16 @@ struct SetLoggingSheet: View {
     @State private var newPR: Bool = false
     @State private var completedSetTrigger: Int = 0
     @State private var useBodyweight: Bool = false
+    @State private var usedAISuggestions: Bool = false
 
     private let exerciseLogService = ExerciseLogService.shared
 
     private var isBodyweightEligible: Bool {
         BodyweightDetector.isBodyweightExercise(exercise.name)
+    }
+
+    private var isEquipmentOnly: Bool {
+        BodyweightDetector.isEquipmentOnly(exercise.name)
     }
 
     private var history: ExerciseHistory {
@@ -51,13 +56,26 @@ struct SetLoggingSheet: View {
         let lastSession = ExerciseLogService.shared.lastSession(for: exercise.name)
         var initialSets: [SetLog] = []
         let wasBW = lastSession?.sets.first?.isBodyweight ?? false
+        let hasLastSession = lastSession != nil
+
+        let hasAISuggestions = !exercise.suggestedWeights.isEmpty && !exercise.suggestedReps.isEmpty
+
         for i in 0..<exercise.sets {
-            let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
-            let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
-            initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: wasBW))
+            if hasLastSession {
+                let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
+                let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
+                initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: wasBW))
+            } else if hasAISuggestions {
+                let sugWeight = exercise.suggestedWeights[safe: i] ?? 0
+                let sugReps = exercise.suggestedReps[safe: i] ?? 0
+                initialSets.append(SetLog(weight: sugWeight, reps: sugReps, isBodyweight: false))
+            } else {
+                initialSets.append(SetLog(weight: 0, reps: 0, isBodyweight: false))
+            }
         }
         _sets = State(initialValue: initialSets)
         _useBodyweight = State(initialValue: wasBW)
+        _usedAISuggestions = State(initialValue: !hasLastSession && hasAISuggestions)
     }
 
     var body: some View {
@@ -66,8 +84,16 @@ struct SetLoggingSheet: View {
                 VStack(spacing: 20) {
                     exerciseHeader
 
-                    if isBodyweightEligible {
+                    if usedAISuggestions {
+                        aiSuggestedBanner
+                    }
+
+                    if isBodyweightEligible || isEquipmentOnly {
                         bodyweightToggleCard
+                    }
+
+                    if !useBodyweight && isBodyweightEligible && !isEquipmentOnly {
+                        totalLoadInfo
                     }
 
                     if let last = history.lastSession {
@@ -114,74 +140,171 @@ struct SetLoggingSheet: View {
         .sensoryFeedback(.success, trigger: showPRCelebration)
     }
 
+    // MARK: - AI Suggested Banner
+
+    private var aiSuggestedBanner: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "sparkles")
+                .font(.system(size: 12))
+                .foregroundStyle(.cyan)
+            Text("AI Suggested weights & reps based on your profile")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Button {
+                withAnimation(.spring(duration: 0.3)) {
+                    usedAISuggestions = false
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .padding(10)
+        .background(Color.cyan.opacity(0.06))
+        .clipShape(.rect(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.cyan.opacity(0.1), lineWidth: 1)
+        )
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
     // MARK: - Bodyweight Toggle
 
     private var bodyweightToggleCard: some View {
-        Button {
-            withAnimation(.spring(duration: 0.35)) {
-                useBodyweight.toggle()
-                if useBodyweight {
-                    let bw = bodyweightValue
-                    for i in sets.indices {
-                        if !sets[i].isCompleted {
-                            sets[i].weight = bw
-                            sets[i].isBodyweight = true
+        Group {
+            if isEquipmentOnly && !isBodyweightEligible {
+                HStack(spacing: 10) {
+                    Image(systemName: "dumbbell.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color(.tertiaryLabel))
+                        .frame(width: 32, height: 32)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(Circle())
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Bodyweight")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                        Text("Requires equipment")
+                            .font(.caption)
+                            .foregroundStyle(.quaternary)
+                    }
+
+                    Spacer()
+
+                    ZStack {
+                        Capsule()
+                            .fill(Color.primary.opacity(0.06))
+                            .frame(width: 48, height: 28)
+                        Circle()
+                            .fill(Color(.tertiarySystemFill))
+                            .frame(width: 22, height: 22)
+                            .offset(x: -10)
+                    }
+                }
+                .padding(14)
+                .background(Color.primary.opacity(0.02))
+                .clipShape(.rect(cornerRadius: 14))
+                .opacity(0.6)
+            } else {
+                Button {
+                    withAnimation(.spring(duration: 0.35)) {
+                        useBodyweight.toggle()
+                        if useBodyweight {
+                            let bw = bodyweightValue
+                            for i in sets.indices {
+                                if !sets[i].isCompleted {
+                                    sets[i].weight = bw
+                                    sets[i].isBodyweight = true
+                                }
+                            }
+                        } else {
+                            let lastSession = exerciseLogService.lastSession(for: exercise.name)
+                            for i in sets.indices {
+                                if !sets[i].isCompleted {
+                                    sets[i].isBodyweight = false
+                                    if let prev = lastSession?.sets[safe: i]?.weight {
+                                        sets[i].weight = prev
+                                    } else if let suggested = exercise.suggestedWeights[safe: i] {
+                                        sets[i].weight = suggested
+                                    } else {
+                                        sets[i].weight = 0
+                                    }
+                                }
+                            }
                         }
                     }
-                } else {
-                    let lastSession = exerciseLogService.lastSession(for: exercise.name)
-                    for i in sets.indices {
-                        if !sets[i].isCompleted {
-                            sets[i].isBodyweight = false
-                            sets[i].weight = lastSession?.sets[safe: i]?.weight ?? 0
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "figure.walk")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(useBodyweight ? .white : .green)
+                            .frame(width: 32, height: 32)
+                            .background(useBodyweight ? Color.green : Color.green.opacity(0.12))
+                            .clipShape(Circle())
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Bodyweight")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(useBodyweight ? "Using your body weight (\(Int(bodyweightValue)) \(weightUnit))" : "Tap to use bodyweight")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        ZStack {
+                            Capsule()
+                                .fill(useBodyweight ? Color.green : Color.primary.opacity(0.1))
+                                .frame(width: 48, height: 28)
+                            Circle()
+                                .fill(.white)
+                                .frame(width: 22, height: 22)
+                                .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                                .offset(x: useBodyweight ? 10 : -10)
                         }
                     }
+                    .padding(14)
+                    .background(
+                        useBodyweight ?
+                        Color.green.opacity(0.06) : Color.primary.opacity(0.03)
+                    )
+                    .clipShape(.rect(cornerRadius: 14))
+                    .overlay(
+                        useBodyweight ?
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color.green.opacity(0.15), lineWidth: 1) : nil
+                    )
                 }
+                .sensoryFeedback(.impact(weight: .light), trigger: useBodyweight)
             }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "figure.walk")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(useBodyweight ? .white : .green)
-                    .frame(width: 32, height: 32)
-                    .background(useBodyweight ? Color.green : Color.green.opacity(0.12))
-                    .clipShape(Circle())
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Bodyweight")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    Text(useBodyweight ? "Using your body weight (\(Int(bodyweightValue)) \(weightUnit))" : "Tap to use bodyweight")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                ZStack {
-                    Capsule()
-                        .fill(useBodyweight ? Color.green : Color.primary.opacity(0.1))
-                        .frame(width: 48, height: 28)
-                    Circle()
-                        .fill(.white)
-                        .frame(width: 22, height: 22)
-                        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-                        .offset(x: useBodyweight ? 10 : -10)
-                }
-            }
-            .padding(14)
-            .background(
-                useBodyweight ?
-                Color.green.opacity(0.06) : Color.primary.opacity(0.03)
-            )
-            .clipShape(.rect(cornerRadius: 14))
-            .overlay(
-                useBodyweight ?
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(Color.green.opacity(0.15), lineWidth: 1) : nil
-            )
         }
-        .sensoryFeedback(.impact(weight: .light), trigger: useBodyweight)
+    }
+
+    // MARK: - Total Load Info
+
+    @ViewBuilder
+    private var totalLoadInfo: some View {
+        let addedWeight = sets.first(where: { !$0.isCompleted })?.weight ?? sets.first?.weight ?? 0
+        if addedWeight > 0 {
+            let totalLoad = bodyweightValue + addedWeight
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.blue)
+                Text("Total load: \(Int(totalLoad))\(weightUnit) (\(Int(bodyweightValue)) BW + \(Int(addedWeight)) added)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(10)
+            .background(Color.blue.opacity(0.05))
+            .clipShape(.rect(cornerRadius: 10))
+        }
     }
 
     // MARK: - Header
