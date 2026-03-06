@@ -94,24 +94,13 @@ struct ScanView: View {
             }
             Spacer()
             Button { showStreakSheet = true } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
+                HStack(spacing: 3) {
+                    Text("🔥")
+                        .font(.system(size: 16))
                     Text("\(appState.profile.currentStreak)")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    LinearGradient(
-                        colors: [.orange, .red],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(.rect(cornerRadius: 8))
             }
         }
         .padding(.vertical, 8)
