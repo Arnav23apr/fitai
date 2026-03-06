@@ -65,6 +65,8 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.hidden)
             }
             .sheet(isPresented: $showNotificationSettings) {
                 NotificationSettingsView()
