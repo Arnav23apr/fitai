@@ -57,7 +57,7 @@ struct MainTabView: View {
         } else {
             safeBottom = 34
         }
-        let tabBarPillHeight: CGFloat = 60
+        let tabBarPillHeight: CGFloat = 55
         let bottomPadding: CGFloat = safeBottom > 0 ? 2 : 4
         let pillBottomY = screen.height - safeBottom + bottomPadding
         let pillTopY = pillBottomY - tabBarPillHeight
