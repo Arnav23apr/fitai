@@ -3,7 +3,9 @@ import PhotosUI
 
 struct ScanView: View {
     @Environment(AppState.self) private var appState
+    @Environment(TourManager.self) private var tourManager
     @State private var viewModel = ScanViewModel()
+    @State private var showStreakSheet: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
     @State private var showPaywall: Bool = false
@@ -55,8 +57,19 @@ struct ScanView: View {
                 TransformationSheet(
                     result: viewModel.transformationResult,
                     isGenerating: viewModel.isGeneratingTransformation,
-                    onDismiss: { showTransformationSheet = false }
+                    onDismiss: { showTransformationSheet = false },
+                    onStartWorkout: {
+                        showTransformationSheet = false
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(400))
+                            tourManager.selectedTab = 1
+                        }
+                    }
                 )
+            }
+            .sheet(isPresented: $showStreakSheet) {
+                StreakSheet()
+                    .presentationDetents([.medium])
             }
             .onChange(of: viewModel.frontPickerItem) { _, _ in
                 Task { await viewModel.loadFrontImage() }
@@ -80,18 +93,20 @@ struct ScanView: View {
                     .foregroundStyle(.primary)
             }
             Spacer()
-            HStack(spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.orange)
-                Text("\(appState.profile.points)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+            Button { showStreakSheet = true } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.orange)
+                    Text("\(appState.profile.currentStreak)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(.capsule)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(.capsule)
         }
         .padding(.vertical, 8)
     }
@@ -779,6 +794,7 @@ struct TransformationSheet: View {
     let result: TransformationResult?
     let isGenerating: Bool
     let onDismiss: () -> Void
+    var onStartWorkout: (() -> Void)? = nil
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -828,6 +844,29 @@ struct TransformationSheet: View {
                                 .foregroundStyle(.tertiary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
+
+                            if let onStartWorkout {
+                                Button(action: onStartWorkout) {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "figure.run")
+                                            .font(.system(size: 14))
+                                        Text("Start Your Workout")
+                                            .font(.headline)
+                                    }
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 52)
+                                    .background(
+                                        LinearGradient(
+                                            colors: [.purple, .blue],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .clipShape(.rect(cornerRadius: 14))
+                                }
+                                .sensoryFeedback(.impact(weight: .medium), trigger: true)
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)

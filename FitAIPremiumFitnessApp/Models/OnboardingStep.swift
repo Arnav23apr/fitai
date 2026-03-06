@@ -18,5 +18,6 @@ enum OnboardingStep: Int, CaseIterable {
     case referralCode
     case signUp
     case paywall
+    case welcomePro
     case spinWheel
 }
