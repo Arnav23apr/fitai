@@ -4,17 +4,16 @@ struct AppleIntelligenceGlowBorder: View {
     let frame: CGRect
     let cornerRadius: CGFloat
     var glowSpread: CGFloat = 28
+    var useCapsule: Bool = false
 
     @State private var gradientStops: [Gradient.Stop] = AppleIntelligenceGlowBorder.randomStops()
 
     var body: some View {
-        let cr = cornerRadius + glowSpread / 2
-
         ZStack {
-            glowLayer(lineWidth: 15, blur: 15, cornerRadius: cr)
-            glowLayer(lineWidth: 11, blur: 12, cornerRadius: cr)
-            glowLayer(lineWidth: 9, blur: 4, cornerRadius: cr)
-            glowLayer(lineWidth: 6, blur: 0, cornerRadius: cr)
+            glowLayer(lineWidth: 15, blur: 15)
+            glowLayer(lineWidth: 11, blur: 12)
+            glowLayer(lineWidth: 9, blur: 4)
+            glowLayer(lineWidth: 6, blur: 0)
         }
         .onAppear {
             Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
@@ -26,21 +25,28 @@ struct AppleIntelligenceGlowBorder: View {
         .allowsHitTesting(false)
     }
 
-    private func glowLayer(lineWidth: CGFloat, blur: CGFloat, cornerRadius: CGFloat) -> some View {
+    private func glowLayer(lineWidth: CGFloat, blur: CGFloat) -> some View {
         let w = frame.width + glowSpread
         let h = frame.height + glowSpread
+        let gradient = AngularGradient(
+            gradient: Gradient(stops: gradientStops),
+            center: .center
+        )
 
-        return RoundedRectangle(cornerRadius: cornerRadius)
-            .strokeBorder(
-                AngularGradient(
-                    gradient: Gradient(stops: gradientStops),
-                    center: .center
-                ),
-                lineWidth: lineWidth
-            )
-            .frame(width: w, height: h)
-            .position(x: frame.midX, y: frame.midY)
-            .blur(radius: blur)
+        return Group {
+            if useCapsule {
+                Capsule()
+                    .strokeBorder(gradient, lineWidth: lineWidth)
+                    .frame(width: w, height: h)
+            } else {
+                let cr = cornerRadius + glowSpread / 2
+                RoundedRectangle(cornerRadius: cr)
+                    .strokeBorder(gradient, lineWidth: lineWidth)
+                    .frame(width: w, height: h)
+            }
+        }
+        .position(x: frame.midX, y: frame.midY)
+        .blur(radius: blur)
     }
 
     static func randomStops() -> [Gradient.Stop] {
