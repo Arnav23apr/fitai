@@ -1,38 +1,24 @@
-# Equipment validation fix, workout redirect, streak popup, and Pro welcome screen
+# Replace weight & reps text fields with iOS wheel pickers
 
-## What's changing
+**What changes**
 
-### 🔧 Fix: Equipment Selection Required
-- When you choose "Home" or "Both" on the training location page, you must now select at least 1 piece of equipment before continuing
-- The Continue button stays dimmed until equipment is picked
-- Selecting "Gym" works as before (no equipment selection needed)
+Replace the current typed text fields for **weight** and **reps** in the workout set logging screen with native iOS wheel pickers (like the Clock app timer picker).
 
-### ➕ "Start Your Workout" Button on 90-Day Preview
-- After the 90-day transformation image finishes generating, a new button appears at the bottom: **"Start Your Workout"**
-- Tapping it closes the preview and takes you directly to the Plan tab
-- Only visible when the transformation has loaded (not during the generating state)
+**How it will work**
 
-### 🔥 Streak Popup on Scan Page
-- The points/flame badge in the top-right corner of the Scan page becomes tappable
-- Tapping it opens a small bottom sheet showing:
-  - Your current streak number (big and bold)
-  - A motivational "Keep it up! 💪" message
-  - Weekly streak dots (like on the Plan page)
-  - Total workouts completed
-- Clean, minimal design — half-height sheet
+- **Weight picker**: Scrollable wheel starting at 0, incrementing by 0.5 (0, 0.5, 1, 1.5, 2, … up to 300)
+- **Reps picker**: Scrollable wheel starting at 0, incrementing by 1 (0, 1, 2, 3, … up to 100)
+- Both pickers are compact inline wheels that sit exactly where the current text fields are — no keyboard pops up
+- Pre-filled with previous session values, so users just scroll slightly to adjust
+- Completed sets become non-interactive (same as today)
+- Unit label (KG/LBS) and "REPS" labels remain above each picker
+- The "×" separator between weight and reps stays
 
-### 🎉 Welcome Screen After Subscribing
-- After completing a purchase on the paywall, a full-screen welcome appears before entering the app
-- **Design:**
-  - Dark background with a subtle green/purple gradient glow
-  - Centered content: crown icon with gold gradient, "Welcome to Fit AI Pro" headline, premium subtext
-  - Soft gold "Pro Activated" badge with gentle glow
-  - "Start My Journey" button at the bottom with a subtle glowing border effect
-- **Animations:**
-  - Content fades in from the bottom with a slight scale-up
-  - Haptic feedback on appear (success feel)
-  - Subtle pulsing glow behind the crown icon
-- **Behavior:**
-  - No scrolling, no clutter — one clean screen
-  - Tapping "Start My Journey" completes onboarding and enters the app
-  - Only shows once when first subscribing during onboarding
+**Why this is better**
+
+- No keyboard blocking the view — all sets stay visible
+- Faster adjustments (scroll vs tap → type → dismiss)
+- Zero typos or weird decimal inputs
+- Feels premium and native iOS
+- Familiar interaction from the Clock app
+
