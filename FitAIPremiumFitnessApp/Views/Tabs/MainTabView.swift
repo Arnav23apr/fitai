@@ -5,7 +5,9 @@ struct MainTabView: View {
     @Environment(TourManager.self) private var tourManager
     @Environment(\.colorScheme) private var colorScheme
     @State private var appeared: Bool = false
+    @State private var showResumeWorkout: Bool = false
 
+    private let session = WorkoutSessionManager.shared
     private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
@@ -29,9 +31,25 @@ struct MainTabView: View {
         .onGeometryChange(for: CGRect.self, of: { geo in geo.frame(in: .global) }) { _ in
             registerTabBarFrame()
         }
+        .overlay(alignment: .bottom) {
+            if session.isActive {
+                WorkoutResumePill(session: session) {
+                    showResumeWorkout = true
+                }
+                .padding(.bottom, 60)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(duration: 0.4, bounce: 0.2), value: session.isActive)
+            }
+        }
         .overlay {
             TourOverlayView()
                 .allowsHitTesting(tourManager.showWelcome || (tourManager.isActive && tourManager.stepReady))
+        }
+        .sheet(isPresented: $showResumeWorkout) {
+            if session.isActive {
+                let resumeWorkout = buildResumeWorkoutDay()
+                WorkoutDetailSheet(workout: resumeWorkout)
+            }
         }
         .onAppear {
             let tabBarAppearance = UITabBarAppearance()
@@ -45,7 +63,22 @@ struct MainTabView: View {
 
             registerTabBarFrame()
             tourManager.checkAndShowWelcome()
+            session.resumeIfNeeded()
         }
+    }
+
+    private func buildResumeWorkoutDay() -> WorkoutDay {
+        WorkoutDay(
+            dayLabel: session.workoutDayLabel,
+            name: session.workoutName,
+            focusAreas: session.workoutFocusAreas,
+            icon: session.workoutIcon,
+            isRestDay: false,
+            exercises: zip(session.exerciseIds, session.exerciseNames).map { id, name in
+                Exercise(id: id, name: name, sets: 3, reps: "8-12", muscleGroup: "")
+            },
+            isWeakPointFocus: session.workoutIsWeakPointFocus
+        )
     }
 
     private func registerTabBarFrame() {

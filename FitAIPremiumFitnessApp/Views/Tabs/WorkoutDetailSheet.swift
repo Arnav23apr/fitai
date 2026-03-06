@@ -4,29 +4,29 @@ struct WorkoutDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     let workout: WorkoutDay
-    @State private var completedExercises: Set<String> = []
-    @State private var workoutStarted: Bool = false
-    @State private var startTime: Date? = nil
-    @State private var showCompletionAlert: Bool = false
-    @State private var elapsedSeconds: Int = 0
-    @State private var timer: Timer? = nil
+
+    private let session = WorkoutSessionManager.shared
+    private let logService = ExerciseLogService.shared
+
     @State private var selectedExercise: Exercise? = nil
     @State private var showWhyWorkout: Bool = false
     @State private var whyExplanation: String = ""
     @State private var isLoadingWhy: Bool = false
-    @State private var earnedPRPoints: Int = 0
-    @State private var exercisePRs: Set<String> = []
     @State private var showPointsFloat: Bool = false
     @State private var floatingPoints: Int = 0
     @State private var completionAnimating: Bool = false
     @State private var showShareCard: Bool = false
-    @State private var exerciseVolumes: [String: Double] = [:]
-    @State private var prExerciseNames: [String] = []
 
-    private let logService = ExerciseLogService.shared
+    private var workoutStarted: Bool { session.isActive && session.workoutName == workout.name }
+    private var completedExercises: Set<String> { session.completedExerciseIds }
+    private var elapsedSeconds: Int { session.elapsedSeconds }
+    private var earnedPRPoints: Int { session.earnedPRPoints }
+    private var exercisePRs: Set<String> { session.exercisePRs }
+    private var prExerciseNames: [String] { session.prExerciseNames }
+    private var exerciseVolumes: [String: Double] { session.exerciseVolumes }
 
     private var allCompleted: Bool {
-        completedExercises.count == workout.exercises.count
+        completedExercises.count == workout.exercises.count && !workout.exercises.isEmpty
     }
 
     private var isAlreadyDone: Bool {
@@ -119,7 +119,6 @@ struct WorkoutDetailSheet: View {
             )
             .background(ClearBackground())
         }
-        .onDisappear { timer?.invalidate() }
     }
 
     // MARK: - Header
@@ -260,7 +259,7 @@ struct WorkoutDetailSheet: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(isAlreadyDone ? .green : .primary)
                     if workoutStarted && !isAlreadyDone {
-                        Text(formatTime(elapsedSeconds))
+                        Text(session.formatTime(elapsedSeconds))
                             .font(.system(.caption, design: .monospaced, weight: .medium))
                             .foregroundStyle(.secondary)
                             .contentTransition(.numericText())
@@ -581,9 +580,7 @@ struct WorkoutDetailSheet: View {
             if !workoutStarted {
                 Button {
                     withAnimation(.spring(duration: 0.4)) {
-                        workoutStarted = true
-                        startTime = Date()
-                        startTimer()
+                        session.startWorkout(workout: workout)
                     }
                 } label: {
                     HStack(spacing: 10) {
@@ -598,7 +595,7 @@ struct WorkoutDetailSheet: View {
                     .background(Color.green)
                     .clipShape(.rect(cornerRadius: 16))
                 }
-                .sensoryFeedback(.impact(weight: .medium), trigger: workoutStarted)
+                .sensoryFeedback(.impact(weight: .medium), trigger: session.isActive)
             } else if allCompleted {
                 Button { completeWorkout() } label: {
                     HStack(spacing: 10) {
@@ -710,10 +707,6 @@ struct WorkoutDetailSheet: View {
     // MARK: - Logic
 
     private func handleExerciseCompletion(exercise: Exercise, sets: [SetLog], hitPR: Bool) {
-        _ = withAnimation(.spring(duration: 0.4)) {
-            completedExercises.insert(exercise.id)
-        }
-
         let log = ExerciseLog(
             exerciseName: exercise.name,
             muscleGroup: exercise.muscleGroup,
@@ -722,12 +715,11 @@ struct WorkoutDetailSheet: View {
         )
         logService.saveLog(log)
 
-        exerciseVolumes[exercise.id] = log.computedVolume
+        withAnimation(.spring(duration: 0.4)) {
+            session.markExerciseCompleted(exercise.id, exerciseName: exercise.name, volume: log.computedVolume, hitPR: hitPR)
+        }
 
         if hitPR {
-            earnedPRPoints += 50
-            exercisePRs.insert(exercise.id)
-            prExerciseNames.append(exercise.name)
             showFloatingPoints(50)
         }
     }
@@ -745,7 +737,6 @@ struct WorkoutDetailSheet: View {
     }
 
     private func completeWorkout() {
-        timer?.invalidate()
         let duration = elapsedSeconds / 60
         let names = workout.exercises.filter { completedExercises.contains($0.id) }.map(\.name)
         appState.logWorkout(
@@ -761,6 +752,7 @@ struct WorkoutDetailSheet: View {
         }
 
         showShareCard = true
+        session.endSession()
     }
 
     private func loadWhyExplanation() {
@@ -797,22 +789,6 @@ struct WorkoutDetailSheet: View {
         isLoadingWhy = false
     }
 
-    private func startTimer() {
-        timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
-            Task { @MainActor in
-                if let start = startTime {
-                    elapsedSeconds = Int(Date().timeIntervalSince(start))
-                }
-            }
-        }
-    }
-
-    private func formatTime(_ seconds: Int) -> String {
-        let m = seconds / 60
-        let s = seconds % 60
-        return String(format: "%02d:%02d", m, s)
-    }
-
     private func trendColor(_ trend: VolumeTrend) -> Color {
         switch trend {
         case .up: return .green
@@ -823,7 +799,6 @@ struct WorkoutDetailSheet: View {
 
     private func buildShareData() -> WorkoutShareCardData {
         let totalVolume = exerciseVolumes.values.reduce(0, +)
-        let completedNames = workout.exercises.filter { completedExercises.contains($0.id) }.map(\.name)
 
         var bestWeight: Double = 0
         var bestReps: Int = 0
