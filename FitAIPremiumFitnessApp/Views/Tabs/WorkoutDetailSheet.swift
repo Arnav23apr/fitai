@@ -1,4 +1,5 @@
 import SwiftUI
+import MuscleMap
 
 struct WorkoutDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,6 +17,7 @@ struct WorkoutDetailSheet: View {
     @State private var floatingPoints: Int = 0
     @State private var completionAnimating: Bool = false
     @State private var showShareCard: Bool = false
+    @State private var selectedMuscle: Muscle? = nil
 
     private var workoutStarted: Bool { session.isActive && session.workoutName == workout.name }
     private var completedExercises: Set<String> { session.completedExerciseIds }
@@ -74,7 +76,12 @@ struct WorkoutDetailSheet: View {
                         whyExplanationCard
                     }
 
-                    musclesSection
+                    WorkoutMuscleMapView(
+                        exercises: workout.exercises,
+                        onMuscleTapped: { muscle in
+                            selectedMuscle = muscle
+                        }
+                    )
 
                     exercisesList
 
@@ -101,6 +108,14 @@ struct WorkoutDetailSheet: View {
                 SetLoggingSheet(exercise: exercise) { completedSets, hitPR in
                     handleExerciseCompletion(exercise: exercise, sets: completedSets, hitPR: hitPR)
                 }
+            }
+            .sheet(item: $selectedMuscle) { muscle in
+                MuscleDetailSheet(
+                    muscle: muscle,
+                    exercises: workout.exercises,
+                    exerciseLogs: logService.loadAll()
+                )
+                .presentationDetents([.medium, .large])
             }
             .sensoryFeedback(.success, trigger: showShareCard)
         }

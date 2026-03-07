@@ -1,4 +1,5 @@
 import SwiftUI
+import MuscleMap
 
 struct PlanView: View {
     @Environment(AppState.self) private var appState
@@ -10,6 +11,7 @@ struct PlanView: View {
     @State private var appeared: Bool = false
     @State private var coachQuestionSent: String? = nil
     @State private var hasAutoResumed: Bool = false
+    @State private var selectedMuscleFromHeatmap: Muscle? = nil
 
     private let session = WorkoutSessionManager.shared
 
@@ -84,6 +86,14 @@ struct PlanView: View {
                             focusAreasSection
                         }
 
+                        WeeklyMuscleHeatMapView(
+                            workoutLogs: appState.profile.workoutLogs,
+                            exerciseLogs: ExerciseLogService.shared.loadAll(),
+                            onMuscleTapped: { muscle in
+                                selectedMuscleFromHeatmap = muscle
+                            }
+                        )
+
                         competeIntegrationCard
 
                         weeklyPlanSection
@@ -110,6 +120,14 @@ struct PlanView: View {
             }
             .sheet(item: $selectedDay) { day in
                 WorkoutDetailSheet(workout: day)
+            }
+            .sheet(item: $selectedMuscleFromHeatmap) { muscle in
+                MuscleDetailSheet(
+                    muscle: muscle,
+                    exercises: workoutPlan.flatMap(\.exercises),
+                    exerciseLogs: ExerciseLogService.shared.loadAll()
+                )
+                .presentationDetents([.medium, .large])
             }
             .sheet(item: $selectedFocusItem) { item in
                 FocusAreaDetailSheet(
