@@ -226,12 +226,16 @@ nonisolated struct ImageEditResponse: Codable, Sendable {
 
 class AIService {
     private let chatURL: URL
-    private let llmObjectURL = URL(string: "https://toolkit.rork.com/llm/object")!
-    private let imageGenerateURL = URL(string: "https://toolkit.rork.com/images/generate/")!
-    private let imageEditURL = URL(string: "https://toolkit.rork.com/images/edit/")!
+    private let llmObjectURL: URL
+    private let imageGenerateURL: URL
+    private let imageEditURL: URL
 
     init() {
-        self.chatURL = URL(string: "https://toolkit.rork.com/agent/chat")!
+        let toolkitBaseURL = URL(string: Config.EXPO_PUBLIC_TOOLKIT_URL)!
+        self.chatURL = toolkitBaseURL.appending(path: "agent/chat")
+        self.llmObjectURL = toolkitBaseURL.appending(path: "llm/object")
+        self.imageGenerateURL = toolkitBaseURL.appending(path: "images/generate")
+        self.imageEditURL = toolkitBaseURL.appending(path: "images/edit")
     }
 
     func analyzeImageWithSchema(imageBase64: String, systemPrompt: String, userPrompt: String) async throws -> [String: Any] {
