@@ -236,7 +236,7 @@ class AppState {
                 break
             }
         }
-        profile.currentStreak = max(profile.currentStreak, streak)
+        profile.currentStreak = streak
     }
 
     func addBonusPoints(_ points: Int) {
