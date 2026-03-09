@@ -823,20 +823,47 @@ struct WorkoutDetailSheet: View {
             bestReps = history.personalBestReps
         }
 
+        let completedExerciseList = workout.exercises.filter { completedExercises.contains($0.id) }
+        let allLogs = logService.loadAll()
+        let todayStart = Calendar.current.startOfDay(for: Date())
+        let todayLogs = allLogs.filter { $0.date >= todayStart }
+
+        var topExName = ""
+        var topWeight: Double = 0
+        var topReps: Int = 0
+        for log in todayLogs {
+            for s in log.sets where s.isCompleted {
+                if s.weight > topWeight {
+                    topWeight = s.weight
+                    topReps = s.reps
+                    topExName = log.exerciseName
+                }
+            }
+        }
+
+        let durationMin = max(elapsedSeconds / 60, 1)
+        let estimatedCal = Int(Double(durationMin) * 5.5 + totalVolume * 0.015)
+
         return WorkoutShareCardData(
             workoutName: workout.name,
             focusAreas: workout.focusAreas,
             totalVolume: totalVolume,
-            duration: max(elapsedSeconds / 60, 1),
+            duration: durationMin,
             exercisesCompleted: completedExercises.count,
             totalExercises: workout.exercises.count,
-            totalSets: workout.exercises.filter { completedExercises.contains($0.id) }.reduce(0) { $0 + $1.sets },
+            totalSets: completedExerciseList.reduce(0) { $0 + $1.sets },
             prCount: exercisePRs.count,
             prExerciseNames: prExerciseNames,
             pointsEarned: workoutPoints,
             prBestWeight: bestWeight,
             prBestReps: bestReps,
-            weightUnit: appState.profile.usesMetric ? "kg" : "lbs"
+            weightUnit: appState.profile.usesMetric ? "kg" : "lbs",
+            topSetExercise: topExName,
+            topSetWeight: topWeight,
+            topSetReps: topReps,
+            estimatedCalories: estimatedCal,
+            exercises: completedExerciseList,
+            workoutDate: Date()
         )
     }
 }
