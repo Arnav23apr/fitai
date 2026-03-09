@@ -1,32 +1,42 @@
-# Interactive Muscle Heat Maps with MuscleMap Library
+# Redesign Workout Share Card — Strava-style for Lifting
 
-## Features
+## What's Changing
 
-- **Workout Muscle Map** — Each workout detail sheet shows a front + back body diagram highlighting which muscles that workout targets, with primary muscles in red and secondary muscles in gold/yellow
-- **Weekly Volume Heat Map** — The Plan tab gets a "Muscle Activity" card showing a body map colored by how much you've trained each muscle group this week (cold → hot gradient based on total sets)
-- **Tap to Explore** — Tap any muscle on the body to see which exercises target it, how many sets you've done, and your total volume for that muscle
-- **Smart Muscle Mapping** — Every exercise in your plan is automatically mapped to its primary and secondary muscle groups (e.g. Bench Press → primary: Chest, secondary: Triceps + Front Delts)
-- **Legend** — Clear color legend below the body map showing what each color intensity means
+A complete redesign of the workout share card that appears after finishing a workout. Replacing the current simple volume-only card with a rich, Strava-inspired share card tailored for lifting.
 
-## Design
+---
 
-- **Dark-themed body diagrams** matching your app's existing dark aesthetic
-- Front and back body views displayed side-by-side, just like in your reference image
-- Primary muscles shown in vibrant red, secondary muscles in warm gold/amber
-- Weekly heat map uses a gradient scale — gray (untrained) → light orange → deep red (heavily trained)
-- Tapping a muscle shows a compact popup/sheet with exercise names, sets done, and volume
-- Smooth spring animations when muscles highlight on appearance
-- The weekly overview card uses a subtle material background with rounded corners, consistent with existing Plan tab cards
+### **Features**
 
-## Screens & Placement
+- **Volume Lifted** — total weight moved, displayed as the hero stat at the top
+- **Duration** — how long the workout took (e.g. "47 min")
+- **Top Set** — the heaviest single set performed (e.g. "Bench Press · 100kg × 8")
+- **Estimated Calories** — rough calorie burn estimate based on duration and volume
+- **Personal Records** — if any PRs were hit, they're highlighted with a trophy badge
+- **Muscle Map** — a body silhouette showing which muscles were worked (primary in red, secondary in amber), automatically choosing front or back view based on which side has more highlighted muscles
+- **App Logo & Name** — FitAI branding at the bottom of the card
 
-- **Workout Detail Sheet** — New "Muscles Targeted" section near the top showing the front + back body with this workout's muscles lit up in primary (red) and secondary (gold) colors
-- **Plan Tab** — New "Weekly Muscle Activity" card (collapsible) showing a heat map of all muscles trained this week, colored by volume intensity
-- **Muscle Detail Popup** — When tapping a muscle, a small sheet appears listing the exercises hitting that muscle, total sets, and total volume this week
+---
 
-## Technical Approach
+### **Design**
 
-- Install the **MuscleMap** Swift package (v1.6.0) — provides 36 SVG-based muscle groups with built-in highlighting, heatmaps, and tap detection
-- Create a mapping service that converts your existing exercise muscle group strings (e.g. "Chest", "Quads", "Biceps") to the MuscleMap library's muscle identifiers, including primary/secondary classification
-- The weekly heat map aggregates completed workout logs from the current week to calculate per-muscle intensity
+- **Pure transparent background** with clean white text — minimal and bold, Strava-like
+- Stats arranged in a **grid layout** (2 columns) for a clean, dense look
+- Each stat has a small label above and a large bold value below
+- PR section appears conditionally with a gold trophy icon when records are broken
+- Muscle map rendered below the stats — single body view (front or back), with a subtle glow behind it
+- Thin divider lines separate sections
+- FitAI logo and wordmark centered at the very bottom, subtle white at ~40% opacity
+- The card has a slight rounded corner and is sized for Instagram Stories sharing  
+it should be transparent (png) only texts and muscle map etc should be visible, no background, same as strava
+
+---
+
+### **Layout (Top to Bottom)**
+
+1. **Workout name & focus** — e.g. "Push Day" with date
+2. **Stat grid** — Volume, Duration, Top Set, Calories in a 2×2 grid
+3. **PR badge** (if applicable) — gold accent, exercise name + weight
+4. **Muscle map** — auto-selected front or back body view, primary (red) and secondary (amber) highlights
+5. **App branding** — FitAI logo at the bottom0
 
