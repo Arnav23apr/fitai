@@ -651,37 +651,61 @@ struct PlanView: View {
     }
 
     private var bodyDiagramView: some View {
-        HStack(spacing: 3) {
-            let weakLower = appState.profile.weakPoints.lowercased()
-            VStack(spacing: 2) {
-                Circle()
-                    .fill(Color.primary.opacity(0.15))
-                    .frame(width: 14, height: 14)
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(weakLower.contains(where: { "chest,back,core,ab".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
-                    .frame(width: 18, height: 22)
-                HStack(spacing: 8) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
-                        .frame(width: 7, height: 24)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(weakLower.contains(where: { "leg,quad,hamstring,glute,calf".contains($0) }) ? Color.orange.opacity(0.5) : Color.primary.opacity(0.12))
-                        .frame(width: 7, height: 24)
-                }
-            }
-
-            VStack(spacing: 4) {
-                ForEach(appState.profile.weakPoints.prefix(3), id: \.self) { point in
-                    Text(point)
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.orange)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(Color.orange.opacity(0.15))
-                        .clipShape(.rect(cornerRadius: 3))
-                }
-            }
+        HStack(spacing: 4) {
+            buildScanInsightBody(side: .front)
+            buildScanInsightBody(side: .back)
         }
+        .frame(height: 110)
+    }
+
+    private func buildScanInsightBody(side: BodySide) -> some View {
+        let style = BodyViewStyle(
+            defaultFillColor: Color(white: 0.22),
+            strokeColor: Color(white: 0.32),
+            strokeWidth: 0.3,
+            selectionColor: .orange,
+            selectionStrokeColor: .orange,
+            selectionStrokeWidth: 1.5,
+            headColor: Color(white: 0.32),
+            hairColor: Color(white: 0.14)
+        )
+        return BodyView(gender: .male, side: side, style: style)
+            .heatmap(scanMuscleIntensities(), colorScale: .workout)
+            .animated(duration: 0.5)
+    }
+
+    private func scanMuscleIntensities() -> [MuscleIntensity] {
+        let weakMuscles = musclesFromScanPoints(appState.profile.weakPoints)
+        let strongMuscles = musclesFromScanPoints(appState.profile.strongPoints)
+        let weakSet = Set(weakMuscles)
+        var result: [MuscleIntensity] = weakMuscles.map { MuscleIntensity(muscle: $0, intensity: 1.0) }
+        result += strongMuscles.filter { !weakSet.contains($0) }.map { MuscleIntensity(muscle: $0, intensity: 0.45) }
+        return result
+    }
+
+    private func musclesFromScanPoints(_ points: [String]) -> [Muscle] {
+        var muscles: [Muscle] = []
+        for point in points {
+            let lower = point.lowercased()
+            if lower.contains("chest") { muscles.append(.chest) }
+            if lower.contains("shoulder") || lower.contains("delt") { muscles.append(.deltoids) }
+            if lower.contains("lower back") { muscles.append(.lowerBack) }
+            else if lower.contains("back") { muscles.append(.upperBack) }
+            if lower.contains("arm") { muscles.append(.biceps); muscles.append(.triceps) }
+            if lower.contains("bicep") { muscles.append(.biceps) }
+            if lower.contains("tricep") { muscles.append(.triceps) }
+            if lower.contains("quad") || (lower.contains("leg") && !lower.contains("lower")) {
+                muscles.append(.quadriceps)
+            }
+            if lower.contains("hamstring") { muscles.append(.hamstring) }
+            if lower.contains("glute") { muscles.append(.gluteal) }
+            if lower.contains("calf") || lower.contains("calve") { muscles.append(.calves) }
+            if lower.contains("core") || lower.contains("ab") { muscles.append(.abs) }
+            if lower.contains("oblique") { muscles.append(.obliques) }
+            if lower.contains("trap") { muscles.append(.trapezius) }
+            if lower.contains("forearm") { muscles.append(.forearm) }
+        }
+        return Array(Set(muscles))
     }
 
     private var promptScanCard: some View {
