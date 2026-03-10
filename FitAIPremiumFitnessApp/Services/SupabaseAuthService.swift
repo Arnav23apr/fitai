@@ -12,6 +12,16 @@ let supabaseAuth = AuthClient(
 class SupabaseAuthService {
     static let shared = SupabaseAuthService()
 
+    func signInWithApple(idToken: String, nonce: String) async throws -> Session {
+        try await supabaseAuth.signInWithIdToken(
+            credentials: OpenIDConnectCredentials(
+                provider: .apple,
+                idToken: idToken,
+                nonce: nonce
+            )
+        )
+    }
+
     func signInWithGoogle() async throws -> Session {
         try await supabaseAuth.signInWithOAuth(
             provider: .google,
