@@ -63,7 +63,7 @@
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = XX0F7C4027B12F8E4ECE86XX /* FitAI */;
+			target = XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -224,9 +224,9 @@
 			productReference = 105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		XX0F7C4027B12F8E4ECE86XX /* FitAI */ = {
+		XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAI" */;
+			buildConfigurationList = XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAIWorkoutActivity" */;
 			buildPhases = (
 				XXE0FD6AFA7551401BFCEBXX /* Sources */,
 				XX75B8358D2242CEB782C5XX /* Frameworks */,
@@ -236,8 +236,8 @@
 			);
 			dependencies = (
 			);
-			name = FitAI;
-			productName = FitAI;
+			name = FitAIWorkoutActivity;
+			productName = FitAIWorkoutActivity;
 			productReference = XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */;
 			productType = "com.apple.product-type.app-extension";
 			fileSystemSynchronizedGroups = (
@@ -284,7 +284,7 @@
 				105FC5792E9EAD3100EA8BCF /* FitAI */,
 				105FC5882E9EAD3200EA8BCF /* FitAI */,
 				105FC5922E9EAD3200EA8BCF /* FitAI */,
-				XX0F7C4027B12F8E4ECE86XX /* FitAI */,
+				XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */,
 			);
 			packageReferences = (
 				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
@@ -368,7 +368,7 @@
 		};
 		XXC4AC2198A79519047E71XX /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = XX0F7C4027B12F8E4ECE86XX /* FitAI */;
+			target = XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */;
 			targetProxy = XXD5B4A86C551D581496BDXX /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -734,7 +734,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAI" */ = {
+		XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAIWorkoutActivity" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				XXDE884D7F0EDFA4524FADXX /* Debug */,
