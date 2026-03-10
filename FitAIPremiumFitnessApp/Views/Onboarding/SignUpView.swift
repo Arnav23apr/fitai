@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import CryptoKit
 
 struct SignUpView: View {
     @Environment(AppState.self) private var appState
@@ -11,6 +12,7 @@ struct SignUpView: View {
     @State private var password: String = ""
     @State private var isSignUp: Bool = false
     @State private var showConfirmationAlert: Bool = false
+    @State private var currentNonce: String = ""
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -25,18 +27,28 @@ struct SignUpView: View {
 
             VStack(spacing: 14) {
                 SignInWithAppleButton(.signIn) { request in
+                    let nonce = Self.randomNonceString()
+                    currentNonce = nonce
                     request.requestedScopes = [.fullName, .email]
+                    request.nonce = Self.sha256(nonce)
                 } onCompletion: { result in
                     switch result {
                     case .success(let auth):
-                        if let credential = auth.credential as? ASAuthorizationAppleIDCredential {
-                            let name = [credential.fullName?.givenName, credential.fullName?.familyName]
-                                .compactMap { $0 }
-                                .joined(separator: " ")
-                            if !name.isEmpty { appState.profile.name = name }
-                            if let email = credential.email { appState.profile.email = email }
+                        guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
+                              let tokenData = credential.identityToken,
+                              let idToken = String(data: tokenData, encoding: .utf8) else { return }
+                        let nonce = currentNonce
+                        Task {
+                            await appState.signInWithApple(
+                                idToken: idToken,
+                                nonce: nonce,
+                                fullName: credential.fullName,
+                                email: credential.email
+                            )
+                            if appState.authError == nil && !appState.isAuthenticating {
+                                onContinue()
+                            }
                         }
-                        onContinue()
                     case .failure:
                         break
                     }
@@ -212,6 +224,19 @@ struct SignUpView: View {
             }
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    private static func randomNonceString(length: Int = 32) -> String {
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var randomBytes = [UInt8](repeating: 0, count: length)
+        _ = SecRandomCopyBytes(kSecRandomDefault, randomBytes.count, &randomBytes)
+        return String(randomBytes.map { charset[Int($0) % charset.count] })
+    }
+
+    private static func sha256(_ input: String) -> String {
+        let data = Data(input.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.map { String(format: "%02x", $0) }.joined()
     }
 
     private var isFormValid: Bool {

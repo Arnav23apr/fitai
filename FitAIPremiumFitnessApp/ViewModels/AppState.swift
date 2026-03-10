@@ -110,6 +110,27 @@ class AppState {
         isAuthenticating = false
     }
 
+    func signInWithApple(idToken: String, nonce: String, fullName: PersonNameComponents?, email: String?) async {
+        isAuthenticating = true
+        authError = nil
+        do {
+            let session = try await SupabaseAuthService.shared.signInWithApple(idToken: idToken, nonce: nonce)
+            isLoggedIn = true
+            if let userEmail = email ?? session.user.email {
+                profile.email = userEmail
+            }
+            let meta = session.user.userMetadata
+            let supabaseName = meta["full_name"]?.stringValue ?? meta["name"]?.stringValue
+            let appleName = [fullName?.givenName, fullName?.familyName].compactMap { $0 }.joined(separator: " ")
+            let resolvedName = supabaseName ?? (appleName.isEmpty ? nil : appleName)
+            profile.name = resolvedName ?? "Athlete"
+            saveProfile()
+        } catch {
+            authError = error.localizedDescription
+        }
+        isAuthenticating = false
+    }
+
     func signInWithGoogle() async {
         isAuthenticating = true
         authError = nil
