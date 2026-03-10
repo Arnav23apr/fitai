@@ -17,6 +17,7 @@ struct SetLoggingSheet: View {
     @State private var completedSetTrigger: Int = 0
     @State private var useBodyweight: Bool = false
     @State private var usedAISuggestions: Bool = false
+    @State private var weightStrings: [String] = []
 
     private let exerciseLogService = ExerciseLogService.shared
 
@@ -76,6 +77,7 @@ struct SetLoggingSheet: View {
         _sets = State(initialValue: initialSets)
         _useBodyweight = State(initialValue: wasBW)
         _usedAISuggestions = State(initialValue: !hasLastSession && hasAISuggestions)
+        _weightStrings = State(initialValue: initialSets.map { Self.formatWeight($0.weight) })
     }
 
     var body: some View {
@@ -119,6 +121,15 @@ struct SetLoggingSheet: View {
             .background(Color(.systemBackground))
             .navigationTitle(exercise.name)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -219,6 +230,9 @@ struct SetLoggingSheet: View {
                                 if !sets[i].isCompleted {
                                     sets[i].weight = bw
                                     sets[i].isBodyweight = true
+                                    if i < weightStrings.count {
+                                        weightStrings[i] = Self.formatWeight(bw)
+                                    }
                                 }
                             }
                         } else {
@@ -226,12 +240,17 @@ struct SetLoggingSheet: View {
                             for i in sets.indices {
                                 if !sets[i].isCompleted {
                                     sets[i].isBodyweight = false
+                                    let newWeight: Double
                                     if let prev = lastSession?.sets[safe: i]?.weight {
-                                        sets[i].weight = prev
+                                        newWeight = prev
                                     } else if let suggested = exercise.suggestedWeights[safe: i] {
-                                        sets[i].weight = suggested
+                                        newWeight = suggested
                                     } else {
-                                        sets[i].weight = 0
+                                        newWeight = 0
+                                    }
+                                    sets[i].weight = newWeight
+                                    if i < weightStrings.count {
+                                        weightStrings[i] = Self.formatWeight(newWeight)
                                     }
                                 }
                             }
@@ -591,12 +610,11 @@ struct SetLoggingSheet: View {
         .frame(width: 28)
     }
 
-    private static let weightValues: [Double] = Array(stride(from: 0.0, through: 300.0, by: 0.5))
     private static let repsValues: [Int] = Array(0...100)
 
-    private func weightPickerIndex(for weight: Double) -> Int {
-        let clamped = min(max(weight, 0), 300)
-        return Int((clamped * 2).rounded())
+    private static func formatWeight(_ weight: Double) -> String {
+        guard weight > 0 else { return "" }
+        return weight.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(weight))" : String(format: "%.1f", weight)
     }
 
     private func setInputFields(index: Int, isDisabled: Bool) -> some View {
@@ -604,25 +622,37 @@ struct SetLoggingSheet: View {
             if useBodyweight {
                 bodyweightWeightLabel
             } else {
-                VStack(spacing: 0) {
+                VStack(spacing: 4) {
                     Text(weightUnit.uppercased())
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.tertiary)
-                    Picker("", selection: Binding(
-                        get: { weightPickerIndex(for: sets[index].weight) },
-                        set: { sets[index].weight = Self.weightValues[$0] }
-                    )) {
-                        ForEach(Self.weightValues.indices, id: \.self) { i in
-                            let v = Self.weightValues[i]
-                            Text(v.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(v))" : String(format: "%.1f", v))
-                                .font(.system(.body, design: .rounded, weight: .semibold))
-                                .tag(i)
+
+                    let weightBinding = Binding<String>(
+                        get: { index < weightStrings.count ? weightStrings[index] : "" },
+                        set: { val in
+                            guard index < weightStrings.count else { return }
+                            let filtered = val.filter { $0.isNumber || $0 == "." }
+                            weightStrings[index] = filtered
+                            if let parsed = Double(filtered) {
+                                sets[index].weight = parsed
+                            } else if filtered.isEmpty {
+                                sets[index].weight = 0
+                            }
                         }
-                    }
-                    .pickerStyle(.wheel)
-                    .frame(width: 70, height: 80)
-                    .clipped()
-                    .disabled(isDisabled)
+                    )
+
+                    TextField("0", text: weightBinding)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 22, design: .rounded, weight: .bold))
+                        .frame(width: 76, height: 68)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(.rect(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                        )
+                        .disabled(isDisabled)
                 }
             }
 
@@ -707,6 +737,7 @@ struct SetLoggingSheet: View {
             withAnimation(.spring(duration: 0.3)) {
                 let lastWeight = useBodyweight ? bodyweightValue : (sets.last?.weight ?? 0) * 0.7
                 sets.append(SetLog(weight: lastWeight, reps: 0, isDropSet: true, isBodyweight: useBodyweight))
+                weightStrings.append(Self.formatWeight(lastWeight))
             }
         } label: {
             HStack(spacing: 8) {
