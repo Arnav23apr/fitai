@@ -63,7 +63,7 @@
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */;
+			target = XX0F7C4027B12F8E4ECE86XX /* FitAI */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -152,9 +152,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */ = {
+		105FC5792E9EAD3100EA8BCF /* FitAI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessApp" */;
+			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAI" */;
 			buildPhases = (
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
@@ -169,18 +169,18 @@
 			fileSystemSynchronizedGroups = (
 				105FC57C2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */,
 			);
-			name = FitAIPremiumFitnessApp;
+			name = FitAI;
 			packageProductDependencies = (
 				XX7F1BC1206458B4E90481XX /* Auth */,
 				XXMM02BB206458B4E90481XX /* MuscleMap */,
 			);
-			productName = FitAIPremiumFitnessApp;
+			productName = FitAI;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */;
 			productType = "com.apple.product-type.application";
 		};
-		105FC5882E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */ = {
+		105FC5882E9EAD3200EA8BCF /* FitAI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppTests" */;
+			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAI" */;
 			buildPhases = (
 				105FC5852E9EAD3200EA8BCF /* Sources */,
 				105FC5862E9EAD3200EA8BCF /* Frameworks */,
@@ -194,16 +194,16 @@
 			fileSystemSynchronizedGroups = (
 				105FC58C2E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */,
 			);
-			name = FitAIPremiumFitnessAppTests;
+			name = FitAI;
 			packageProductDependencies = (
 			);
-			productName = FitAIPremiumFitnessAppTests;
+			productName = FitAI;
 			productReference = 105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		105FC5922E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */ = {
+		105FC5922E9EAD3200EA8BCF /* FitAI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppUITests" */;
+			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAI" */;
 			buildPhases = (
 				105FC58F2E9EAD3200EA8BCF /* Sources */,
 				105FC5902E9EAD3200EA8BCF /* Frameworks */,
@@ -217,16 +217,16 @@
 			fileSystemSynchronizedGroups = (
 				105FC5962E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */,
 			);
-			name = FitAIPremiumFitnessAppUITests;
+			name = FitAI;
 			packageProductDependencies = (
 			);
-			productName = FitAIPremiumFitnessAppUITests;
+			productName = FitAI;
 			productReference = 105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
-		XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */ = {
+		XX0F7C4027B12F8E4ECE86XX /* FitAI */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAIWorkoutActivity" */;
+			buildConfigurationList = XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAI" */;
 			buildPhases = (
 				XXE0FD6AFA7551401BFCEBXX /* Sources */,
 				XX75B8358D2242CEB782C5XX /* Frameworks */,
@@ -236,8 +236,8 @@
 			);
 			dependencies = (
 			);
-			name = FitAIWorkoutActivity;
-			productName = FitAIWorkoutActivity;
+			name = FitAI;
+			productName = FitAI;
 			productReference = XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */;
 			productType = "com.apple.product-type.app-extension";
 			fileSystemSynchronizedGroups = (
@@ -267,7 +267,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAIPremiumFitnessApp" */;
+			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAI" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -281,10 +281,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */,
-				105FC5882E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */,
-				105FC5922E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */,
-				XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */,
+				105FC5792E9EAD3100EA8BCF /* FitAI */,
+				105FC5882E9EAD3200EA8BCF /* FitAI */,
+				105FC5922E9EAD3200EA8BCF /* FitAI */,
+				XX0F7C4027B12F8E4ECE86XX /* FitAI */,
 			);
 			packageReferences = (
 				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
@@ -358,17 +358,17 @@
 /* Begin PBXTargetDependency section */
 		105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */;
+			target = 105FC5792E9EAD3100EA8BCF /* FitAI */;
 			targetProxy = 105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 		105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */;
+			target = 105FC5792E9EAD3100EA8BCF /* FitAI */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 		XXC4AC2198A79519047E71XX /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */;
+			target = XX0F7C4027B12F8E4ECE86XX /* FitAI */;
 			targetProxy = XXD5B4A86C551D581496BDXX /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -696,7 +696,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAIPremiumFitnessApp" */ = {
+		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FitAI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59B2E9EAD3200EA8BCF /* Debug */,
@@ -705,7 +705,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessApp" */ = {
+		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59E2E9EAD3200EA8BCF /* Debug */,
@@ -714,7 +714,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppTests" */ = {
+		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A12E9EAD3200EA8BCF /* Debug */,
@@ -723,7 +723,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAIPremiumFitnessAppUITests" */ = {
+		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FitAI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
@@ -732,7 +732,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAIWorkoutActivity" */ = {
+		XXE10675807B00492B9D35XX /* Build configuration list for PBXNativeTarget "FitAI" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				XXDE884D7F0EDFA4524FADXX /* Debug */,
