@@ -142,7 +142,7 @@ nonisolated struct LLMObjectResponse: Codable, Sendable {
     let object: [String: AnyCodable]
 }
 
-nonisolated struct AnyCodable: Codable, Sendable {
+nonisolated struct AnyCodable: Codable, @unchecked Sendable {
     let value: Any
 
     init(_ value: Any) {
