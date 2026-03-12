@@ -1,42 +1,85 @@
-# Redesign Workout Share Card — Strava-style for Lifting
+# Major FitAI Update — 20 Fixes & Features
 
-## What's Changing
+## Features
 
-A complete redesign of the workout share card that appears after finishing a workout. Replacing the current simple volume-only card with a rich, Strava-inspired share card tailored for lifting.
+### 💳 Payment System (RevenueCat — Real Purchases)
 
----
+- Set up RevenueCat with 3 products: Monthly ($9.99), Yearly ($119.99), Lifetime ($149.99)
+- Redesign paywall: single **Continue** button at the bottom (no per-plan buttons)
+- Subtitle changes to **"Reach your dream physique faster."**
+- Toggle switch to choose Monthly vs Yearly plan
+- Left toggle for a **2-day free trial** on the selected plan
+- Below the button: pricing line — *"Just $119.99/year ($9.99/mo)"* or *"$9.99/month"* dynamically
+- Creative **"Get Lifetime 🏆"** banner beneath — "One payment. Train forever." at $149.99 — styled as a premium gold card
+- All prices shown in the **user's local currency** via App Store pricing
+- **Restore Purchases** button in the top-left corner of the paywall
+- Wheel page "Claim 85% Off" → $69.99 discounted yearly plan + a 3-day free trial toggle
 
-### **Features**
+### 🍎 Apple Health Connect
 
-- [x] **Volume Lifted** — total weight moved, displayed as the hero stat at the top
-- [x] **Duration** — how long the workout took (e.g. "47 min")
-- [x] **Top Set** — the heaviest single set performed (e.g. "Bench Press · 100kg × 8")
-- [x] **Estimated Calories** — rough calorie burn estimate based on duration and volume
-- [x] **Personal Records** — if any PRs were hit, they're highlighted with a trophy badge
-- [x] **Muscle Map** — a body silhouette showing which muscles were worked (primary in red, secondary in amber), automatically choosing front or back view based on which side has more highlighted muscles
-- [x] **App Logo & Name** — FitAI branding at the bottom of the card
+- New **Apple Health** page (accessible from Profile → Settings tap on Apple Health row, not an alert anymore)
+- Shows two connection cards: **Workouts** (read & write) and **Body Weight** (read & write)
+- Toggle switches to enable/disable each data type
+- On connect: requests HealthKit permissions with a clear permission prompt
+- Weight synced automatically on app open; workouts written to Health when sessions complete
 
----
+### 🏆 Leaderboard & Friends (Real Users)
 
-### **Design**
+- Create a Supabase `leaderboard_profiles` table with username, display name, points, tier, and streak
+- Leaderboard shows **real active users** from Supabase, sorted by points — no more hardcoded fake names
+- Friends search actually queries the database by username — returns real users
+- Add friend button sends/accepts a friend request stored in Supabase
 
-- [x] **Pure transparent background** with clean white text — minimal and bold, Strava-like
-- [x] Stats arranged in a **grid layout** (2 columns) for a clean, dense look
-- [x] Each stat has a small label above and a large bold value below
-- [x] PR section appears conditionally with a gold trophy icon when records are broken
-- [x] Muscle map rendered below the stats — single body view (front or back), with a subtle glow behind it
-- [x] Thin divider lines separate sections
-- [x] FitAI logo and wordmark centered at the very bottom, subtle white at ~40% opacity
-- [x] Transparent PNG export (renderer.isOpaque = false)
+### 🎯 Onboarding Fixes
 
----
+- **Goals** and **What's holding you back** screens: reduce option button font size so text fits without overflow, use `.footnote` weight or auto-resize
+- **Rating page**: remove all fake testimonials (Jake, Maria, Alex) and placeholder avatars — show a clean, minimal design with a star rating animation and the system review prompt
+- **Referral code** "I don't have a code" button: adaptive color that contrasts properly in both light and dark mode
+- **Remove the X close button** from the sign-up/log-in screen (the `showCloseButton` on `.signUp` step)
 
-### **Layout (Top to Bottom)**
+### 📋 Plan Tab
 
-1. [x] **Workout name & focus** — e.g. "Push Day" with date
-2. [x] **Stat grid** — Volume, Duration, Top Set, Calories in a 2×2 grid
-3. [x] **PR badge** (if applicable) — gold accent, exercise name + weight
-4. [x] **Muscle map** — auto-selected front or back body view, primary (red) and secondary (amber) highlights
-5. [x] **App branding** — FitAI logo at the bottom
+- **Weekly Muscle Activity** section (heatmap) starts **collapsed by default** — user taps to expand
 
-✅ **COMPLETE**
+### 💪 Workout Improvements
+
+- **Preset weight & reps** when starting a workout: beginner gets lighter weights/higher reps, intermediate gets moderate, advanced gets heavier — values increase each week based on workout history
+- **Resume workout**: add an **End Workout** button and an **Edit Exercises** option within the active workout sheet so users can make changes mid-session
+- **Workout shortcut bar** (floating above the tab bar): repositioned so it doesn't overlap the AI chat button — moved slightly higher or to the left
+
+### 📸 Scan Tab
+
+- **Photo guidelines** cards become tappable — tapping opens a tips sheet with detailed guidance (lighting, distance, pose, clothing tips)
+
+### 🔔 Live Activities & Dynamic Island
+
+- Fix Live Activity to **actually start** when a workout begins (wire up `WorkoutSessionManager` to call `Activity.request()`)
+- Live Activity shows workout name, timer, exercise progress bar, and current exercise name
+- Dynamic Island compact view shows workout icon + live timer; expanded view shows full progress
+- Fix the activity not updating as exercises are completed
+
+### 🏠 Widgets
+
+- Replace the broken "shows time only" widget with two useful widgets:
+  - **Small widget**: Today's workout name + exercise count with a "Start" deep link
+  - **Medium widget**: Today's workout + latest body scan score side by side
+
+### 🌍 Language Translation Fix
+
+- Audit the `LocalizationService` for missing keys across all languages
+- Add missing translations for all keys that currently fall back to English (workout screen labels, settings, coach messages, onboarding steps)
+
+### ⚙️ Settings — Get Pro Banner
+
+- Free users see a creative **"Unlock Pro"** card in the Settings section of the Profile tab
+- Styled with a gradient gold/black design, crown icon, and a one-line value prop — taps open the paywall
+
+## Design
+
+- Paywall lifetime option: gold gradient card with a sparkle/trophy icon, "Best Value" badge
+- Apple Health page: clean list of toggleable data types with Apple Health pink heart branding
+- Rating page: large animated 5-star display, app store rating badge, single "Rate FitAI" CTA button
+- Referral "no code" button: uses `.secondary` semantic color for proper light/dark contrast
+- Get Pro settings card: compact gradient strip with crown icon, seamless with existing settings list style
+- All existing dark/light mode support preserved throughout
+
