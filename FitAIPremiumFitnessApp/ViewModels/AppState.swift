@@ -1,5 +1,6 @@
 import SwiftUI
 import Auth
+import WidgetKit
 
 @Observable
 @MainActor
@@ -58,6 +59,8 @@ class AppState {
         let entry = ScanHistoryEntry(from: result)
         ScanHistoryService.shared.save(entry)
         scanHistory = ScanHistoryService.shared.loadAll()
+        saveWidgetData(workoutName: profile.workoutLogs.last?.dayName ?? "Today's Workout", exerciseCount: 6)
+        WidgetCenter.shared.reloadAllTimelines()
 
         NotificationService.shared.reconcileAll(profile: profile, scanHistory: scanHistory)
     }
@@ -175,6 +178,13 @@ class AppState {
         showSplash = false
     }
 
+    func saveWidgetData(workoutName: String, exerciseCount: Int) {
+        UserDefaults.standard.set(workoutName, forKey: "widget_workoutName")
+        UserDefaults.standard.set(exerciseCount, forKey: "widget_exerciseCount")
+        UserDefaults.standard.set(profile.currentStreak, forKey: "widget_streak")
+        UserDefaults.standard.set(profile.latestScore ?? 0, forKey: "widget_latestScore")
+    }
+
     func logWorkout(dayName: String, exercisesCompleted: Int, totalExercises: Int, durationMinutes: Int, completedExerciseNames: [String]) {
         resetWeekIfNeeded()
         let log = WorkoutLog(
@@ -197,6 +207,20 @@ class AppState {
         updateStreak()
         updateTier()
         saveProfile()
+        saveWidgetData(workoutName: dayName, exerciseCount: exercisesCompleted)
+        WidgetCenter.shared.reloadAllTimelines()
+        if !profile.username.isEmpty {
+            Task {
+                await LeaderboardService.shared.upsertProfile(
+                    username: profile.username,
+                    displayName: profile.name,
+                    points: profile.points,
+                    tier: profile.tier,
+                    streak: profile.currentStreak,
+                    totalWorkouts: profile.totalWorkouts
+                )
+            }
+        }
 
         NotificationService.shared.cancelTodaysWorkoutReminder()
 

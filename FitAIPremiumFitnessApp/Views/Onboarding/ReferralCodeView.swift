@@ -6,10 +6,8 @@ struct ReferralCodeView: View {
     var onContinue: () -> Void
     @State private var code: String = ""
     @State private var appeared: Bool = false
-    @State private var isFocused: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
-
     private var isDark: Bool { colorScheme == .dark }
 
     var body: some View {
@@ -100,9 +98,7 @@ struct ReferralCodeView: View {
             .opacity(appeared ? 1 : 0)
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                appeared = true
-            }
+            withAnimation(.easeOut(duration: 0.6)) { appeared = true }
         }
     }
 }

@@ -6,7 +6,7 @@ struct WeeklyMuscleHeatMapView: View {
     let exerciseLogs: [ExerciseLog]
     var onMuscleTapped: ((Muscle) -> Void)? = nil
 
-    @State private var isExpanded: Bool = true
+    @State private var isExpanded: Bool = false
     @State private var appeared: Bool = false
 
     private let mapper = MuscleMapperService.shared

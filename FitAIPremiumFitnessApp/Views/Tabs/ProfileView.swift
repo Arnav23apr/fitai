@@ -7,7 +7,7 @@ struct ProfileView: View {
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
     @State private var showLanguagePicker: Bool = false
-    @State private var showHealthAlert: Bool = false
+    @State private var showAppleHealth: Bool = false
     @State private var showNotificationSettings: Bool = false
     @State private var showCurrentPlan: Bool = false
     @State private var showWeightHeightEditor: Bool = false
@@ -59,32 +59,23 @@ struct ProfileView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileSheet()
-            }
-            .sheet(isPresented: $showPaywall) {
-                PaywallSheet()
-            }
+            .sheet(isPresented: $showEditProfile) { EditProfileSheet() }
+            .sheet(isPresented: $showPaywall) { PaywallSheet() }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
                     .presentationDetents([.fraction(0.75), .large])
                     .presentationDragIndicator(.hidden)
             }
-            .sheet(isPresented: $showNotificationSettings) {
-                NotificationSettingsView()
-            }
-            .sheet(isPresented: $showLanguagePicker) {
-                LanguagePickerSheet()
-            }
+            .sheet(isPresented: $showNotificationSettings) { NotificationSettingsView() }
+            .sheet(isPresented: $showLanguagePicker) { LanguagePickerSheet() }
             .sheet(isPresented: $showWeightHeightEditor) {
                 WeightHeightEditorSheet()
                     .presentationDetents([.fraction(0.65), .large])
                     .presentationDragIndicator(.visible)
             }
-            .alert(L.t("comingSoon", lang), isPresented: $showHealthAlert) {
-                Button(L.t("ok", lang), role: .cancel) {}
-            } message: {
-                Text(L.t("comingSoonMessage", lang))
+            .sheet(isPresented: $showAppleHealth) {
+                AppleHealthView()
+                    .presentationDetents([.large])
             }
         }
     }
@@ -118,27 +109,20 @@ struct ProfileView: View {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(
-                                LinearGradient(
-                                    colors: [.yellow, .orange],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
+                                LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
                             )
                     }
                 }
-
                 if !appState.profile.username.isEmpty {
                     Text("@\(appState.profile.username)")
                         .font(.caption)
                         .foregroundStyle(.blue.opacity(0.7))
                 }
-
                 if !appState.profile.goals.isEmpty {
                     Text(appState.profile.goals.prefix(2).joined(separator: ", "))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
-
                 if !appState.profile.bio.isEmpty {
                     Text(appState.profile.bio)
                         .font(.caption)
@@ -169,21 +153,15 @@ struct ProfileView: View {
         let weightKg = profile.weightKg
 
         let heightText: String = {
-            if isMetric {
-                return "\(Int(heightCm)) cm"
-            } else {
-                let feet = Int(heightCm / 30.48)
-                let inches = Int((heightCm / 2.54).truncatingRemainder(dividingBy: 12))
-                return "\(feet)'\(inches)\""
-            }
+            if isMetric { return "\(Int(heightCm)) cm" }
+            let feet = Int(heightCm / 30.48)
+            let inches = Int((heightCm / 2.54).truncatingRemainder(dividingBy: 12))
+            return "\(feet)'\(inches)\""
         }()
 
         let weightText: String = {
-            if isMetric {
-                return "\(Int(weightKg)) kg"
-            } else {
-                return "\(Int(weightKg * 2.205)) lbs"
-            }
+            if isMetric { return "\(Int(weightKg)) kg" }
+            return "\(Int(weightKg * 2.205)) lbs"
         }()
 
         return Button { showWeightHeightEditor = true } label: {
@@ -287,18 +265,9 @@ struct ProfileView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(16)
-            .background(
-                LinearGradient(
-                    colors: [Color.yellow.opacity(0.08), Color.orange.opacity(0.04)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
+            .background(LinearGradient(colors: [Color.yellow.opacity(0.08), Color.orange.opacity(0.04)], startPoint: .leading, endPoint: .trailing))
             .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.yellow.opacity(0.15), lineWidth: 1)
-            )
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(Color.yellow.opacity(0.15), lineWidth: 1))
         }
     }
 
@@ -315,6 +284,10 @@ struct ProfileView: View {
                 Spacer()
             }
 
+            if !appState.profile.isPremium {
+                getProBanner
+            }
+
             VStack(spacing: 0) {
                 settingsRow(title: L.t("notifications", lang), icon: "bell.fill", iconColor: .secondary) {
                     showNotificationSettings = true
@@ -325,12 +298,17 @@ struct ProfileView: View {
                 weightUnitRow
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("appleHealth", lang), icon: "heart.fill", iconColor: .pink) {
-                    showHealthAlert = true
+                    showAppleHealth = true
                 }
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("restorePurchases", lang), icon: "arrow.clockwise") {
-                    appState.profile.isPremium = true
-                    appState.saveProfile()
+                    Task {
+                        await StoreViewModel.shared.restore()
+                        if StoreViewModel.shared.isPremium {
+                            appState.profile.isPremium = true
+                            appState.saveProfile()
+                        }
+                    }
                 }
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("language", lang), icon: "globe", trailing: appState.profile.selectedLanguage) {
@@ -345,9 +323,7 @@ struct ProfileView: View {
             .clipShape(.rect(cornerRadius: 16))
             .tourAnchor(.profileSettings)
 
-            Button(action: {
-                appState.logout()
-            }) {
+            Button(action: { appState.logout() }) {
                 HStack(spacing: 10) {
                     Image(systemName: "rectangle.portrait.and.arrow.right")
                         .font(.system(size: 14))
@@ -363,10 +339,72 @@ struct ProfileView: View {
         }
     }
 
+    private var getProBanner: some View {
+        Button(action: { showPaywall = true }) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.3), Color.orange.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
+                        )
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Unlock FitAI Pro 🏆")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("Reach your dream physique faster.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("Try Free")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.black)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        LinearGradient(colors: [.yellow, .orange], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .clipShape(.capsule)
+            }
+            .padding(14)
+            .background(
+                LinearGradient(
+                    colors: [Color.yellow.opacity(0.08), Color.orange.opacity(0.04)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.yellow.opacity(0.4), Color.orange.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+        }
+    }
+
     private var restartTourRow: some View {
-        Button {
-            tourManager.restartTour()
-        } label: {
+        Button { tourManager.restartTour() } label: {
             HStack(spacing: 14) {
                 Image(systemName: "questionmark.circle.fill")
                     .font(.system(size: 14))
@@ -436,24 +474,6 @@ struct ProfileView: View {
         }
     }
 
-    private func settingsToggle(title: String, icon: String, isOn: Binding<Bool>) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-                .frame(width: 28)
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-            Spacer()
-            Toggle("", isOn: isOn)
-                .tint(.green)
-                .labelsHidden()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
     private func settingsRow(title: String, icon: String, iconColor: Color = .secondary, trailing: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
@@ -490,14 +510,9 @@ struct EditProfileSheet: View {
     @State private var customPhotoData: Data? = nil
 
     private let avatarOptions = [
-        "person.crop.circle.fill",
-        "figure.run",
-        "figure.strengthtraining.traditional",
-        "figure.boxing",
-        "figure.martial.arts",
-        "dumbbell.fill"
+        "person.crop.circle.fill", "figure.run", "figure.strengthtraining.traditional",
+        "figure.boxing", "figure.martial.arts", "dumbbell.fill"
     ]
-
     @State private var selectedAvatar: String = "person.crop.circle.fill"
 
     var body: some View {
@@ -506,8 +521,7 @@ struct EditProfileSheet: View {
                 VStack(spacing: 28) {
                     VStack(spacing: 16) {
                         ZStack(alignment: .bottomTrailing) {
-                            if let photoData = customPhotoData,
-                               let uiImage = UIImage(data: photoData) {
+                            if let photoData = customPhotoData, let uiImage = UIImage(data: photoData) {
                                 Image(uiImage: uiImage)
                                     .resizable()
                                     .scaledToFill()
@@ -536,10 +550,7 @@ struct EditProfileSheet: View {
 
                         if customPhotoData != nil {
                             Button(L.t("removePhoto", appState.profile.selectedLanguage)) {
-                                withAnimation {
-                                    customPhotoData = nil
-                                    selectedPhotoItem = nil
-                                }
+                                withAnimation { customPhotoData = nil; selectedPhotoItem = nil }
                             }
                             .font(.caption)
                             .foregroundStyle(.red.opacity(0.7))
@@ -548,11 +559,7 @@ struct EditProfileSheet: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(avatarOptions, id: \.self) { avatar in
-                                    Button(action: {
-                                        selectedAvatar = avatar
-                                        customPhotoData = nil
-                                        selectedPhotoItem = nil
-                                    }) {
+                                    Button(action: { selectedAvatar = avatar; customPhotoData = nil; selectedPhotoItem = nil }) {
                                         Image(systemName: avatar)
                                             .font(.system(size: 22))
                                             .foregroundStyle(selectedAvatar == avatar && customPhotoData == nil ? Color(.systemBackground) : .secondary)
@@ -569,34 +576,23 @@ struct EditProfileSheet: View {
 
                     VStack(spacing: 14) {
                         TextField(L.t("name", appState.profile.selectedLanguage), text: $name)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
+                            .font(.body).foregroundStyle(.primary)
+                            .padding(16).background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
 
                         HStack(spacing: 0) {
-                            Text("@")
-                                .font(.body.weight(.medium))
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 16)
+                            Text("@").font(.body.weight(.medium)).foregroundStyle(.secondary).padding(.leading, 16)
                             TextField("username", text: $username)
-                                .font(.body)
-                                .foregroundStyle(.primary)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .padding(.vertical, 16)
-                                .padding(.leading, 4)
-                                .padding(.trailing, 16)
+                                .font(.body).foregroundStyle(.primary)
+                                .textInputAutocapitalization(.never).autocorrectionDisabled()
+                                .padding(.vertical, 16).padding(.leading, 4).padding(.trailing, 16)
                         }
                         .background(Color(.secondarySystemGroupedBackground))
                         .clipShape(.rect(cornerRadius: 12))
 
                         TextField(L.t("shortBio", appState.profile.selectedLanguage), text: $bio)
-                            .font(.body)
-                            .foregroundStyle(.primary)
-                            .padding(16)
-                            .background(Color(.secondarySystemGroupedBackground))
+                            .font(.body).foregroundStyle(.primary)
+                            .padding(16).background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
                     }
                     .padding(.horizontal, 20)
@@ -648,24 +644,12 @@ struct LanguagePickerSheet: View {
     @State private var selectedLanguage: String = "English"
 
     private let languages: [(name: String, flag: String, native: String)] = [
-        ("English", "🇺🇸", "English"),
-        ("Arabic", "🇸🇦", "العربية"),
-        ("Chinese", "🇨🇳", "中文"),
-        ("Dutch", "🇳🇱", "Nederlands"),
-        ("French", "🇫🇷", "Français"),
-        ("German", "🇩🇪", "Deutsch"),
-        ("Hebrew", "🇮🇱", "עברית"),
-        ("Hindi", "🇮🇳", "हिन्दी"),
-        ("Italian", "🇮🇹", "Italiano"),
-        ("Japanese", "🇯🇵", "日本語"),
-        ("Korean", "🇰🇷", "한국어"),
-        ("Polish", "🇵🇱", "Polski"),
-        ("Portuguese", "🇧🇷", "Português"),
-        ("Romanian", "🇷🇴", "Română"),
-        ("Russian", "🇷🇺", "Русский"),
-        ("Spanish", "🇪🇸", "Español"),
-        ("Swedish", "🇸🇪", "Svenska"),
-        ("Turkish", "🇹🇷", "Türkçe"),
+        ("English", "🇺🇸", "English"), ("Arabic", "🇸🇦", "العربية"), ("Chinese", "🇨🇳", "中文"),
+        ("Dutch", "🇳🇱", "Nederlands"), ("French", "🇫🇷", "Français"), ("German", "🇩🇪", "Deutsch"),
+        ("Hebrew", "🇮🇱", "עברית"), ("Hindi", "🇮🇳", "हिन्दी"), ("Italian", "🇮🇹", "Italiano"),
+        ("Japanese", "🇯🇵", "日本語"), ("Korean", "🇰🇷", "한국어"), ("Polish", "🇵🇱", "Polski"),
+        ("Portuguese", "🇧🇷", "Português"), ("Romanian", "🇷🇴", "Română"), ("Russian", "🇷🇺", "Русский"),
+        ("Spanish", "🇪🇸", "Español"), ("Swedish", "🇸🇪", "Svenska"), ("Turkish", "🇹🇷", "Türkçe"),
     ]
 
     var body: some View {
@@ -676,23 +660,16 @@ struct LanguagePickerSheet: View {
                         selectedLanguage = language.name
                     } label: {
                         HStack(spacing: 14) {
-                            Text(language.flag)
-                                .font(.system(size: 24))
+                            Text(language.flag).font(.system(size: 24))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(language.native)
-                                    .font(.body.weight(.medium))
-                                    .foregroundStyle(.primary)
+                                Text(language.native).font(.body.weight(.medium)).foregroundStyle(.primary)
                                 if language.native != language.name {
-                                    Text(language.name)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                    Text(language.name).font(.caption).foregroundStyle(.secondary)
                                 }
                             }
                             Spacer()
                             if selectedLanguage == language.name {
-                                Image(systemName: "checkmark")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(.green)
+                                Image(systemName: "checkmark").font(.body.weight(.semibold)).foregroundStyle(.green)
                             }
                         }
                     }
@@ -718,8 +695,6 @@ struct LanguagePickerSheet: View {
                 }
             }
         }
-        .onAppear {
-            selectedLanguage = appState.profile.selectedLanguage
-        }
+        .onAppear { selectedLanguage = appState.profile.selectedLanguage }
     }
 }

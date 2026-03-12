@@ -1,4 +1,5 @@
 import SwiftUI
+import RevenueCat
 
 struct PaywallView: View {
     @Environment(AppState.self) private var appState
@@ -8,15 +9,12 @@ struct PaywallView: View {
 
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
+
     @State private var appeared: Bool = false
     @State private var showSkip: Bool = false
-    @State private var selectedPlan: Int = 1
-
-    private let plans: [(title: String, price: String, period: String, badge: String?)] = [
-        ("Monthly", "$9.99", "/month", nil),
-        ("Annual", "$59.99", "/year", "BEST VALUE"),
-        ("Lifetime", "$149.99", "one-time", nil)
-    ]
+    @State private var isYearly: Bool = true
+    @State private var freeTrialEnabled: Bool = false
+    @State private var store = StoreViewModel.shared
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -24,25 +22,44 @@ struct PaywallView: View {
                 skipButton
                 headerSection
                 featuresSection
-                plansSection
+                planToggleSection
                 ctaSection
+                lifetimeCard
+                    .padding(.top, 16)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                appeared = true
-            }
+            withAnimation(.easeOut(duration: 0.6)) { appeared = true }
             Task {
                 try? await Task.sleep(for: .seconds(4))
-                withAnimation(.spring(duration: 0.4)) {
-                    showSkip = true
-                }
+                withAnimation(.spring(duration: 0.4)) { showSkip = true }
             }
+        }
+        .onChange(of: store.isPremium) { _, isPremium in
+            if isPremium {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                onSubscribe()
+            }
+        }
+        .alert("Error", isPresented: .init(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+            Button("OK") { store.error = nil }
+        } message: {
+            Text(store.error ?? "")
         }
     }
 
     private var skipButton: some View {
         HStack {
+            Button(action: {
+                Task { await store.restore() }
+            }) {
+                Text("Restore")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
             Spacer()
             if showSkip {
                 Button(action: onSkip) {
@@ -65,23 +82,21 @@ struct PaywallView: View {
             Image(systemName: "crown.fill")
                 .font(.system(size: 48))
                 .foregroundStyle(
-                    LinearGradient(
-                        colors: [.yellow, .orange],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
+                    LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
                 )
 
             VStack(spacing: 8) {
                 Text(L.t("unlockFitAIPro", lang))
                     .font(.system(.title, design: .default, weight: .bold))
                     .foregroundStyle(.primary)
-                Text(L.t("premiumExperience", lang))
+                Text("Reach your dream physique faster.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
         }
         .opacity(appeared ? 1 : 0)
+        .padding(.horizontal, 24)
     }
 
     private var featuresSection: some View {
@@ -97,82 +112,201 @@ struct PaywallView: View {
         .opacity(appeared ? 1 : 0)
     }
 
-    private var plansSection: some View {
-        VStack(spacing: 12) {
-            ForEach(Array(plans.enumerated()), id: \.offset) { index, plan in
-                planRow(index: index, plan: plan)
+    private var planToggleSection: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Text("Free Trial")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    Toggle("", isOn: $freeTrialEnabled)
+                        .tint(.green)
+                        .labelsHidden()
+                        .scaleEffect(0.85, anchor: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text("Monthly")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(!isYearly ? .primary : .secondary)
+                        Toggle("", isOn: $isYearly)
+                            .tint(.primary)
+                            .labelsHidden()
+                            .scaleEffect(0.9)
+                        Text("Yearly")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(isYearly ? .primary : .secondary)
+                    }
+                    if isYearly {
+                        Text("Save 16%")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.green)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.green.opacity(0.12))
+                            .clipShape(.capsule)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .padding(.horizontal, 24)
         }
         .padding(.top, 28)
-        .padding(.horizontal, 24)
         .opacity(appeared ? 1 : 0)
-    }
-
-    private func planRow(index: Int, plan: (title: String, price: String, period: String, badge: String?)) -> some View {
-        let isSelected = selectedPlan == index
-        let bgColor = isSelected
-            ? (isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.06))
-            : (isDark ? Color.white.opacity(0.04) : Color.black.opacity(0.02))
-        let borderColor = isSelected
-            ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.15))
-            : Color.clear
-
-        return Button(action: { selectedPlan = index }) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(plan.title)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                        if let badge = plan.badge {
-                            Text(badge)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(Color.yellow)
-                                .clipShape(.rect(cornerRadius: 6))
-                        }
-                    }
-                    Text(plan.price + " " + plan.period)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? .primary : .tertiary)
-            }
-            .padding(16)
-            .background(bgColor)
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(borderColor, lineWidth: 1)
-            )
-        }
     }
 
     private var ctaSection: some View {
-        VStack(spacing: 8) {
-            Button(action: onSubscribe) {
-                Text(L.t("startFreeTrial", lang))
-                    .font(.headline)
-                    .foregroundStyle(isDark ? .black : .white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(isDark ? Color.white : Color.black)
-                    .clipShape(.rect(cornerRadius: 16))
+        VStack(spacing: 12) {
+            Button(action: continuePurchase) {
+                HStack(spacing: 8) {
+                    if store.isPurchasing {
+                        ProgressView()
+                            .tint(isDark ? .black : .white)
+                            .scaleEffect(0.9)
+                    } else {
+                        Text("Continue")
+                            .font(.headline)
+                    }
+                }
+                .foregroundStyle(isDark ? .black : .white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(isDark ? Color.white : Color.black)
+                .clipShape(.rect(cornerRadius: 16))
             }
+            .disabled(store.isPurchasing)
             .padding(.horizontal, 24)
             .padding(.top, 24)
 
-            Text(L.t("cancelAnytime", lang))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .padding(.bottom, 32)
+            VStack(spacing: 4) {
+                if freeTrialEnabled {
+                    Text("Start your 2-day free trial, then")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                Text(isYearly ? "Just \(store.annualPriceString)/year (\(store.monthlyPriceString)/mo)" : "\(store.monthlyPriceString)/month")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+            .multilineTextAlignment(.center)
         }
         .opacity(appeared ? 1 : 0)
+    }
+
+    private var lifetimeCard: some View {
+        Button(action: purchaseLifetime) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.3), Color.orange.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
+                        )
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("Get Lifetime 🏆")
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text("BEST VALUE")
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(.black)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.yellow)
+                            .clipShape(.capsule)
+                    }
+                    Text("One payment. Train forever.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(store.lifetimePriceString)
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Text("one-time")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(16)
+            .background(
+                LinearGradient(
+                    colors: [Color.yellow.opacity(0.08), Color.orange.opacity(0.05)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.yellow.opacity(0.4), Color.orange.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+            )
+        }
+        .disabled(store.isPurchasing)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    private func continuePurchase() {
+        Task {
+            let pkg = isYearly ? store.annualPackage : store.monthlyPackage
+            guard let pkg else {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                onSubscribe()
+                return
+            }
+            let success = await store.purchase(package: pkg)
+            if success {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                onSubscribe()
+            }
+        }
+    }
+
+    private func purchaseLifetime() {
+        Task {
+            guard let pkg = store.lifetimePackage else {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                onSubscribe()
+                return
+            }
+            let success = await store.purchase(package: pkg)
+            if success {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                onSubscribe()
+            }
+        }
     }
 }
 

@@ -36,7 +36,7 @@ struct MainTabView: View {
                 WorkoutResumePill(session: session) {
                     showResumeWorkout = true
                 }
-                .padding(.bottom, 60)
+                .padding(.bottom, 84)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.spring(duration: 0.4, bounce: 0.2), value: session.isActive)
             }
