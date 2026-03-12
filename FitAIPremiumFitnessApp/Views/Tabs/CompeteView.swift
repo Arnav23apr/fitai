@@ -12,6 +12,8 @@ struct CompeteView: View {
     @State private var showFriends: Bool = false
     @State private var friendVM = FriendViewModel()
     @State private var showRankProgression: Bool = false
+    @State private var realLeaderboard: [LeaderboardProfile] = []
+    @State private var isLoadingLeaderboard: Bool = false
 
     private var currentTier: CompeteTier { CompeteTier.current(for: appState.profile.points) }
     private var nextTier: CompeteTier? { CompeteTier.next(for: appState.profile.points) }
@@ -51,15 +53,21 @@ struct CompeteView: View {
         return SeasonInfo(name: seasonName, number: seasonNum, daysRemaining: daysLeft, totalDays: 30, exclusiveBadge: "trophy.fill")
     }
 
-    private let leaderboardData: [LeaderboardEntry] = [
-        LeaderboardEntry(id: "1", rank: 1, name: "Alex M.", points: 12450, tier: "Diamond", xpToday: 340, rankChange: 0),
-        LeaderboardEntry(id: "2", rank: 2, name: "Sarah K.", points: 11200, tier: "Diamond", xpToday: 280, rankChange: 1),
-        LeaderboardEntry(id: "3", rank: 3, name: "Jordan R.", points: 9800, tier: "Platinum", xpToday: 210, rankChange: -1),
-        LeaderboardEntry(id: "4", rank: 4, name: "Casey T.", points: 8600, tier: "Platinum", xpToday: 175, rankChange: 2),
-        LeaderboardEntry(id: "5", rank: 5, name: "Morgan L.", points: 7200, tier: "Gold", xpToday: 120, rankChange: 0),
-        LeaderboardEntry(id: "6", rank: 6, name: "Riley P.", points: 5400, tier: "Gold", xpToday: 95, rankChange: -2),
-        LeaderboardEntry(id: "7", rank: 7, name: "Taylor W.", points: 4100, tier: "Gold", xpToday: 60, rankChange: 1),
-    ]
+    private var leaderboardData: [LeaderboardEntry] {
+        let myUsername = appState.profile.username.lowercased()
+        let entries = realLeaderboard.filter { $0.username != myUsername }
+        return entries.prefix(20).enumerated().map { index, profile in
+            LeaderboardEntry(
+                id: profile.id,
+                rank: index + 1,
+                name: profile.displayName,
+                points: profile.points,
+                tier: profile.tier,
+                xpToday: 0,
+                rankChange: 0
+            )
+        }
+    }
 
     private let activityFeed: [ActivityFeedItem] = [
         ActivityFeedItem(id: "a1", userName: "Alex M.", action: "reached", detail: "Diamond tier", icon: "diamond.fill", timeAgo: "2h"),
@@ -129,10 +137,12 @@ struct CompeteView: View {
                     .presentationDetents([.large])
             }
             .onAppear {
-                friendVM.loadSampleData()
                 if !appState.profile.username.isEmpty {
                     friendVM.setUsername(appState.profile.username)
                 }
+            }
+            .task {
+                await syncAndLoadLeaderboard()
             }
         }
     }
@@ -1189,5 +1199,22 @@ struct CompeteView: View {
         case "Diamond": return Color(red: 0.7, green: 0.85, blue: 1.0)
         default: return Color(red: 0.80, green: 0.50, blue: 0.20)
         }
+    }
+
+    private func syncAndLoadLeaderboard() async {
+        let profile = appState.profile
+        if !profile.username.isEmpty {
+            await LeaderboardService.shared.upsertProfile(
+                username: profile.username,
+                displayName: profile.name.isEmpty ? profile.username : profile.name,
+                points: profile.points,
+                tier: profile.tier,
+                streak: profile.currentStreak,
+                totalWorkouts: profile.totalWorkouts
+            )
+        }
+        isLoadingLeaderboard = true
+        realLeaderboard = await LeaderboardService.shared.fetchLeaderboard(limit: 50)
+        isLoadingLeaderboard = false
     }
 }

@@ -10,6 +10,7 @@
 		XX35EA3B892FE936243B52XX /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = XX7F1BC1206458B4E90481XX /* Auth */; };
 		XX9C355859F76B2000C5BDXX /* FitAIWorkoutActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XXMM01AA892FE936243B52XX /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = XXMM02BB206458B4E90481XX /* MuscleMap */; };
+		XXRC01AA892FE936243B52XX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXRC02BB206458B4E90481XX /* RevenueCat */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -100,6 +101,7 @@
 			files = (
 				XX35EA3B892FE936243B52XX /* Auth in Frameworks */,
 				XXMM01AA892FE936243B52XX /* MuscleMap in Frameworks */,
+				XXRC01AA892FE936243B52XX /* RevenueCat in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,6 +175,7 @@
 			packageProductDependencies = (
 				XX7F1BC1206458B4E90481XX /* Auth */,
 				XXMM02BB206458B4E90481XX /* MuscleMap */,
+				XXRC02BB206458B4E90481XX /* RevenueCat */,
 			);
 			productName = FitAI;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */;
@@ -289,6 +292,7 @@
 			packageReferences = (
 				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				XXMM03CC6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "MuscleMap" */,
+				XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 		};
 /* End PBXProject section */
@@ -508,6 +512,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fit AI needs camera access to take physique photos for analysis.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Fit AI writes your completed workouts and body weight to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -545,6 +551,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fit AI needs camera access to take physique photos for analysis.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Fit AI writes your completed workouts and body weight to Apple Health.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -748,6 +756,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 		XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -767,6 +783,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		XXRC02BB206458B4E90481XX /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
 		XX7F1BC1206458B4E90481XX /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */;

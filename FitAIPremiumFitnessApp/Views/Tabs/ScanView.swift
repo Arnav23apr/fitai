@@ -30,6 +30,7 @@ struct ScanView: View {
     @State private var showBackCamera: Bool = false
     @State private var showFrontPhotoPicker: Bool = false
     @State private var showBackPhotoPicker: Bool = false
+    @State private var showPhotoTips: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -240,17 +241,24 @@ struct ScanView: View {
                 .clipShape(.rect(cornerRadius: 10))
             }
 
-            Button(action: {}) {
+            Button(action: { showPhotoTips = true }) {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle")
                         .font(.system(size: 14))
                     Text(L.t("photoGuidelines", lang))
                         .font(.subheadline)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
                 }
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity)
             }
             .tourAnchor(.scanPhotoGuidelines)
+            .sheet(isPresented: $showPhotoTips) {
+                PhotoTipsSheet()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
         }
         .padding(20)
         .background(Color(.secondarySystemGroupedBackground))

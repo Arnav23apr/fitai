@@ -65,20 +65,20 @@ class FriendViewModel {
         }
 
         Task {
-            try? await Task.sleep(for: .milliseconds(800))
-            let avatars = ["💪", "🏋️", "🔥", "⚡", "🦾", "🎯", "🏆"]
-            let tiers = ["Bronze", "Silver", "Gold", "Platinum"]
-            let names = ["Alex M.", "Jordan B.", "Casey R.", "Morgan T.", "Riley W.", "Taylor S."]
-
-            searchResult = Friend(
-                username: query,
-                displayName: names.randomElement() ?? query,
-                avatarEmoji: avatars.randomElement() ?? "💪",
-                tier: tiers.randomElement() ?? "Bronze",
-                points: Int.random(in: 200...8000),
-                totalWorkouts: Int.random(in: 5...120),
-                currentStreak: Int.random(in: 0...30)
-            )
+            let profile = await LeaderboardService.shared.searchUser(username: query)
+            if let profile {
+                searchResult = Friend(
+                    username: profile.username,
+                    displayName: profile.displayName,
+                    avatarEmoji: tierEmoji(profile.tier),
+                    tier: profile.tier,
+                    points: profile.points,
+                    totalWorkouts: profile.totalWorkouts,
+                    currentStreak: profile.streak
+                )
+            } else {
+                searchError = "User @\(query) not found. They need to sign up for FitAI first."
+            }
             isSearching = false
         }
     }
@@ -152,10 +152,15 @@ class FriendViewModel {
         }
     }
 
-    func loadSampleData() {
-        if friends.isEmpty {
-            friends = service.generateSampleFriends()
-            service.saveFriends(friends)
+    func loadSampleData() {}
+
+    private func tierEmoji(_ tier: String) -> String {
+        switch tier.lowercased() {
+        case "diamond": return "💎"
+        case "platinum": return "🏆"
+        case "gold": return "🥇"
+        case "silver": return "🥈"
+        default: return "🥉"
         }
     }
 }

@@ -103,6 +103,17 @@ struct WorkoutDetailSheet: View {
                     Button("Done") { dismiss() }
                         .fontWeight(.medium)
                 }
+                if workoutStarted && !isAlreadyDone {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(role: .destructive) {
+                            completeWorkout()
+                        } label: {
+                            Label("End", systemImage: "xmark.circle.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
             }
             .sheet(item: $selectedExercise) { exercise in
                 SetLoggingSheet(exercise: exercise) { completedSets, hitPR in

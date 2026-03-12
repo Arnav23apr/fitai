@@ -35,16 +35,16 @@ struct GoalsView: View {
             .opacity(appeared ? 1 : 0)
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 12) {
+                VStack(spacing: 10) {
                     ForEach(Array(rows.enumerated()), id: \.offset) { _, pair in
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             chipButton(pair.0)
                             chipButton(pair.1)
                         }
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 32)
+                .padding(.top, 28)
             }
             .opacity(appeared ? 1 : 0)
 
@@ -68,25 +68,23 @@ struct GoalsView: View {
             .opacity(appeared ? 1 : 0)
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                appeared = true
-            }
+            withAnimation(.easeOut(duration: 0.6)) { appeared = true }
         }
     }
 
     private func chipButton(_ title: String) -> some View {
         Button {
-            if selected.contains(title) {
-                selected.remove(title)
-            } else {
-                selected.insert(title)
-            }
+            if selected.contains(title) { selected.remove(title) } else { selected.insert(title) }
         } label: {
             Text(title)
-                .font(.subheadline.weight(.medium))
+                .font(.footnote.weight(.medium))
+                .minimumScaleFactor(0.75)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .foregroundStyle(selected.contains(title) ? (isDark ? .black : .white) : .primary)
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: 48)
+                .padding(.horizontal, 8)
                 .background(selected.contains(title) ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
                 .clipShape(.rect(cornerRadius: 24))
         }

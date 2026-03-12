@@ -1,4 +1,5 @@
 import SwiftUI
+import RevenueCat
 
 struct SpinWheelView: View {
     @Environment(AppState.self) private var appState
@@ -14,6 +15,9 @@ struct SpinWheelView: View {
     @State private var resultDiscount: Int = 0
     @State private var confettiParticles: [ConfettiParticle] = []
     @State private var showConfetti: Bool = false
+    @State private var freeTrialEnabled: Bool = false
+    @State private var isPurchasing: Bool = false
+    @State private var store = StoreViewModel.shared
 
     private let segments: [Int] = [10, 20, 85, 15, 50, 25, 40, 20]
 
@@ -136,20 +140,51 @@ struct SpinWheelView: View {
                 Spacer()
 
                 if hasSpun {
-                    Button(action: {
-                        appState.profile.spinDiscount = resultDiscount
-                        appState.profile.isPremium = true
-                        onContinue()
-                    }) {
-                        Text("Claim \(resultDiscount)% Off")
-                            .font(.headline)
-                            .foregroundStyle(isDark ? .black : .white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 56)
-                            .background(isDark ? Color.white : Color.black)
-                            .clipShape(.rect(cornerRadius: 16))
+                    VStack(spacing: 16) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "calendar.badge.clock")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                            Text("3-day free trial")
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Toggle("", isOn: $freeTrialEnabled)
+                                .tint(.green)
+                                .labelsHidden()
+                        }
+                        .padding(.horizontal, 24)
+
+                        VStack(spacing: 6) {
+                            Button(action: claimDiscount) {
+                                HStack(spacing: 8) {
+                                    if isPurchasing {
+                                        ProgressView()
+                                            .tint(isDark ? .black : .white)
+                                            .scaleEffect(0.9)
+                                    } else {
+                                        Image(systemName: "flame.fill")
+                                            .font(.system(size: 14))
+                                        Text("Claim 85% Off — $69.99/year")
+                                            .font(.headline)
+                                    }
+                                }
+                                .foregroundStyle(isDark ? .black : .white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 56)
+                                .background(isDark ? Color.white : Color.black)
+                                .clipShape(.rect(cornerRadius: 16))
+                            }
+                            .disabled(isPurchasing)
+
+                            if freeTrialEnabled {
+                                Text("Start your 3-day free trial, then $69.99/year")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .padding(.horizontal, 24)
                     }
-                    .padding(.horizontal, 24)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     Button(action: spinWheel) {
@@ -182,8 +217,13 @@ struct SpinWheelView: View {
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.6)) {
-                appeared = true
+            withAnimation(.easeOut(duration: 0.6)) { appeared = true }
+        }
+        .onChange(of: store.isPremium) { _, isPremium in
+            if isPremium {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                onContinue()
             }
         }
     }
@@ -213,6 +253,27 @@ struct SpinWheelView: View {
         }
     }
 
+    private func claimDiscount() {
+        Task {
+            isPurchasing = true
+            defer { isPurchasing = false }
+            guard let pkg = store.annualPackage else {
+                appState.profile.isPremium = true
+                appState.profile.spinDiscount = resultDiscount
+                appState.saveProfile()
+                onContinue()
+                return
+            }
+            let success = await store.purchase(package: pkg)
+            if success {
+                appState.profile.isPremium = true
+                appState.profile.spinDiscount = resultDiscount
+                appState.saveProfile()
+                onContinue()
+            }
+        }
+    }
+
     private func triggerConfetti() {
         let emojis = ["🎉", "🥳", "🎊", "🎈", "✨", "💪", "🏆", "⭐️"]
         var particles: [ConfettiParticle] = []
@@ -227,14 +288,10 @@ struct SpinWheelView: View {
             ))
         }
         confettiParticles = particles
-        withAnimation {
-            showConfetti = true
-        }
+        withAnimation { showConfetti = true }
         Task {
             try? await Task.sleep(for: .seconds(4.0))
-            withAnimation {
-                showConfetti = false
-            }
+            withAnimation { showConfetti = false }
         }
     }
 }

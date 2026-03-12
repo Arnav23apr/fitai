@@ -102,7 +102,7 @@ struct OnboardingContainerView: View {
                 OnboardingHeaderView(
                     progressIndex: progressIndex,
                     totalSteps: progressSteps.count,
-                    showCloseButton: currentStep == .signUp,
+                    showCloseButton: false,
                     onBack: { goBack() },
                     onClose: { advance() }
                 )
