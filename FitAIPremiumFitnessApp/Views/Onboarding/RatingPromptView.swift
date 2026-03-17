@@ -32,9 +32,6 @@ struct RatingPromptView: View {
 
                     starsSection
                         .opacity(appeared ? 1 : 0)
-
-                    appBadgeSection
-                        .opacity(appeared ? 1 : 0)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 120)
@@ -126,43 +123,4 @@ struct RatingPromptView: View {
         )
     }
 
-    private var appBadgeSection: some View {
-        HStack(spacing: 16) {
-            Image("FitAILogo")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 60, height: 60)
-                .clipShape(.rect(cornerRadius: 14))
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Fit AI")
-                    .font(.headline)
-                    .foregroundStyle(.primary)
-                Text("AI-Powered Fitness Coach")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 2) {
-                    ForEach(0..<5, id: \.self) { _ in
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.orange)
-                    }
-                }
-            }
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Image(systemName: "star.circle.fill")
-                    .font(.system(size: 20))
-                    .foregroundStyle(.orange)
-                Text("App Store")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(.rect(cornerRadius: 16))
-    }
 }

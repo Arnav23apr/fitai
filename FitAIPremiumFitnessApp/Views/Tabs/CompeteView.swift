@@ -69,12 +69,7 @@ struct CompeteView: View {
         }
     }
 
-    private let activityFeed: [ActivityFeedItem] = [
-        ActivityFeedItem(id: "a1", userName: "Alex M.", action: "reached", detail: "Diamond tier", icon: "diamond.fill", timeAgo: "2h"),
-        ActivityFeedItem(id: "a2", userName: "Sarah K.", action: "won a", detail: "physique battle", icon: "figure.mixed.cardio", timeAgo: "3h"),
-        ActivityFeedItem(id: "a3", userName: "Jordan R.", action: "completed", detail: "7-day streak", icon: "flame.fill", timeAgo: "5h"),
-        ActivityFeedItem(id: "a4", userName: "Casey T.", action: "unlocked", detail: "Gladiator badge", icon: "trophy.fill", timeAgo: "8h"),
-    ]
+    private let activityFeed: [ActivityFeedItem] = []
 
     var body: some View {
         NavigationStack {
@@ -937,37 +932,20 @@ struct CompeteView: View {
                     .foregroundStyle(.tertiary)
             }
 
-            ForEach(activityFeed) { item in
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(Color(.systemGray5))
-                        .frame(width: 32, height: 32)
-                        .overlay(
-                            Image(systemName: item.icon)
-                                .font(.system(size: 12))
-                                .foregroundStyle(.secondary)
-                        )
-
-                    HStack(spacing: 0) {
-                        Text(item.userName)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.primary.opacity(0.7))
-                        Text(" \(item.action) ")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(item.detail)
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Text(item.timeAgo)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.vertical, 6)
+            VStack(spacing: 6) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.tertiary)
+                Text("No activity yet")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text("Complete workouts and compete with friends to see activity here.")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
         }
     }
 
