@@ -26,6 +26,18 @@ struct SignUpView: View {
             Spacer()
 
             VStack(spacing: 14) {
+                if let error = appState.authError {
+                    Text(error)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red.opacity(0.08))
+                        .clipShape(.rect(cornerRadius: 12))
+                }
+
                 SignInWithAppleButton(.signIn) { request in
                     let nonce = Self.randomNonceString()
                     currentNonce = nonce
@@ -45,7 +57,7 @@ struct SignUpView: View {
                                 fullName: credential.fullName,
                                 email: credential.email
                             )
-                            if appState.authError == nil && !appState.isAuthenticating {
+                            if appState.authError == nil && appState.isLoggedIn {
                                 onContinue()
                             }
                         }
@@ -60,10 +72,8 @@ struct SignUpView: View {
                 Button(action: {
                     Task {
                         await appState.signInWithGoogle()
-                        if appState.authError == nil && !appState.isAuthenticating {
-                            if !appState.profile.email.isEmpty {
-                                onContinue()
-                            }
+                        if appState.authError == nil && appState.isLoggedIn {
+                            onContinue()
                         }
                     }
                 }) {
