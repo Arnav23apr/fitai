@@ -231,11 +231,11 @@ class AIService {
     private let imageEditURL: URL
 
     init() {
-        let toolkitBaseURL = URL(string: Config.EXPO_PUBLIC_TOOLKIT_URL)!
-        self.chatURL = toolkitBaseURL.appending(path: "agent/chat")
-        self.llmObjectURL = toolkitBaseURL.appending(path: "llm/object")
-        self.imageGenerateURL = toolkitBaseURL.appending(path: "images/generate")
-        self.imageEditURL = toolkitBaseURL.appending(path: "images/edit")
+        let base = URL(string: Config.EXPO_PUBLIC_TOOLKIT_URL) ?? URL(string: "https://toolkit.rork.com")!
+        self.chatURL = base.appending(path: "agent/chat")
+        self.llmObjectURL = base.appending(path: "llm/object")
+        self.imageGenerateURL = base.appending(path: "images/generate")
+        self.imageEditURL = base.appending(path: "images/edit")
     }
 
     func analyzeImageWithSchema(imageBase64: String, systemPrompt: String, userPrompt: String) async throws -> [String: Any] {

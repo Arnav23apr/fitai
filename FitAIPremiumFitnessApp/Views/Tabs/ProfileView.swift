@@ -315,7 +315,11 @@ struct ProfileView: View {
                     showLanguagePicker = true
                 }
                 Divider().padding(.leading, 52)
-                settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {}
+                settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {
+                    if let url = URL(string: "https://app.rork.fitai-spc.com/terms") {
+                        UIApplication.shared.open(url)
+                    }
+                }
                 Divider().padding(.leading, 52)
                 restartTourRow
             }
