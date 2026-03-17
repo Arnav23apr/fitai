@@ -57,7 +57,7 @@ class ScanViewModel {
             """
 
             let profileContext = ProfileContextBuilder.buildContext(from: profile)
-            var userPrompt = """
+            let userPrompt = """
             Analyze this physique photo. Here is my profile:
             \(profileContext)
             
