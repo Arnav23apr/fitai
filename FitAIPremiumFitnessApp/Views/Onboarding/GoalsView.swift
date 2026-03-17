@@ -77,13 +77,13 @@ struct GoalsView: View {
             if selected.contains(title) { selected.remove(title) } else { selected.insert(title) }
         } label: {
             Text(title)
-                .font(.footnote.weight(.medium))
-                .minimumScaleFactor(0.75)
+                .font(.subheadline.weight(.medium))
+                .minimumScaleFactor(0.7)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(selected.contains(title) ? (isDark ? .black : .white) : .primary)
                 .frame(maxWidth: .infinity)
-                .frame(minHeight: 48)
+                .frame(minHeight: 52)
                 .padding(.horizontal, 8)
                 .background(selected.contains(title) ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
                 .clipShape(.rect(cornerRadius: 24))
