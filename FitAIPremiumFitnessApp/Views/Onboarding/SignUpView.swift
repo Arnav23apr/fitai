@@ -139,14 +139,22 @@ struct SignUpView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 4) {
-                    Button(L.t("termsAndConditions", lang)) {}
+                    Button(L.t("termsAndConditions", lang)) {
+                        if let url = URL(string: "https://app.rork.fitai-spc.com/terms") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.primary)
                         .underline()
                     Text(L.t("and", lang))
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
-                    Button(L.t("privacyPolicy", lang)) {}
+                    Button(L.t("privacyPolicy", lang)) {
+                        if let url = URL(string: "https://app.rork.fitai-spc.com/privacy") {
+                            UIApplication.shared.open(url)
+                        }
+                    }
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.primary)
                         .underline()
