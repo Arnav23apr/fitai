@@ -4,9 +4,6 @@ import SwiftUI
 @main
 struct FitAIWorkoutActivityBundle: WidgetBundle {
     var body: some Widget {
-        FitAIWorkoutActivity()
-        FitAISmallWidget()
-        FitAIMediumWidget()
         WorkoutLiveActivity()
     }
 }
