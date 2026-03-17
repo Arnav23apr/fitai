@@ -17,6 +17,7 @@ enum OnboardingStep: Int, CaseIterable {
     case ratingPrompt
     case referralCode
     case signUp
+    case appleHealth
     case paywall
     case welcomePro
     case spinWheel

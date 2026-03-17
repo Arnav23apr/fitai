@@ -644,7 +644,7 @@ struct SetLoggingSheet: View {
                     TextField("0", text: weightBinding)
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.center)
-                        .font(.system(size: 22, design: .rounded, weight: .bold))
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
                         .frame(width: 76, height: 68)
                         .background(Color.primary.opacity(0.06))
                         .clipShape(.rect(cornerRadius: 12))

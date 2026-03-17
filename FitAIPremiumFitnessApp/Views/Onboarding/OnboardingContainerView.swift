@@ -10,7 +10,7 @@ struct OnboardingContainerView: View {
         .gender, .workoutsPerWeek, .trainingExperience, .trainingLocation,
         .primaryGoal, .dateOfBirth, .heightWeight, .holdingBack,
         .goals, .confidence, .resultsGraph, .enableNotifications,
-        .ratingPrompt, .referralCode, .signUp
+        .ratingPrompt, .referralCode, .signUp, .appleHealth
     ]
 
     private var showsHeader: Bool {
@@ -65,6 +65,8 @@ struct OnboardingContainerView: View {
                     ReferralCodeView(onContinue: { advance() })
                 case .signUp:
                     SignUpView(onContinue: { advance() })
+                case .appleHealth:
+                    AppleHealthOnboardingView(onContinue: { advance() })
                 case .paywall:
                     PaywallView(
                         onSubscribe: {

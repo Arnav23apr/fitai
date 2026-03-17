@@ -821,8 +821,9 @@ struct PlanView: View {
             .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
         }
         .padding(.trailing, 20)
-        .padding(.bottom, 24)
+        .padding(.bottom, session.isActive ? 108 : 24)
         .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
+        .animation(.spring(duration: 0.3), value: session.isActive)
     }
 
     private var dailyCoachMessage: String {
