@@ -1,5 +1,7 @@
 import Foundation
 import Auth
+import UIKit
+import AuthenticationServices
 
 let supabaseAuth = AuthClient(
     url: URL(string: "\(Config.SUPABASE_URL)/auth/v1")!,
@@ -22,10 +24,23 @@ class SupabaseAuthService {
         )
     }
 
+    @MainActor
     func signInWithGoogle() async throws -> Session {
-        try await supabaseAuth.signInWithOAuth(
+        // Use the real key window as the ASWebAuthenticationSession anchor.
+        // The SDK default (a bare UIWindow() with no scene) crashes on start().
+        let anchor: UIWindow? = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .compactMap { $0.keyWindow }
+            .first
+
+        return try await supabaseAuth.signInWithOAuth(
             provider: .google,
-            redirectTo: URL(string: "fitaipremium://auth-callback")
+            redirectTo: URL(string: "fitaipremium://auth-callback"),
+            configure: { (session: ASWebAuthenticationSession) in
+                if let anchor {
+                    session.presentationContextProvider = anchor
+                }
+            }
         )
     }
 
