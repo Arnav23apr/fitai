@@ -22,7 +22,7 @@ nonisolated struct LeaderboardProfile: Codable, Identifiable, Sendable {
     }
 }
 
-nonisolated class LeaderboardService: Sendable {
+nonisolated class LeaderboardService: @unchecked Sendable {
     static let shared = LeaderboardService()
 
     private let baseURL: String = Config.SUPABASE_URL + "/rest/v1"
