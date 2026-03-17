@@ -37,7 +37,7 @@ class SupabaseAuthService {
             provider: .google,
             redirectTo: URL(string: "fitaipremium://auth-callback"),
             configure: { (session: ASWebAuthenticationSession) in
-                if let anchor {
+                if let anchor = anchor as? ASWebAuthenticationPresentationContextProviding {
                     session.presentationContextProvider = anchor
                 }
             }
