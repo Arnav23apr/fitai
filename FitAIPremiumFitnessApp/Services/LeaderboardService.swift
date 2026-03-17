@@ -25,8 +25,8 @@ nonisolated struct LeaderboardProfile: Codable, Identifiable, Sendable {
 nonisolated class LeaderboardService: @unchecked Sendable {
     static let shared = LeaderboardService()
 
-    private let baseURL: String = Config.SUPABASE_URL + "/rest/v1"
-    private let anonKey: String = Config.SUPABASE_ANON_KEY
+    private nonisolated(unsafe) let baseURL: String = Config.SUPABASE_URL + "/rest/v1"
+    private nonisolated(unsafe) let anonKey: String = Config.SUPABASE_ANON_KEY
 
     private var commonHeaders: [String: String] {
         [
