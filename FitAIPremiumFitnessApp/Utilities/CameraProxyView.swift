@@ -32,7 +32,7 @@ struct CameraUnavailablePlaceholder: View {
             Text("Camera Preview")
                 .font(.title2)
                 .fontWeight(.semibold)
-            Text("Install this app on your device\nvia the Rork App to use the camera.")
+            Text("Camera is not available on this device.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
