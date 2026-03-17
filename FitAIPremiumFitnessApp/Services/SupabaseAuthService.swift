@@ -26,26 +26,22 @@ class SupabaseAuthService {
 
     @MainActor
     func signInWithGoogle() async throws -> Session {
-        // Grab the real key window so ASWebAuthenticationSession has a valid
-        // presentation anchor. The SDK default (ASPresentationAnchor() = UIWindow())
-        // has no scene attached and crashes on start().
-        let anchor = UIApplication.shared.connectedScenes
+        // Use the real key window as the ASWebAuthenticationSession anchor.
+        // The SDK default (a bare UIWindow() with no scene) crashes on start().
+        let anchor: UIWindow? = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }
-            ?? UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first
+            .compactMap { $0.keyWindow }
+            .first
 
         return try await supabaseAuth.signInWithOAuth(
             provider: .google,
-            redirectTo: URL(string: "fitaipremium://auth-callback")
-        ) { session in
-            if let anchor {
-                session.presentationContextProvider = anchor
+            redirectTo: URL(string: "fitaipremium://auth-callback"),
+            configure: { (session: ASWebAuthenticationSession) in
+                if let anchor {
+                    session.presentationContextProvider = anchor
+                }
             }
-        }
+        )
     }
 
     func signUpWithEmail(email: String, password: String) async throws -> Session {
