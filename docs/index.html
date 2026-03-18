@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitAI — AI-Powered Premium Fitness</title>
+  <meta name="description" content="Your personal AI fitness coach. Custom workout plans, body analysis, nutrition tracking, and real-time progress — all in one app." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #00E676;
+      --green-dim: #00C853;
+      --bg: #0A0A0A;
+      --surface: #141414;
+      --surface2: #1E1E1E;
+      --border: rgba(255,255,255,0.07);
+      --text: #F5F5F5;
+      --muted: #888;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 40px;
+      background: rgba(10,10,10,0.8);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .logo span { color: var(--green); }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--green); color: #000; padding: 10px 22px;
+      border-radius: 100px; font-weight: 600; font-size: 14px;
+      text-decoration: none; transition: opacity .2s;
+    }
+    .nav-cta:hover { opacity: 0.85; color: #000; }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(0,230,118,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25);
+      color: var(--green); padding: 6px 16px; border-radius: 100px;
+      font-size: 13px; font-weight: 600; margin-bottom: 28px;
+      letter-spacing: 0.5px; text-transform: uppercase;
+    }
+    h1 {
+      font-size: clamp(42px, 7vw, 80px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+    }
+    h1 .accent { color: var(--green); }
+    .hero-sub {
+      font-size: clamp(17px, 2.5vw, 20px);
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 44px;
+      line-height: 1.65;
+    }
+    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--green); color: #000;
+      padding: 16px 32px; border-radius: 100px;
+      font-weight: 700; font-size: 16px; text-decoration: none;
+      transition: transform .2s, opacity .2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; color: #000; }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--surface2); color: var(--text);
+      padding: 16px 32px; border-radius: 100px;
+      font-weight: 600; font-size: 16px; text-decoration: none;
+      border: 1px solid var(--border);
+      transition: transform .2s, border-color .2s;
+    }
+    .btn-secondary:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); color: var(--text); }
+
+    /* STATS */
+    .stats {
+      display: flex; justify-content: center; gap: 60px; flex-wrap: wrap;
+      padding: 60px 24px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat { text-align: center; }
+    .stat-num { font-size: 38px; font-weight: 800; color: var(--green); letter-spacing: -1px; }
+    .stat-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* FEATURES */
+    .section { padding: 100px 24px; max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      font-size: 12px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--green); margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 800; letter-spacing: -1.5px; line-height: 1.1;
+      margin-bottom: 60px;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      transition: border-color .2s, transform .2s;
+    }
+    .feature-card:hover { border-color: rgba(0,230,118,0.2); transform: translateY(-4px); }
+    .feature-icon {
+      width: 48px; height: 48px;
+      background: rgba(0,230,118,0.1);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 20px;
+    }
+    .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+    .feature-card p { font-size: 15px; color: var(--muted); line-height: 1.65; }
+
+    /* HOW IT WORKS */
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; }
+    .step { text-align: center; padding: 20px; }
+    .step-num {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 800; color: var(--green);
+      margin: 0 auto 20px;
+    }
+    .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .step p { font-size: 14px; color: var(--muted); }
+
+    /* CTA BANNER */
+    .cta-banner {
+      margin: 0 24px 80px;
+      background: linear-gradient(135deg, rgba(0,230,118,0.15) 0%, rgba(0,200,83,0.05) 100%);
+      border: 1px solid rgba(0,230,118,0.2);
+      border-radius: 28px;
+      padding: 80px 40px;
+      text-align: center;
+      max-width: 900px;
+      margin-left: auto; margin-right: auto;
+    }
+    .cta-banner h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
+    .cta-banner p { font-size: 17px; color: var(--muted); margin-bottom: 36px; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 40px;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    }
+    footer .logo { font-size: 18px; }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-links a { color: var(--muted); font-size: 14px; text-decoration: none; transition: color .2s; }
+    .footer-links a:hover { color: var(--text); }
+    .footer-copy { color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 640px) {
+      nav { padding: 16px 20px; }
+      .nav-links { display: none; }
+      .stats { gap: 32px; }
+      footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Fit<span>AI</span></div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How it works</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
+  </div>
+  <a href="#download" class="nav-cta">Download</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div>
+    <div class="badge">✦ AI-Powered Fitness</div>
+    <h1>Your coach.<br>Your <span class="accent">physique.</span><br>Your results.</h1>
+    <p class="hero-sub">
+      FitAI builds personalised workout plans, analyses your body with AI, tracks your nutrition, and competes with you every step of the way.
+    </p>
+    <div class="hero-actions">
+      <a href="#download" class="btn-primary">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Download on App Store
+      </a>
+      <a href="#features" class="btn-secondary">See features →</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">10K+</div>
+    <div class="stat-label">Workouts Generated</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">4.9★</div>
+    <div class="stat-label">App Store Rating</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">15+</div>
+    <div class="stat-label">Languages Supported</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">100%</div>
+    <div class="stat-label">AI-Personalised</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="section" id="features">
+  <p class="section-label">Features</p>
+  <h2 class="section-title">Everything you need<br>to transform.</h2>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI Workout Plans</h3>
+      <p>Personalised training programmes built around your goals, experience, and schedule. Adapts as you progress.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📸</div>
+      <h3>Body Scan Analysis</h3>
+      <p>Upload a photo and get a detailed AI analysis of your physique — strengths, weak points, and a personalised improvement plan.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🥗</div>
+      <h3>Nutrition Tracking</h3>
+      <p>Log meals, scan food, and get macro targets tailored to your body composition goals. No guesswork.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🏆</div>
+      <h3>Leaderboard & Compete</h3>
+      <p>Earn points for every workout. Climb the global leaderboard and compete with friends to stay accountable.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">❤️</div>
+      <h3>Apple Health Sync</h3>
+      <p>Seamlessly syncs workouts, body weight, and active energy with Apple Health for a complete picture of your health.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>Live Activities</h3>
+      <p>Track your active workout in real time on the Dynamic Island and Lock Screen — no need to unlock your phone mid-set.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how-it-works" style="padding-top: 0;">
+  <p class="section-label">How it works</p>
+  <h2 class="section-title">Up and running<br>in minutes.</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <h3>Tell us about you</h3>
+      <p>Complete a quick onboarding — goals, experience level, training location, and schedule.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <h3>Get your plan</h3>
+      <p>AI generates a full workout programme and nutrition targets tailored specifically to you.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Train & track</h3>
+      <p>Follow guided workouts, log sets and meals, and watch your stats improve week over week.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <h3>Scan & analyse</h3>
+      <p>Use the body scanner to track your physique transformation with AI-powered feedback.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-banner" id="download">
+  <h2>Start your transformation today.</h2>
+  <p>Join thousands of athletes using FitAI to reach their goals faster.</p>
+  <a href="#" class="btn-primary">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    Download on App Store
+  </a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="logo">Fit<span style="color:var(--green)">AI</span></div>
+  <div class="footer-links">
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="terms.html">Terms of Service</a>
+    <a href="mailto:support@fitai.app">Support</a>
+  </div>
+  <div class="footer-copy">© 2026 FitAI. All rights reserved.</div>
+</footer>
+
+</body>
+</html>
