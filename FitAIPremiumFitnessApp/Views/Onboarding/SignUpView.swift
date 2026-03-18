@@ -140,7 +140,7 @@ struct SignUpView: View {
                     .foregroundStyle(.secondary)
                 HStack(spacing: 4) {
                     Button(L.t("termsAndConditions", lang)) {
-                        if let url = URL(string: "https://app.rork.fitai-spc.com/terms") {
+                        if let url = URL(string: "https://arnav23apr.github.io/rork-fit-ai--premium-fitness-app/terms.html") {
                             UIApplication.shared.open(url)
                         }
                     }
@@ -151,7 +151,7 @@ struct SignUpView: View {
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                     Button(L.t("privacyPolicy", lang)) {
-                        if let url = URL(string: "https://app.rork.fitai-spc.com/privacy") {
+                        if let url = URL(string: "https://arnav23apr.github.io/rork-fit-ai--premium-fitness-app/privacy.html") {
                             UIApplication.shared.open(url)
                         }
                     }
