@@ -5,201 +5,735 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>FitAI — AI-Powered Premium Fitness</title>
   <meta name="description" content="Your personal AI fitness coach. Custom workout plans, body analysis, nutrition tracking, and real-time progress — all in one app." />
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,600,700,800,900&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --green: #00E676;
-      --green-dim: #00C853;
-      --bg: #0A0A0A;
-      --surface: #141414;
-      --surface2: #1E1E1E;
-      --border: rgba(255,255,255,0.07);
-      --text: #F5F5F5;
-      --muted: #888;
+      --green: #4ade80;
+      --green-dim: #22c55e;
+      --green-muted: rgba(74,222,128,0.08);
+      --green-border: rgba(74,222,128,0.18);
+      --bg: #09090b;
+      --surface: #111113;
+      --surface2: #18181b;
+      --surface3: #27272a;
+      --border: rgba(255,255,255,0.06);
+      --border2: rgba(255,255,255,0.1);
+      --text: #f4f4f5;
+      --muted: #71717a;
+      --muted2: #a1a1aa;
     }
 
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+      font-family: 'Satoshi', -apple-system, BlinkMacSystemFont, sans-serif;
       background: var(--bg);
       color: var(--text);
       line-height: 1.6;
+      overflow-x: hidden;
     }
 
-    /* NAV */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 20px 40px;
-      background: rgba(10,10,10,0.8);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-    }
-    .logo { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
-    .logo span { color: var(--green); }
-    .nav-links { display: flex; gap: 32px; align-items: center; }
-    .nav-links a { color: var(--muted); text-decoration: none; font-size: 15px; transition: color .2s; }
-    .nav-links a:hover { color: var(--text); }
-    .nav-cta {
-      background: var(--green); color: #000; padding: 10px 22px;
-      border-radius: 100px; font-weight: 600; font-size: 14px;
-      text-decoration: none; transition: opacity .2s;
-    }
-    .nav-cta:hover { opacity: 0.85; color: #000; }
-
-    /* HERO */
-    .hero {
-      min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero::before {
+    /* ─── NOISE OVERLAY ─── */
+    body::before {
       content: '';
-      position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 800px;
-      background: radial-gradient(circle, rgba(0,230,118,0.12) 0%, transparent 70%);
+      position: fixed;
+      inset: 0;
+      z-index: 999;
       pointer-events: none;
+      opacity: 0.025;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
     }
+
+    /* ─── SCROLL ANIMATIONS ─── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(28px);
+      transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.08s; }
+    .reveal-delay-2 { transition-delay: 0.16s; }
+    .reveal-delay-3 { transition-delay: 0.24s; }
+    .reveal-delay-4 { transition-delay: 0.32s; }
+    .reveal-delay-5 { transition-delay: 0.40s; }
+    .reveal-delay-6 { transition-delay: 0.48s; }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px 12px 24px;
+      background: rgba(9,9,11,0.75);
+      backdrop-filter: blur(24px) saturate(1.5);
+      -webkit-backdrop-filter: blur(24px) saturate(1.5);
+      border: 1px solid var(--border2);
+      border-radius: 100px;
+      width: calc(100% - 48px);
+      max-width: 960px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+
+    .logo {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+    .logo span { color: var(--green); }
+
+    .nav-links {
+      display: flex; gap: 4px; align-items: center;
+      position: absolute; left: 50%; transform: translateX(-50%);
+    }
+    .nav-links a {
+      color: var(--muted2);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 100px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+
+    .nav-cta {
+      background: var(--green);
+      color: #09090b;
+      padding: 9px 20px;
+      border-radius: 100px;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      letter-spacing: -0.1px;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
+      white-space: nowrap;
+    }
+    .nav-cta:hover { transform: scale(1.03); opacity: 0.9; color: #09090b; }
+    .nav-cta:active { transform: scale(0.97); }
+
+    /* ─── HERO ─── */
+    .hero {
+      min-height: 100dvh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 120px 64px 80px;
+      gap: 80px;
+      position: relative;
+    }
+
+    .hero-content { position: relative; z-index: 2; }
+
     .badge {
       display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.25);
-      color: var(--green); padding: 6px 16px; border-radius: 100px;
-      font-size: 13px; font-weight: 600; margin-bottom: 28px;
-      letter-spacing: 0.5px; text-transform: uppercase;
+      background: var(--green-muted);
+      border: 1px solid var(--green-border);
+      color: var(--green);
+      padding: 5px 14px;
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
     }
+    .badge-dot {
+      width: 6px; height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
     h1 {
-      font-size: clamp(42px, 7vw, 80px);
-      font-weight: 800;
-      line-height: 1.05;
-      letter-spacing: -2px;
+      font-size: clamp(48px, 5.5vw, 80px);
+      font-weight: 900;
+      line-height: 1.0;
+      letter-spacing: -3px;
       margin-bottom: 24px;
+      color: var(--text);
     }
+    h1 .line-muted { color: var(--muted); font-weight: 500; }
     h1 .accent { color: var(--green); }
+
     .hero-sub {
-      font-size: clamp(17px, 2.5vw, 20px);
-      color: var(--muted);
-      max-width: 520px;
-      margin: 0 auto 44px;
-      line-height: 1.65;
+      font-size: 17px;
+      color: var(--muted2);
+      max-width: 440px;
+      line-height: 1.7;
+      margin-bottom: 48px;
     }
-    .hero-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+    .hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
     .btn-primary {
       display: inline-flex; align-items: center; gap: 10px;
-      background: var(--green); color: #000;
-      padding: 16px 32px; border-radius: 100px;
-      font-weight: 700; font-size: 16px; text-decoration: none;
-      transition: transform .2s, opacity .2s;
+      background: var(--green);
+      color: #09090b;
+      padding: 14px 28px;
+      border-radius: 100px;
+      font-weight: 800;
+      font-size: 15px;
+      text-decoration: none;
+      letter-spacing: -0.2px;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s;
+      box-shadow: 0 0 0 0 rgba(74,222,128,0);
     }
-    .btn-primary:hover { transform: translateY(-2px); opacity: 0.9; color: #000; }
-    .btn-secondary {
-      display: inline-flex; align-items: center; gap: 10px;
-      background: var(--surface2); color: var(--text);
-      padding: 16px 32px; border-radius: 100px;
-      font-weight: 600; font-size: 16px; text-decoration: none;
-      border: 1px solid var(--border);
-      transition: transform .2s, border-color .2s;
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(74,222,128,0.2);
+      color: #09090b;
     }
-    .btn-secondary:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.15); color: var(--text); }
+    .btn-primary:active { transform: scale(0.97) translateY(0); }
 
-    /* STATS */
-    .stats {
-      display: flex; justify-content: center; gap: 60px; flex-wrap: wrap;
-      padding: 60px 24px;
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      color: var(--muted2);
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 14px 20px;
+      border-radius: 100px;
+      transition: color 0.2s, background 0.2s;
+      letter-spacing: -0.1px;
+    }
+    .btn-ghost:hover { color: var(--text); background: var(--surface2); }
+
+    /* ─── HERO VISUAL ─── */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 560px;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(74,222,128,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .phone-frame {
+      position: relative;
+      width: 240px;
+      height: 480px;
+      background: var(--surface2);
+      border-radius: 40px;
+      border: 1px solid var(--border2);
+      box-shadow:
+        0 40px 80px rgba(0,0,0,0.6),
+        0 0 0 1px rgba(255,255,255,0.05),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+      overflow: hidden;
+      z-index: 2;
+      animation: float 5s ease-in-out infinite;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-12px); }
+    }
+
+    .phone-screen {
+      width: 100%; height: 100%;
+      padding: 24px 16px;
+      background: linear-gradient(160deg, #111113 0%, #0d1a14 100%);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .phone-notch {
+      width: 80px; height: 22px;
+      background: #09090b;
+      border-radius: 100px;
+      margin: 0 auto 8px;
+    }
+    .phone-stat-row {
+      display: flex; gap: 8px;
+    }
+    .phone-stat {
+      flex: 1;
+      background: rgba(74,222,128,0.07);
+      border: 1px solid rgba(74,222,128,0.15);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .phone-stat-label {
+      font-size: 9px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 2px;
+    }
+    .phone-stat-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--green);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .phone-card {
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .phone-card-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .phone-bar-row { display: flex; flex-direction: column; gap: 6px; }
+    .phone-bar-label { display: flex; justify-content: space-between; }
+    .phone-bar-name { font-size: 9px; color: var(--muted2); font-weight: 500; }
+    .phone-bar-val { font-size: 9px; color: var(--green); font-weight: 700; }
+    .phone-bar-track {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .phone-bar-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 2px;
+      animation: bar-grow 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes bar-grow {
+      from { width: 0%; }
+    }
+    .phone-ai-badge {
+      background: linear-gradient(135deg, rgba(74,222,128,0.15), rgba(74,222,128,0.05));
+      border: 1px solid rgba(74,222,128,0.2);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 10px;
+      color: var(--muted2);
+      line-height: 1.5;
+    }
+    .phone-ai-badge strong { color: var(--green); font-weight: 700; }
+
+    /* Orbiting card */
+    .orbit-card {
+      position: absolute;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 16px;
+      padding: 12px 16px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+      white-space: nowrap;
+      z-index: 3;
+    }
+    .orbit-card-1 {
+      right: -20px; top: 80px;
+      animation: orbit1 6s ease-in-out infinite;
+    }
+    .orbit-card-2 {
+      left: -30px; bottom: 100px;
+      animation: orbit2 7s ease-in-out infinite;
+    }
+    @keyframes orbit1 {
+      0%, 100% { transform: translateY(0px) rotate(-1deg); }
+      50% { transform: translateY(-10px) rotate(1deg); }
+    }
+    @keyframes orbit2 {
+      0%, 100% { transform: translateY(0px) rotate(1deg); }
+      50% { transform: translateY(8px) rotate(-1deg); }
+    }
+    .orbit-label { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .orbit-value { font-size: 20px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
+    .orbit-sub { font-size: 11px; color: var(--green); font-weight: 600; margin-top: 1px; }
+
+    /* ─── MARQUEE ─── */
+    .marquee-section {
       border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
+      padding: 20px 0;
+      overflow: hidden;
+      position: relative;
     }
-    .stat { text-align: center; }
-    .stat-num { font-size: 38px; font-weight: 800; color: var(--green); letter-spacing: -1px; }
-    .stat-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .marquee-track {
+      display: flex; gap: 64px;
+      animation: marquee 28s linear infinite;
+      width: max-content;
+    }
+    .marquee-track:hover { animation-play-state: paused; }
+    @keyframes marquee {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    .marquee-item {
+      display: flex; align-items: center; gap: 16px;
+      white-space: nowrap;
+    }
+    .marquee-num {
+      font-size: 22px; font-weight: 900;
+      color: var(--text);
+      letter-spacing: -1px;
+    }
+    .marquee-num .unit { color: var(--green); }
+    .marquee-label { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .marquee-divider {
+      width: 4px; height: 4px;
+      background: var(--surface3);
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
 
-    /* FEATURES */
-    .section { padding: 100px 24px; max-width: 1100px; margin: 0 auto; }
-    .section-label {
-      font-size: 12px; font-weight: 700; letter-spacing: 2px;
-      text-transform: uppercase; color: var(--green); margin-bottom: 12px;
+    /* ─── SECTION BASE ─── */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 48px;
+    }
+    .section { padding: 120px 0; }
+    .section-eyebrow {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 16px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--green);
+      opacity: 0.6;
     }
     .section-title {
-      font-size: clamp(32px, 5vw, 52px);
-      font-weight: 800; letter-spacing: -1.5px; line-height: 1.1;
-      margin-bottom: 60px;
+      font-size: clamp(36px, 4vw, 56px);
+      font-weight: 900;
+      letter-spacing: -2.5px;
+      line-height: 1.05;
+      margin-bottom: 16px;
     }
-    .features-grid {
+    .section-body {
+      font-size: 17px;
+      color: var(--muted2);
+      max-width: 480px;
+      line-height: 1.7;
+    }
+
+    /* ─── FEATURES BENTO ─── */
+    .features-header {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: end;
+      margin-bottom: 64px;
     }
-    .feature-card {
+
+    .bento {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 16px;
+    }
+
+    .bento-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 32px;
-      transition: border-color .2s, transform .2s;
+      border-radius: 24px;
+      padding: 36px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .feature-card:hover { border-color: rgba(0,230,118,0.2); transform: translateY(-4px); }
-    .feature-icon {
-      width: 48px; height: 48px;
-      background: rgba(0,230,118,0.1);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px; margin-bottom: 20px;
+    .bento-card:hover {
+      border-color: rgba(74,222,128,0.2);
+      transform: translateY(-3px);
     }
-    .feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
-    .feature-card p { font-size: 15px; color: var(--muted); line-height: 1.65; }
+    .bento-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    }
 
-    /* HOW IT WORKS */
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; }
-    .step { text-align: center; padding: 20px; }
+    .bento-card.span-2 { grid-column: 1 / 3; }
+    .bento-card.row-2 { grid-row: 1 / 3; }
+
+    .bento-icon {
+      width: 44px; height: 44px;
+      background: var(--green-muted);
+      border: 1px solid var(--green-border);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 24px;
+      flex-shrink: 0;
+    }
+    .bento-icon svg { width: 20px; height: 20px; stroke: var(--green); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+    .bento-card h3 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .bento-card p {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 340px;
+    }
+
+    /* Feature card decorative bits */
+    .bento-tag {
+      display: inline-flex;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      color: var(--muted2);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 100px;
+      margin-right: 6px;
+      margin-top: 16px;
+    }
+
+    .bento-progress-demo {
+      margin-top: 24px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .demo-row { display: flex; align-items: center; gap: 12px; }
+    .demo-label { font-size: 12px; color: var(--muted2); font-weight: 600; width: 60px; flex-shrink: 0; }
+    .demo-track {
+      flex: 1; height: 5px;
+      background: var(--surface3);
+      border-radius: 3px; overflow: hidden;
+    }
+    .demo-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green-dim), var(--green));
+      border-radius: 3px;
+    }
+    .demo-val { font-size: 12px; color: var(--green); font-weight: 700; width: 36px; text-align: right; }
+
+    .bento-score {
+      display: flex; align-items: baseline; gap: 6px;
+      margin-top: 20px;
+    }
+    .score-num { font-size: 52px; font-weight: 900; color: var(--green); letter-spacing: -3px; line-height: 1; }
+    .score-denom { font-size: 20px; color: var(--muted); font-weight: 600; }
+
+    .bento-leaderboard {
+      margin-top: 20px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .lb-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px;
+      background: var(--surface2);
+      border-radius: 10px;
+    }
+    .lb-rank { font-size: 11px; font-weight: 800; color: var(--muted); width: 16px; }
+    .lb-avatar {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--surface3);
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 800; color: var(--muted2);
+    }
+    .lb-name { font-size: 12px; font-weight: 600; color: var(--text); flex: 1; }
+    .lb-pts { font-size: 12px; font-weight: 800; color: var(--green); }
+    .lb-row.you { background: rgba(74,222,128,0.07); border: 1px solid var(--green-border); }
+
+    /* ─── HOW IT WORKS ─── */
+    .how-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: start;
+    }
+    .how-sticky {
+      position: sticky;
+      top: 120px;
+    }
+    .steps-list { display: flex; flex-direction: column; }
+    .step-item {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 0 24px;
+      padding: 32px 0;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+    .step-item:first-child { padding-top: 0; }
+    .step-item:last-child { border-bottom: none; }
+    .step-num-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
     .step-num {
-      width: 48px; height: 48px; border-radius: 50%;
-      background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--green);
+      background: var(--green-muted);
+      border: 1px solid var(--green-border);
+      width: 36px; height: 36px;
+      border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px; font-weight: 800; color: var(--green);
-      margin: 0 auto 20px;
+      flex-shrink: 0;
     }
-    .step h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
-    .step p { font-size: 14px; color: var(--muted); }
-
-    /* CTA BANNER */
-    .cta-banner {
-      margin: 0 24px 80px;
-      background: linear-gradient(135deg, rgba(0,230,118,0.15) 0%, rgba(0,200,83,0.05) 100%);
-      border: 1px solid rgba(0,230,118,0.2);
-      border-radius: 28px;
-      padding: 80px 40px;
-      text-align: center;
-      max-width: 900px;
-      margin-left: auto; margin-right: auto;
+    .step-line {
+      flex: 1;
+      width: 1px;
+      background: var(--border);
+      margin-top: 12px;
     }
-    .cta-banner h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -1px; margin-bottom: 16px; }
-    .cta-banner p { font-size: 17px; color: var(--muted); margin-bottom: 36px; }
+    .step-item:last-child .step-line { display: none; }
+    .step-content { padding-top: 4px; }
+    .step-content h3 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .step-content p { font-size: 14px; color: var(--muted); line-height: 1.7; }
 
-    /* FOOTER */
+    /* ─── CTA ─── */
+    .cta-section {
+      padding: 0 48px 120px;
+    }
+    .cta-inner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      padding: 100px 80px;
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 60px;
+    }
+    .cta-inner::before {
+      content: '';
+      position: absolute;
+      top: -200px; left: -100px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(74,222,128,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-inner::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(74,222,128,0.3), transparent);
+    }
+    .cta-title {
+      font-size: clamp(36px, 4vw, 54px);
+      font-weight: 900;
+      letter-spacing: -2.5px;
+      line-height: 1.05;
+      margin-bottom: 12px;
+    }
+    .cta-sub {
+      font-size: 16px;
+      color: var(--muted2);
+      max-width: 420px;
+      line-height: 1.6;
+    }
+    .cta-actions {
+      display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .cta-note { font-size: 12px; color: var(--muted); text-align: center; }
+
+    /* ─── FOOTER ─── */
     footer {
       border-top: 1px solid var(--border);
-      padding: 40px 40px;
-      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+      padding: 40px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
     }
-    footer .logo { font-size: 18px; }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { color: var(--muted); font-size: 14px; text-decoration: none; transition: color .2s; }
-    .footer-links a:hover { color: var(--text); }
-    .footer-copy { color: var(--muted); font-size: 13px; }
+    .footer-logo { font-size: 16px; font-weight: 800; letter-spacing: -0.4px; }
+    .footer-logo span { color: var(--green); }
+    .footer-links { display: flex; gap: 8px; }
+    .footer-links a {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 100px;
+      transition: color 0.2s, background 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); background: var(--surface2); }
+    .footer-copy { color: var(--muted); font-size: 12px; font-weight: 500; }
 
-    @media (max-width: 640px) {
-      nav { padding: 16px 20px; }
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      nav { top: 12px; width: calc(100% - 32px); padding: 12px 16px 12px 20px; }
       .nav-links { display: none; }
-      .stats { gap: 32px; }
-      footer { flex-direction: column; align-items: flex-start; }
+
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 100px 24px 60px;
+        gap: 48px;
+        text-align: center;
+      }
+      .hero-visual { height: 400px; }
+      .hero-sub { margin: 0 auto 48px; }
+      .hero-actions { justify-content: center; }
+      .orbit-card-1 { right: 0; top: 40px; }
+      .orbit-card-2 { left: 0; bottom: 40px; }
+
+      .features-header { grid-template-columns: 1fr; gap: 24px; margin-bottom: 40px; }
+      .bento { grid-template-columns: 1fr; }
+      .bento-card.span-2 { grid-column: 1; }
+      .bento-card.row-2 { grid-row: auto; }
+
+      .how-grid { grid-template-columns: 1fr; gap: 48px; }
+      .how-sticky { position: static; }
+
+      .cta-inner { grid-template-columns: 1fr; padding: 60px 32px; gap: 36px; }
+      .cta-actions { align-items: stretch; }
+      .cta-note { text-align: left; }
+
+      .container { padding: 0 24px; }
+      .cta-section { padding: 0 24px 80px; }
+      footer { padding: 32px 24px; }
+
+      .section { padding: 80px 0; }
+    }
+
+    @media (max-width: 480px) {
+      h1 { letter-spacing: -2px; }
+      .phone-frame { width: 200px; height: 400px; }
+      .orbit-card { display: none; }
     }
   </style>
 </head>
 <body>
 
+<!-- NAV -->
 <nav>
   <div class="logo">Fit<span>AI</span></div>
   <div class="nav-links">
@@ -208,133 +742,406 @@
     <a href="privacy.html">Privacy</a>
     <a href="terms.html">Terms</a>
   </div>
-  <a href="#download" class="nav-cta">Download</a>
+  <a href="#download" class="nav-cta">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="display:inline;vertical-align:middle;margin-right:5px;"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+    Download
+  </a>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div>
-    <div class="badge">✦ AI-Powered Fitness</div>
-    <h1>Your coach.<br>Your <span class="accent">physique.</span><br>Your results.</h1>
-    <p class="hero-sub">
-      FitAI builds personalised workout plans, analyses your body with AI, tracks your nutrition, and competes with you every step of the way.
+  <div class="hero-content">
+    <div class="badge reveal">
+      <span class="badge-dot"></span>
+      AI-Powered Training
+    </div>
+    <h1 class="reveal reveal-delay-1">
+      Train smarter.<br>
+      <span class="line-muted">Not just</span><br>
+      <span class="accent">harder.</span>
+    </h1>
+    <p class="hero-sub reveal reveal-delay-2">
+      FitAI builds workout plans around your physique, analyses your body with AI, and keeps you accountable with real competitive pressure.
     </p>
-    <div class="hero-actions">
+    <div class="hero-actions reveal reveal-delay-3">
       <a href="#download" class="btn-primary">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
         Download on App Store
       </a>
-      <a href="#features" class="btn-secondary">See features →</a>
+      <a href="#features" class="btn-ghost">
+        Explore features
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-visual reveal reveal-delay-2">
+    <div class="hero-glow"></div>
+    <div class="phone-frame">
+      <div class="phone-screen">
+        <div class="phone-notch"></div>
+        <div class="phone-stat-row">
+          <div class="phone-stat">
+            <div class="phone-stat-label">Streak</div>
+            <div class="phone-stat-val">14d</div>
+          </div>
+          <div class="phone-stat">
+            <div class="phone-stat-label">Points</div>
+            <div class="phone-stat-val">2.4k</div>
+          </div>
+        </div>
+        <div class="phone-card">
+          <div class="phone-card-title">Today's Focus</div>
+          <div class="phone-bar-row">
+            <div>
+              <div class="phone-bar-label">
+                <span class="phone-bar-name">Chest</span>
+                <span class="phone-bar-val">82%</span>
+              </div>
+              <div class="phone-bar-track"><div class="phone-bar-fill" style="width:82%"></div></div>
+            </div>
+            <div>
+              <div class="phone-bar-label">
+                <span class="phone-bar-name">Shoulders</span>
+                <span class="phone-bar-val">61%</span>
+              </div>
+              <div class="phone-bar-track"><div class="phone-bar-fill" style="width:61%;animation-delay:0.3s"></div></div>
+            </div>
+            <div>
+              <div class="phone-bar-label">
+                <span class="phone-bar-name">Triceps</span>
+                <span class="phone-bar-val">74%</span>
+              </div>
+              <div class="phone-bar-track"><div class="phone-bar-fill" style="width:74%;animation-delay:0.5s"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="phone-ai-badge">
+          <strong>AI Coach</strong> — Your upper chest is lagging. Adding 2 incline sets this week.
+        </div>
+      </div>
+    </div>
+    <div class="orbit-card orbit-card-1">
+      <div class="orbit-label">AI Score</div>
+      <div class="orbit-value">87</div>
+      <div class="orbit-sub">+4 this week</div>
+    </div>
+    <div class="orbit-card orbit-card-2">
+      <div class="orbit-label">Rank</div>
+      <div class="orbit-value">#312</div>
+      <div class="orbit-sub">Global leaderboard</div>
     </div>
   </div>
 </section>
 
-<!-- STATS -->
-<div class="stats">
-  <div class="stat">
-    <div class="stat-num">10K+</div>
-    <div class="stat-label">Workouts Generated</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">4.9★</div>
-    <div class="stat-label">App Store Rating</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">15+</div>
-    <div class="stat-label">Languages Supported</div>
-  </div>
-  <div class="stat">
-    <div class="stat-num">100%</div>
-    <div class="stat-label">AI-Personalised</div>
+<!-- MARQUEE STATS -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <!-- Repeated twice for seamless loop -->
+    <div class="marquee-item">
+      <span class="marquee-num">10<span class="unit">K+</span></span>
+      <span class="marquee-label">Workouts Generated</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">4.9<span class="unit">★</span></span>
+      <span class="marquee-label">App Store Rating</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">15<span class="unit">+</span></span>
+      <span class="marquee-label">Languages Supported</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">100<span class="unit">%</span></span>
+      <span class="marquee-label">AI-Personalised</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">$9<span class="unit">.99</span></span>
+      <span class="marquee-label">Per Month</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">3<span class="unit">-day</span></span>
+      <span class="marquee-label">Free Trial</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <!-- Duplicate for loop -->
+    <div class="marquee-item">
+      <span class="marquee-num">10<span class="unit">K+</span></span>
+      <span class="marquee-label">Workouts Generated</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">4.9<span class="unit">★</span></span>
+      <span class="marquee-label">App Store Rating</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">15<span class="unit">+</span></span>
+      <span class="marquee-label">Languages Supported</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">100<span class="unit">%</span></span>
+      <span class="marquee-label">AI-Personalised</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">$9<span class="unit">.99</span></span>
+      <span class="marquee-label">Per Month</span>
+    </div>
+    <div class="marquee-divider"></div>
+    <div class="marquee-item">
+      <span class="marquee-num">3<span class="unit">-day</span></span>
+      <span class="marquee-label">Free Trial</span>
+    </div>
   </div>
 </div>
 
 <!-- FEATURES -->
 <section class="section" id="features">
-  <p class="section-label">Features</p>
-  <h2 class="section-title">Everything you need<br>to transform.</h2>
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🤖</div>
-      <h3>AI Workout Plans</h3>
-      <p>Personalised training programmes built around your goals, experience, and schedule. Adapts as you progress.</p>
+  <div class="container">
+    <div class="features-header">
+      <div>
+        <div class="section-eyebrow reveal">Features</div>
+        <h2 class="section-title reveal reveal-delay-1">Everything your<br>coach would do.</h2>
+      </div>
+      <p class="section-body reveal reveal-delay-2">
+        Six core capabilities — all wired together so your workout plan, body data, and competitive ranking stay in sync.
+      </p>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">📸</div>
-      <h3>Body Scan Analysis</h3>
-      <p>Upload a photo and get a detailed AI analysis of your physique — strengths, weak points, and a personalised improvement plan.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🥗</div>
-      <h3>Nutrition Tracking</h3>
-      <p>Log meals, scan food, and get macro targets tailored to your body composition goals. No guesswork.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">🏆</div>
-      <h3>Leaderboard & Compete</h3>
-      <p>Earn points for every workout. Climb the global leaderboard and compete with friends to stay accountable.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">❤️</div>
-      <h3>Apple Health Sync</h3>
-      <p>Seamlessly syncs workouts, body weight, and active energy with Apple Health for a complete picture of your health.</p>
-    </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <h3>Live Activities</h3>
-      <p>Track your active workout in real time on the Dynamic Island and Lock Screen — no need to unlock your phone mid-set.</p>
+
+    <!-- Bento grid — asymmetric, no equal 3-column cards -->
+    <div class="bento">
+
+      <!-- Large card: AI Workouts -->
+      <div class="bento-card row-2 reveal reveal-delay-1">
+        <div class="bento-icon">
+          <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        </div>
+        <h3>AI Workout Plans</h3>
+        <p>Personalised programmes built around your goals, experience, and available equipment. Rebuilt weekly as you adapt.</p>
+        <div class="bento-progress-demo">
+          <div class="demo-row">
+            <span class="demo-label">Push</span>
+            <div class="demo-track"><div class="demo-fill" style="width:88%"></div></div>
+            <span class="demo-val">88%</span>
+          </div>
+          <div class="demo-row">
+            <span class="demo-label">Pull</span>
+            <div class="demo-track"><div class="demo-fill" style="width:71%"></div></div>
+            <span class="demo-val">71%</span>
+          </div>
+          <div class="demo-row">
+            <span class="demo-label">Legs</span>
+            <div class="demo-track"><div class="demo-fill" style="width:63%"></div></div>
+            <span class="demo-val">63%</span>
+          </div>
+          <div class="demo-row">
+            <span class="demo-label">Core</span>
+            <div class="demo-track"><div class="demo-fill" style="width:55%"></div></div>
+            <span class="demo-val">55%</span>
+          </div>
+        </div>
+        <div style="margin-top:20px;">
+          <span class="bento-tag">Adaptive</span>
+          <span class="bento-tag">15+ languages</span>
+        </div>
+      </div>
+
+      <!-- Body Scan -->
+      <div class="bento-card reveal reveal-delay-2">
+        <div class="bento-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20v-2a6 6 0 0 1 12 0v2"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+        </div>
+        <h3>Body Scan Analysis</h3>
+        <p>Upload a photo. Get AI-ranked strengths, weak points, and a targeted correction plan.</p>
+        <div class="bento-score">
+          <span class="score-num">87</span>
+          <span class="score-denom">/ 100</span>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="bento-card reveal reveal-delay-3">
+        <div class="bento-icon">
+          <svg viewBox="0 0 24 24"><path d="M8 6l4-4 4 4"/><path d="M12 2v10"/><rect x="2" y="16" width="5" height="6" rx="1"/><rect x="9.5" y="12" width="5" height="10" rx="1"/><rect x="17" y"=18" width="5" height="4" rx="1"/><rect x="17" y="18" width="5" height="4" rx="1"/></svg>
+        </div>
+        <h3>Compete Globally</h3>
+        <p>Earn points for every session. Climb the global board or battle friends head-to-head.</p>
+        <div class="bento-leaderboard">
+          <div class="lb-row">
+            <span class="lb-rank">1</span>
+            <div class="lb-avatar">MJ</div>
+            <span class="lb-name">Marcus J.</span>
+            <span class="lb-pts">3,841</span>
+          </div>
+          <div class="lb-row you">
+            <span class="lb-rank">2</span>
+            <div class="lb-avatar" style="background:rgba(74,222,128,0.15);color:var(--green)">You</div>
+            <span class="lb-name" style="color:var(--green)">You</span>
+            <span class="lb-pts">3,512</span>
+          </div>
+          <div class="lb-row">
+            <span class="lb-rank">3</span>
+            <div class="lb-avatar">RK</div>
+            <span class="lb-name">Rena K.</span>
+            <span class="lb-pts">3,290</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom full-width: extra features row -->
+      <div class="bento-card span-2 reveal reveal-delay-4" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:32px;align-items:start;">
+        <div>
+          <div class="bento-icon" style="margin-bottom:16px;">
+            <svg viewBox="0 0 24 24"><path d="M3 3h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3zM3 8h18"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <h3 style="font-size:16px;margin-bottom:6px;">Nutrition Tracking</h3>
+          <p style="font-size:13px;">Log meals, scan barcodes, hit macro targets built for your body composition goals.</p>
+        </div>
+        <div>
+          <div class="bento-icon" style="margin-bottom:16px;">
+            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <h3 style="font-size:16px;margin-bottom:6px;">Apple Health Sync</h3>
+          <p style="font-size:13px;">Workouts, body weight, and active energy automatically flow into Apple Health.</p>
+        </div>
+        <div>
+          <div class="bento-icon" style="margin-bottom:16px;">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 8l3 3 5-5"/></svg>
+          </div>
+          <h3 style="font-size:16px;margin-bottom:6px;">Live Activities</h3>
+          <p style="font-size:13px;">Real-time workout tracking on your Dynamic Island and Lock Screen — no unlock needed.</p>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
 
 <!-- HOW IT WORKS -->
-<section class="section" id="how-it-works" style="padding-top: 0;">
-  <p class="section-label">How it works</p>
-  <h2 class="section-title">Up and running<br>in minutes.</h2>
-  <div class="steps">
-    <div class="step">
-      <div class="step-num">1</div>
-      <h3>Tell us about you</h3>
-      <p>Complete a quick onboarding — goals, experience level, training location, and schedule.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">2</div>
-      <h3>Get your plan</h3>
-      <p>AI generates a full workout programme and nutrition targets tailored specifically to you.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">3</div>
-      <h3>Train & track</h3>
-      <p>Follow guided workouts, log sets and meals, and watch your stats improve week over week.</p>
-    </div>
-    <div class="step">
-      <div class="step-num">4</div>
-      <h3>Scan & analyse</h3>
-      <p>Use the body scanner to track your physique transformation with AI-powered feedback.</p>
+<section class="section" id="how-it-works" style="border-top: 1px solid var(--border);">
+  <div class="container">
+    <div class="how-grid">
+
+      <div class="how-sticky">
+        <div class="section-eyebrow reveal">How it works</div>
+        <h2 class="section-title reveal reveal-delay-1">Four steps.<br>Permanent results.</h2>
+        <p class="section-body reveal reveal-delay-2" style="margin-top:16px;">
+          From a blank slate to a calibrated training machine — in the time it takes to drink a pre-workout.
+        </p>
+        <div style="margin-top:40px;" class="reveal reveal-delay-3">
+          <a href="#download" class="btn-primary" style="display:inline-flex;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            Get started free
+          </a>
+        </div>
+      </div>
+
+      <div class="steps-list">
+        <div class="step-item reveal reveal-delay-1">
+          <div class="step-num-col">
+            <div class="step-num">1</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Tell us about you</h3>
+            <p>A quick intake — your goals, experience level, training location, and weekly availability. Takes under 3 minutes.</p>
+          </div>
+        </div>
+        <div class="step-item reveal reveal-delay-2">
+          <div class="step-num-col">
+            <div class="step-num">2</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Receive your programme</h3>
+            <p>AI generates a complete weekly workout plan and macro targets calibrated to your body composition goals — no templates.</p>
+          </div>
+        </div>
+        <div class="step-item reveal reveal-delay-3">
+          <div class="step-num-col">
+            <div class="step-num">3</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Train, log, compete</h3>
+            <p>Follow guided sessions, log sets and meals, earn points for every workout, and track your rank week over week.</p>
+          </div>
+        </div>
+        <div class="step-item reveal reveal-delay-4">
+          <div class="step-num-col">
+            <div class="step-num">4</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-content">
+            <h3>Scan your physique</h3>
+            <p>Use the body scanner periodically to document transformation and get AI feedback on what to prioritise next.</p>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </section>
 
 <!-- CTA -->
-<div class="cta-banner" id="download">
-  <h2>Start your transformation today.</h2>
-  <p>Join thousands of athletes using FitAI to reach their goals faster.</p>
-  <a href="#" class="btn-primary">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-    Download on App Store
-  </a>
+<div class="cta-section" id="download">
+  <div class="cta-inner reveal">
+    <div>
+      <h2 class="cta-title">Ready to build<br>the body you want?</h2>
+      <p class="cta-sub">Start with a 3-day free trial. Cancel any time. No credit card required upfront.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="#" class="btn-primary" style="font-size:16px;padding:16px 32px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        Download on App Store
+      </a>
+      <p class="cta-note">Free 3-day trial &middot; from $9.99/mo after</p>
+    </div>
+  </div>
 </div>
 
 <!-- FOOTER -->
 <footer>
-  <div class="logo">Fit<span style="color:var(--green)">AI</span></div>
+  <div class="footer-logo">Fit<span>AI</span></div>
   <div class="footer-links">
-    <a href="privacy.html">Privacy Policy</a>
-    <a href="terms.html">Terms of Service</a>
+    <a href="privacy.html">Privacy</a>
+    <a href="terms.html">Terms</a>
     <a href="mailto:team@fitai.health">Support</a>
   </div>
-  <div class="footer-copy">© 2026 FitAI. All rights reserved.</div>
+  <div class="footer-copy">&copy; 2026 FitAI. All rights reserved.</div>
 </footer>
+
+<script>
+  // Intersection Observer for scroll reveals
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  reveals.forEach(el => observer.observe(el));
+
+  // Immediately reveal elements already in viewport on load
+  window.addEventListener('load', () => {
+    reveals.forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) {
+        el.classList.add('visible');
+        observer.unobserve(el);
+      }
+    });
+  });
+</script>
 
 </body>
 </html>
