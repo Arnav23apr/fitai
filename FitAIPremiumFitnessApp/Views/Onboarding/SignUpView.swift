@@ -258,7 +258,9 @@ struct SignUpView: View {
     }
 
     private var isFormValid: Bool {
-        email.contains("@") && email.contains(".") && password.count >= 6
+        let emailRegex = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/
+        let emailValid = (try? emailRegex.wholeMatch(in: email)) != nil
+        return emailValid && password.count >= 8
     }
 
     private func submitEmail() {
