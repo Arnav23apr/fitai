@@ -365,13 +365,13 @@ class AIService {
         encoder.outputFormatting = .prettyPrinted
         request.httpBody = try encoder.encode(body)
 
-        // Log request details (excluding base64 image for brevity)
+        #if DEBUG
         if let bodyData = request.httpBody,
            let bodyString = String(data: bodyData, encoding: .utf8) {
-            let truncated = bodyString.prefix(500)
             print("[AIService] POST \(llmObjectURL.absoluteString)")
-            print("[AIService] Request body (truncated): \(truncated)...")
+            print("[AIService] Request body (truncated): \(bodyString.prefix(500))...")
         }
+        #endif
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
@@ -379,10 +379,11 @@ class AIService {
             throw AIError.networkError
         }
 
-        // Log response details
+        #if DEBUG
         let responseText = String(data: data, encoding: .utf8) ?? "[binary data]"
         print("[AIService] Response status: \(httpResponse.statusCode)")
         print("[AIService] Response body: \(responseText.prefix(1000))")
+        #endif
 
         guard httpResponse.statusCode == 200 else {
             let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"

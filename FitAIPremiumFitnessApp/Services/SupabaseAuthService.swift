@@ -3,13 +3,21 @@ import Auth
 import UIKit
 import AuthenticationServices
 
-let supabaseAuth = AuthClient(
-    url: URL(string: "\(Config.SUPABASE_URL)/auth/v1")!,
-    headers: ["apikey": Config.SUPABASE_ANON_KEY],
-    flowType: .pkce,
-    redirectToURL: URL(string: "fitaipremium://auth-callback"),
-    localStorage: AuthClient.Configuration.defaultLocalStorage
-)
+let supabaseAuth: AuthClient = {
+    guard
+        !Config.SUPABASE_URL.isEmpty,
+        let authURL = URL(string: "\(Config.SUPABASE_URL)/auth/v1")
+    else {
+        fatalError("SUPABASE_URL is missing or invalid — check Info.plist configuration.")
+    }
+    return AuthClient(
+        url: authURL,
+        headers: ["apikey": Config.SUPABASE_ANON_KEY],
+        flowType: .pkce,
+        redirectToURL: URL(string: "fitaipremium://auth-callback"),
+        localStorage: AuthClient.Configuration.defaultLocalStorage
+    )
+}()
 
 class SupabaseAuthService {
     static let shared = SupabaseAuthService()
