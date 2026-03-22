@@ -514,6 +514,18 @@ pGeo.setAttribute('position',new THREE.Float32BufferAttribute(partPos,3));
 const particles=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xffffff,size:.015,transparent:true,opacity:.16}));
 scene.add(particles);
 
+// ── CONSTELLATION LINES ──
+const MAX_LINES=PARTICLE_COUNT*(PARTICLE_COUNT-1)/2; // 4950
+const linePos=new Float32Array(MAX_LINES*6);
+const lineCol=new Float32Array(MAX_LINES*6);
+const lineGeo=new THREE.BufferGeometry();
+lineGeo.setAttribute('position',new THREE.BufferAttribute(linePos,3));
+lineGeo.setAttribute('color',new THREE.BufferAttribute(lineCol,3));
+const lineMat=new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:1,blending:THREE.AdditiveBlending,depthWrite:false});
+const constLines=new THREE.LineSegments(lineGeo,lineMat);
+scene.add(constLines);
+const CONN_DIST=2.8, CONN_DIST2=CONN_DIST*CONN_DIST;
+
 // Raycaster for mouse→3D conversion
 const raycaster=new THREE.Raycaster();
 const mousePlane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
@@ -667,7 +679,32 @@ const clock=new THREE.Clock();
     pAttr.setXYZ(i,partPos[ix],partPos[iy],partPos[iz]);
   }
   pAttr.needsUpdate=true;
+
+  // Update constellation lines
+  let li=0;
+  for(let i=0;i<PARTICLE_COUNT;i++){
+    const ix=i*3;
+    for(let j=i+1;j<PARTICLE_COUNT;j++){
+      const jx=j*3;
+      const dx=partPos[ix]-partPos[jx], dy=partPos[ix+1]-partPos[jx+1], dz=partPos[ix+2]-partPos[jx+2];
+      const d2=dx*dx+dy*dy+dz*dz;
+      if(d2<CONN_DIST2){
+        const alpha=(1-Math.sqrt(d2)/CONN_DIST)*0.13;
+        const base=li*6;
+        linePos[base]=partPos[ix];   linePos[base+1]=partPos[ix+1]; linePos[base+2]=partPos[ix+2];
+        linePos[base+3]=partPos[jx]; linePos[base+4]=partPos[jx+1]; linePos[base+5]=partPos[jx+2];
+        lineCol[base]=lineCol[base+1]=lineCol[base+2]=alpha;
+        lineCol[base+3]=lineCol[base+4]=lineCol[base+5]=alpha;
+        li++;
+      }
+    }
+  }
+  lineGeo.setDrawRange(0,li*2);
+  lineGeo.attributes.position.needsUpdate=true;
+  lineGeo.attributes.color.needsUpdate=true;
+
   particles.rotation.y+=.0002;
+  constLines.rotation.y=particles.rotation.y;
 
   composer.render();
 })();
