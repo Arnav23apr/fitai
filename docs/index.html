@@ -28,11 +28,9 @@
       line-height: 1.5;
     }
 
-    /* Hide default cursor on pointer devices */
     @media (pointer: fine) {
       *, a, button { cursor: none !important; }
     }
-
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
     }
@@ -43,60 +41,47 @@
       width: 30px; height: 30px; border-radius: 50%;
       border: 1px solid rgba(255,255,255,0.55);
       transform: translate(-50%, -50%);
-      transition: width 0.25s cubic-bezier(0.16,1,0.3,1),
-                  height 0.25s cubic-bezier(0.16,1,0.3,1),
-                  background 0.25s, border-color 0.25s,
-                  opacity 0.3s;
-      will-change: transform;
-      opacity: 0;
+      transition: width .25s cubic-bezier(.16,1,.3,1), height .25s cubic-bezier(.16,1,.3,1),
+                  background .25s, border-color .25s, opacity .3s;
+      will-change: transform; opacity: 0;
     }
     #cur-dot {
       position: fixed; pointer-events: none; z-index: 9999;
-      width: 4px; height: 4px; border-radius: 50%;
-      background: #fff;
+      width: 4px; height: 4px; border-radius: 50%; background: #fff;
       transform: translate(-50%, -50%);
-      will-change: transform;
-      opacity: 0;
-      transition: opacity 0.3s;
+      will-change: transform; opacity: 0; transition: opacity .3s;
     }
-    #cur-ring.hov {
-      width: 54px; height: 54px;
-      border-color: rgba(255,255,255,0.25);
-      background: rgba(255,255,255,0.04);
-    }
-    #cur-ring.press { width: 22px; height: 22px; background: rgba(255,255,255,0.12); }
+    #cur-ring.hov { width:54px; height:54px; border-color:rgba(255,255,255,.22); background:rgba(255,255,255,.04); }
+    #cur-ring.press { width:22px; height:22px; background:rgba(255,255,255,.12); }
 
-    /* ── GRAIN OVERLAY ── */
+    /* ── GRAIN ── */
     #grain {
       position: fixed; inset: 0; z-index: 998; pointer-events: none;
-      background-repeat: repeat;
-      opacity: 0.038;
+      background-repeat: repeat; opacity: 0.038;
     }
 
-    /* ── FULL-PAGE CANVAS ── */
-    #db-canvas {
-      position: fixed; inset: 0;
-      z-index: 0; pointer-events: none;
-      display: block;
+    /* ── VIGNETTE ── */
+    #vignette {
+      position: fixed; inset: 0; z-index: 997; pointer-events: none;
+      background: radial-gradient(ellipse at 50% 50%,
+        transparent 42%,
+        rgba(0,0,0,0.45) 72%,
+        rgba(0,0,0,0.82) 100%);
     }
+
+    /* ── CANVAS ── */
+    #db-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; display: block; }
 
     /* ── SCAN OVERLAY ── */
     #scan-ov {
-      position: fixed; inset: 0;
-      z-index: 2; pointer-events: none;
+      position: fixed; inset: 0; z-index: 2; pointer-events: none;
       display: flex; align-items: center; justify-content: center;
-      transition: opacity 0.5s ease;
+      transition: opacity .5s ease;
     }
-    .scan-frame {
-      width: clamp(260px, 34vw, 400px);
-      aspect-ratio: 1;
-      position: relative;
-    }
+    .scan-frame { width: clamp(260px,34vw,400px); aspect-ratio: 1; position: relative; }
     .sc {
-      position: absolute;
-      width: 26px; height: 26px;
-      border-color: rgba(255,255,255,0.42);
-      border-style: solid; border-width: 0;
+      position: absolute; width: 26px; height: 26px;
+      border-color: rgba(255,255,255,.42); border-style: solid; border-width: 0;
     }
     .sc.tl { top:0;left:0;    border-top-width:1.5px; border-left-width:1.5px;  border-top-left-radius:3px; }
     .sc.tr { top:0;right:0;   border-top-width:1.5px; border-right-width:1.5px; border-top-right-radius:3px; }
@@ -104,15 +89,12 @@
     .sc.br { bottom:0;right:0;border-bottom-width:1.5px; border-right-width:1.5px; border-bottom-right-radius:3px; }
     .scan-line {
       position: absolute; left:0; right:0; height:1px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.52), transparent);
+      background: linear-gradient(90deg,transparent,rgba(255,255,255,.52),transparent);
       animation: scan-sweep 3.6s ease-in-out infinite;
     }
     @keyframes scan-sweep {
-      0%   { top:0%;   opacity:0; }
-      6%   { opacity:0.85; }
-      88%  { opacity:0.85; }
-      94%  { top:100%; opacity:0; }
-      100% { top:100%; opacity:0; }
+      0%  { top:0%;   opacity:0; } 6% { opacity:.85; } 88% { opacity:.85; }
+      94% { top:100%; opacity:0; } 100% { top:100%; opacity:0; }
     }
 
     /* ── NAV ── */
@@ -121,14 +103,12 @@
       display: flex; align-items:center; justify-content:space-between;
       padding: 22px 48px;
     }
-    .nav-logo { height:26px; filter:brightness(0) invert(1); opacity:0.9; }
+    .nav-logo { height:26px; filter:brightness(0) invert(1); opacity:.9; }
     .nav-dl {
-      display: inline-flex; align-items:center; gap:8px;
-      background:#fff; color:#000;
-      padding:9px 20px; border-radius:100px;
+      display:inline-flex; align-items:center; gap:8px;
+      background:#fff; color:#000; padding:9px 20px; border-radius:100px;
       font-weight:600; font-size:13px; letter-spacing:-0.1px;
-      transition: opacity 0.2s;
-      will-change: transform;
+      transition:opacity .2s; will-change:transform;
     }
     .nav-dl svg { width:14px; height:14px; fill:#000; }
 
@@ -137,126 +117,83 @@
 
     /* ── HERO ── */
     .hero {
-      min-height:100dvh;
-      display:flex; flex-direction:column;
+      min-height:100dvh; display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      text-align:center;
-      padding:120px 24px 80px;
+      text-align:center; padding:120px 24px 80px;
     }
-
-    /* App icon badge */
     .app-icon-badge {
-      width:72px; height:72px;
-      border-radius:18px;
-      margin-bottom:28px;
-      box-shadow: 0 8px 40px rgba(255,255,255,0.06), 0 0 0 1px rgba(255,255,255,0.08);
-      opacity:0; transform:scale(0.82);
-      display:block;
+      width:72px; height:72px; border-radius:18px; margin-bottom:28px;
+      box-shadow:0 8px 40px rgba(255,255,255,.06),0 0 0 1px rgba(255,255,255,.08);
+      opacity:0; transform:scale(.82); display:block;
     }
-
     .hero-tag {
       display:inline-flex; align-items:center; gap:7px;
-      border:1px solid var(--border2);
-      color:var(--muted2); padding:5px 14px; border-radius:100px;
-      font-size:11px; font-weight:500; letter-spacing:0.3px;
-      margin-bottom:32px;
-      background:rgba(255,255,255,0.04);
-      backdrop-filter:blur(12px);
+      border:1px solid var(--border2); color:var(--muted2);
+      padding:5px 14px; border-radius:100px;
+      font-size:11px; font-weight:500; letter-spacing:.3px;
+      margin-bottom:32px; background:rgba(255,255,255,.04); backdrop-filter:blur(12px);
       opacity:0; transform:translateY(12px);
     }
-    .hero-tag-dot {
-      width:5px; height:5px; border-radius:50%; background:#fff;
-      animation:blink 2.4s ease-in-out infinite;
-    }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+    .hero-tag-dot { width:5px; height:5px; border-radius:50%; background:#fff; animation:blink 2.4s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-    /* Split-text headline */
     .hero h1 {
-      font-size: clamp(58px, 8.5vw, 112px);
-      font-weight:700; line-height:0.9;
-      letter-spacing:-4px; margin-bottom:32px;
+      font-size:clamp(58px,8.5vw,112px); font-weight:700;
+      line-height:.9; letter-spacing:-4px; margin-bottom:32px;
     }
-    .word-clip {
-      display:inline-block; overflow:hidden;
-      vertical-align:bottom;
-      /* add a tiny bit of padding so descenders aren't clipped */
-      padding-bottom:0.06em; margin-bottom:-0.06em;
-    }
-    .word-inner {
-      display:inline-block;
-      transform:translateY(108%);
-    }
+    .word-clip { display:inline-block; overflow:hidden; vertical-align:bottom; padding-bottom:.06em; margin-bottom:-.06em; }
+    .word-inner { display:inline-block; transform:translateY(108%); }
     .word-inner.dim { color:var(--muted); font-weight:300; }
 
     .hero-sub {
       font-size:18px; color:var(--muted2); line-height:1.7;
-      max-width:360px; margin:0 auto 48px;
-      font-weight:400; letter-spacing:-0.1px;
+      max-width:360px; margin:0 auto 48px; font-weight:400; letter-spacing:-0.1px;
       opacity:0; transform:translateY(14px);
     }
-
-    /* Primary CTA — magnetic */
     .hero-dl {
       display:inline-flex; align-items:center; gap:10px;
-      background:#fff; color:#000;
-      padding:16px 32px; border-radius:100px;
+      background:#fff; color:#000; padding:16px 32px; border-radius:100px;
       font-weight:700; font-size:16px; letter-spacing:-0.3px;
-      box-shadow: 0 0 50px rgba(255,255,255,0.10);
-      opacity:0;
-      will-change:transform;
-      transition:opacity 0.2s;
+      box-shadow:0 0 50px rgba(255,255,255,.10);
+      opacity:0; will-change:transform; transition:opacity .2s;
     }
     .hero-dl svg { width:18px; height:18px; fill:#000; }
     .hero-note { margin-top:14px; font-size:12px; color:var(--muted); opacity:0; }
 
     /* ── FEATURES ── */
-    .features {
-      padding:0 24px 160px;
-      max-width:900px; margin:0 auto;
-    }
+    .features { padding:0 24px 160px; max-width:900px; margin:0 auto; }
     .features-label {
-      text-align:center;
-      font-size:11px; font-weight:500; letter-spacing:1px;
-      text-transform:uppercase; color:var(--muted);
-      margin-bottom:40px;
+      text-align:center; font-size:11px; font-weight:500; letter-spacing:1px;
+      text-transform:uppercase; color:var(--muted); margin-bottom:40px;
       opacity:0; transform:translateY(14px);
     }
     .feat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
     .feat-card {
-      border:1px solid var(--border); border-radius:20px;
-      padding:36px 28px; background:var(--card);
-      position:relative; overflow:hidden;
+      border:1px solid var(--border); border-radius:20px; padding:36px 28px;
+      background:var(--card); position:relative; overflow:hidden;
       opacity:0; transform:translateY(26px);
-      transition:border-color 0.25s, background 0.25s;
-      backdrop-filter:blur(8px);
+      transition:border-color .25s,background .25s; backdrop-filter:blur(8px);
     }
     .feat-card::before {
       content:''; position:absolute; top:0; left:0; right:0; height:1px;
-      background:linear-gradient(90deg,transparent,rgba(255,255,255,0.10),transparent);
+      background:linear-gradient(90deg,transparent,rgba(255,255,255,.10),transparent);
     }
-    .feat-card:hover { border-color:var(--border2); background:rgba(255,255,255,0.05); }
-    .feat-num { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:0.5px; margin-bottom:32px; }
+    .feat-card:hover { border-color:var(--border2); background:rgba(255,255,255,.05); }
+    .feat-num { font-size:11px; font-weight:600; color:var(--muted); letter-spacing:.5px; margin-bottom:32px; }
     .feat-icon { width:40px; height:40px; margin-bottom:20px; }
-    .feat-icon svg {
-      width:40px; height:40px;
-      stroke:#fff; fill:none;
-      stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round;
-    }
-    .feat-card h3 { font-size:22px; font-weight:700; letter-spacing:-0.8px; margin-bottom:10px; line-height:1.1; }
+    .feat-icon svg { width:40px; height:40px; stroke:#fff; fill:none; stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+    .feat-card h3 { font-size:22px; font-weight:700; letter-spacing:-.8px; margin-bottom:10px; line-height:1.1; }
     .feat-card p  { font-size:14px; color:var(--muted2); line-height:1.65; font-weight:400; }
 
     /* ── FOOTER ── */
     footer {
-      border-top:1px solid var(--border);
-      padding:28px 48px;
+      border-top:1px solid var(--border); padding:28px 48px;
       display:flex; align-items:center; justify-content:space-between;
-      flex-wrap:wrap; gap:12px;
-      position:relative; z-index:1;
-      backdrop-filter:blur(8px);
+      flex-wrap:wrap; gap:12px; position:relative; z-index:1; backdrop-filter:blur(8px);
     }
-    .foot-logo { height:20px; filter:brightness(0) invert(1); opacity:0.45; }
+    .foot-logo { height:20px; filter:brightness(0) invert(1); opacity:.45; }
     .foot-links { display:flex; gap:4px; }
-    .foot-links a { color:var(--muted); font-size:13px; font-weight:400; padding:5px 10px; border-radius:100px; transition:color 0.15s; }
+    .foot-links a { color:var(--muted); font-size:13px; font-weight:400; padding:5px 10px; border-radius:100px; transition:color .15s; }
     .foot-links a:hover { color:var(--text); }
     .foot-copy { color:var(--muted); font-size:12px; }
 
@@ -266,23 +203,18 @@
       .feat-grid { grid-template-columns:1fr; gap:10px; }
       .features { padding:0 16px 100px; }
       footer { padding:24px; }
-      #cur-ring, #cur-dot { display:none; }
+      #cur-ring,#cur-dot { display:none; }
     }
   </style>
 </head>
 <body>
 
-<!-- Custom cursor (desktop only) -->
 <div id="cur-ring"></div>
 <div id="cur-dot"></div>
-
-<!-- Film grain overlay -->
 <div id="grain"></div>
-
-<!-- 3D canvas -->
+<div id="vignette"></div>
 <canvas id="db-canvas"></canvas>
 
-<!-- Scan brackets (hero only, fades on scroll) -->
 <div id="scan-ov">
   <div class="scan-frame">
     <span class="sc tl"></span><span class="sc tr"></span>
@@ -301,22 +233,14 @@
 
 <main>
   <section class="hero" id="hero">
-    <!-- App icon badge -->
-    <img src="icon.png" class="app-icon-badge" id="hicon" alt="FitAI App Icon"/>
-
-    <div class="hero-tag" id="htag">
-      <span class="hero-tag-dot"></span>AI-Powered Fitness
-    </div>
-
-    <!-- Split-text headline: each word wrapped for clip reveal -->
+    <img src="icon.png" class="app-icon-badge" id="hicon" alt="FitAI"/>
+    <div class="hero-tag" id="htag"><span class="hero-tag-dot"></span>AI-Powered Fitness</div>
     <h1 id="hh1" aria-label="Scan. Plan. Compete.">
       <span class="word-clip"><span class="word-inner" id="w1">Scan.</span></span><br>
       <span class="word-clip"><span class="word-inner dim" id="w2">Plan.</span></span><br>
       <span class="word-clip"><span class="word-inner" id="w3">Compete.</span></span>
     </h1>
-
     <p class="hero-sub" id="hsub">Upload a photo. Get a plan built for your body. Climb the global leaderboard.</p>
-
     <a href="https://apps.apple.com" class="hero-dl" id="hdl">
       <svg viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
       Download on App Store
@@ -371,19 +295,18 @@ import * as THREE from 'three';
 import { EffectComposer }  from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-// ── FILM GRAIN ──
-// Generate a noise tile at runtime (no external asset needed)
+// ── GRAIN ──
 const nc = document.createElement('canvas');
 nc.width = nc.height = 256;
 const nctx = nc.getContext('2d');
 const id = nctx.createImageData(256, 256);
 for (let i = 0; i < id.data.length; i += 4) {
   const v = Math.floor(Math.random() * 255);
-  id.data[i] = id.data[i+1] = id.data[i+2] = v;
-  id.data[i+3] = 255;
+  id.data[i] = id.data[i+1] = id.data[i+2] = v; id.data[i+3] = 255;
 }
 nctx.putImageData(id, 0, 0);
 document.getElementById('grain').style.backgroundImage = `url(${nc.toDataURL()})`;
@@ -391,26 +314,14 @@ document.getElementById('grain').style.backgroundImage = `url(${nc.toDataURL()})
 // ── CUSTOM CURSOR ──
 const ring = document.getElementById('cur-ring');
 const dot  = document.getElementById('cur-dot');
-let curX = -100, curY = -100, ringX = -100, ringY = -100;
-let cursorVisible = false;
+let curX = -100, curY = -100, ringX = -100, ringY = -100, cursorVisible = false;
 
 document.addEventListener('mousemove', e => {
   curX = e.clientX; curY = e.clientY;
-  if (!cursorVisible) {
-    cursorVisible = true;
-    ring.style.opacity = '1'; dot.style.opacity = '1';
-  }
-  // Dot follows immediately
-  dot.style.left = curX + 'px';
-  dot.style.top  = curY + 'px';
+  dot.style.left = curX + 'px'; dot.style.top = curY + 'px';
+  if (!cursorVisible) { cursorVisible = true; ring.style.opacity = '1'; dot.style.opacity = '1'; }
 });
-
-document.addEventListener('mouseleave', () => {
-  ring.style.opacity = '0'; dot.style.opacity = '0';
-  cursorVisible = false;
-});
-
-// Hover states
+document.addEventListener('mouseleave', () => { ring.style.opacity = '0'; dot.style.opacity = '0'; cursorVisible = false; });
 document.querySelectorAll('a, button, .feat-card').forEach(el => {
   el.addEventListener('mouseenter', () => ring.classList.add('hov'));
   el.addEventListener('mouseleave', () => ring.classList.remove('hov'));
@@ -422,25 +333,20 @@ document.addEventListener('mouseup',   () => ring.classList.remove('press'));
 function makeMagnetic(el, strength = 0.38) {
   el.addEventListener('mousemove', e => {
     const r = el.getBoundingClientRect();
-    const dx = (e.clientX - (r.left + r.width  / 2)) * strength;
-    const dy = (e.clientY - (r.top  + r.height / 2)) * strength;
-    gsap.to(el, { x: dx, y: dy, duration: 0.35, ease: 'power2.out' });
+    gsap.to(el, { x:(e.clientX-(r.left+r.width/2))*strength, y:(e.clientY-(r.top+r.height/2))*strength, duration:.35, ease:'power2.out' });
   });
-  el.addEventListener('mouseleave', () => {
-    gsap.to(el, { x: 0, y: 0, duration: 0.7, ease: 'elastic.out(1, 0.45)' });
-  });
+  el.addEventListener('mouseleave', () => gsap.to(el, { x:0, y:0, duration:.7, ease:'elastic.out(1,.45)' }));
 }
 makeMagnetic(document.getElementById('hdl'));
 makeMagnetic(document.getElementById('nav-dl'), 0.28);
 
-// ── SCROLL: fade scan overlay ──
+// ── SCAN OVERLAY FADE ──
 const scanOv = document.getElementById('scan-ov');
 window.addEventListener('scroll', () => {
-  const fade = Math.max(0, 1 - window.scrollY / (window.innerHeight * 0.42));
-  scanOv.style.opacity = fade;
+  scanOv.style.opacity = Math.max(0, 1 - window.scrollY / (window.innerHeight * 0.42));
 }, { passive: true });
 
-// ── THREE.JS RENDERER ──
+// ── RENDERER ──
 const canvas = document.getElementById('db-canvas');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -449,25 +355,26 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
 
-// ── SCENE & CAMERA ──
+// ── SCENE ──
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
+
+// Scene fog — distant plates dissolve into black
+scene.fog = new THREE.FogExp2(0x000000, 0.036);
+
 const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
 camera.position.set(0, 0.3, 9);
 
-// ── ENVIRONMENT (proper chrome reflections) ──
+// ── ENVIRONMENT ──
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(0.04)).texture;
 pmrem.dispose();
 
 // ── LIGHTS ──
 scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const key = new THREE.DirectionalLight(0xffffff, 3.5);
-key.position.set(5, 8, 5); scene.add(key);
-const rim = new THREE.DirectionalLight(0xffffff, 1.0);
-rim.position.set(-4, -3, -4); scene.add(rim);
-const fill = new THREE.PointLight(0xffffff, 2.5, 28);
-fill.position.set(-5, 2, 5); scene.add(fill);
+const key = new THREE.DirectionalLight(0xffffff, 3.5); key.position.set(5,8,5); scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 1.0); rim.position.set(-4,-3,-4); scene.add(rim);
+const fill = new THREE.PointLight(0xffffff, 2.5, 28); fill.position.set(-5,2,5); scene.add(fill);
 
 // ── MATERIALS ──
 const barMat    = new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.92, roughness:0.08, envMapIntensity:1.2 });
@@ -476,9 +383,9 @@ const plateDark = new THREE.MeshStandardMaterial({ color:0xb0b0b0, metalness:0.7
 const gripMat   = new THREE.MeshStandardMaterial({ color:0x282828, metalness:0.05, roughness:0.92 });
 const edgeMat   = new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.95, roughness:0.05, envMapIntensity:1.5 });
 
-function cyl(rT, rB, h, mat, x, segs=48) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(rT, rB, h, segs), mat);
-  m.rotation.z = Math.PI / 2; m.position.x = x; return m;
+function cyl(rT,rB,h,mat,x,segs=48) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rT,rB,h,segs), mat);
+  m.rotation.z = Math.PI/2; m.position.x = x; return m;
 }
 
 // ── MAIN DUMBBELL ──
@@ -487,7 +394,6 @@ db.add(cyl(0.048,0.048,4.4,barMat,0));
 db.add(cyl(0.072,0.072,1.3,gripMat,0));
 db.add(cyl(0.085,0.085,0.10,edgeMat, 0.71));
 db.add(cyl(0.085,0.085,0.10,edgeMat,-0.71));
-
 function buildSide(s) {
   db.add(cyl(0.095,0.095,0.14,edgeMat,  s*0.86));
   db.add(cyl(0.52, 0.52, 0.13,plateMat, s*1.00));
@@ -495,33 +401,82 @@ function buildSide(s) {
   db.add(cyl(0.42, 0.42, 0.10,plateMat, s*1.26));
   db.add(cyl(0.32, 0.32, 0.09,plateDark,s*1.36));
   db.add(cyl(0.11, 0.11, 0.18,edgeMat,  s*1.46));
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.52,0.013,16,80), edgeMat);
-  ring.rotation.y = Math.PI/2; ring.position.x = s*1.00; db.add(ring);
+  const r = new THREE.Mesh(new THREE.TorusGeometry(0.52,0.013,16,80), edgeMat);
+  r.rotation.y = Math.PI/2; r.position.x = s*1.00; db.add(r);
 }
-buildSide( 1); buildSide(-1);
+buildSide(1); buildSide(-1);
 db.rotation.z = -0.10; db.rotation.y = 0.22;
 scene.add(db);
 
-// ── FLOATING BACKGROUND PLATES ──
-const floatDefs = [
-  { pos:[-4.2, 1.8,-3.5], r:0.40, h:0.07, sx:0.003, sy:0.009, sz:0.002, ph:0.0 },
-  { pos:[ 4.0,-1.4,-4.2], r:0.54, h:0.09, sx:0.006, sy:0.003, sz:0.007, ph:1.3 },
-  { pos:[-2.6,-2.6,-5.0], r:0.66, h:0.11, sx:0.004, sy:0.006, sz:0.003, ph:2.6 },
-  { pos:[ 3.4, 2.5,-3.0], r:0.30, h:0.06, sx:0.008, sy:0.002, sz:0.005, ph:0.7 },
-  { pos:[-3.6,-0.4,-6.0], r:0.47, h:0.08, sx:0.002, sy:0.007, sz:0.004, ph:1.9 },
-  { pos:[ 1.4, 3.4,-4.5], r:0.36, h:0.07, sx:0.007, sy:0.004, sz:0.008, ph:3.1 },
-];
-const floatPlates = floatDefs.map(d => {
+// ── GHOST WIREFRAME DUMBBELL ──
+// Slightly larger, semi-transparent wireframe overlay — holographic scan look
+const ghostDb = new THREE.Group();
+const ghostMat = new THREE.MeshBasicMaterial({ color:0xffffff, wireframe:true, transparent:true, opacity:0.032 });
+db.traverse(child => {
+  if (child.isMesh) {
+    const ghost = new THREE.Mesh(child.geometry, ghostMat);
+    ghost.position.copy(child.position);
+    ghost.rotation.copy(child.rotation);
+    ghost.scale.copy(child.scale);
+    ghostDb.add(ghost);
+  }
+});
+ghostDb.scale.setScalar(1.018); // marginally larger so wires peek out around edges
+scene.add(ghostDb);
+
+// ── PLATE WITH HOLE geometry helper ──
+// Returns a Group shaped like a real weight plate (annular disc)
+function makePlateHoled(outerR, innerR, thickness, faceMat, edgM) {
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(new THREE.CylinderGeometry(d.r,d.r,d.h,48),
-    new THREE.MeshStandardMaterial({ color:0x888888, metalness:0.70, roughness:0.30, envMapIntensity:0.8, transparent:true, opacity:0.52 })));
-  const rng = new THREE.Mesh(new THREE.TorusGeometry(d.r,0.010,12,64),
-    new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.92, roughness:0.06, envMapIntensity:1.2, transparent:true, opacity:0.62 }));
-  g.add(rng);
-  g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,d.h+0.01,24), edgeMat));
+  // Front face ring
+  const rg = new THREE.RingGeometry(innerR, outerR, 52);
+  const front = new THREE.Mesh(rg, faceMat);
+  front.rotation.x = -Math.PI/2; front.position.y = thickness/2; g.add(front);
+  // Back face ring
+  const back = new THREE.Mesh(rg, faceMat);
+  back.rotation.x = Math.PI/2; back.position.y = -thickness/2; g.add(back);
+  // Outer rim (open cylinder)
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(outerR,outerR,thickness,52,1,true), edgM));
+  // Inner hole rim
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(innerR,innerR,thickness,32,1,true), edgM));
+  return g;
+}
+
+// ── FLOATING PLATES — 3 free-floaters + 3 orbiters, all with proper holes ──
+
+// Material factory (transparent, depth-based opacity)
+function plateFaceMat(opacity) {
+  return new THREE.MeshStandardMaterial({ color:0x909090, metalness:0.72, roughness:0.28, envMapIntensity:0.9, transparent:true, opacity, side:THREE.DoubleSide });
+}
+function plateEdgeMat(opacity) {
+  return new THREE.MeshStandardMaterial({ color:0xffffff, metalness:0.92, roughness:0.07, envMapIntensity:1.2, transparent:true, opacity:opacity*1.1, side:THREE.DoubleSide });
+}
+
+// Free floaters (random drift)
+const freeDefs = [
+  { pos:[-4.2, 1.8,-3.5], r:0.40, ir:0.07, h:0.07, sx:0.003, sy:0.009, sz:0.002, ph:0.0 },
+  { pos:[ 4.0,-1.4,-5.0], r:0.56, ir:0.09, h:0.09, sx:0.006, sy:0.003, sz:0.007, ph:1.3 },
+  { pos:[-2.6,-2.6,-6.2], r:0.68, ir:0.10, h:0.11, sx:0.004, sy:0.006, sz:0.003, ph:2.6 },
+];
+const freePlates = freeDefs.map(d => {
+  const op = THREE.MathUtils.mapLinear(d.pos[2], -3, -7, 0.58, 0.22);
+  const g = makePlateHoled(d.r, d.ir, d.h, plateFaceMat(op), plateEdgeMat(op));
   g.position.set(...d.pos);
   g.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
   g.userData = d; scene.add(g); return g;
+});
+
+// Orbiting plates (elliptical paths)
+const orbitDefs = [
+  { a:4.2, b:2.0, zOff:-3.8, tiltX: 0.38, tiltZ: 0.15, speed:0.09, ph:0.0,  r:0.34, ir:0.06, h:0.06, depth:-3.8 },
+  { a:3.2, b:1.6, zOff:-4.8, tiltX:-0.28, tiltZ: 0.30, speed:0.13, ph:2.1,  r:0.46, ir:0.08, h:0.08, depth:-4.8 },
+  { a:3.8, b:2.4, zOff:-5.5, tiltX: 0.55, tiltZ:-0.20, speed:0.07, ph:4.2,  r:0.30, ir:0.06, h:0.06, depth:-5.5 },
+];
+const orbitPlates = orbitDefs.map(d => {
+  const op = THREE.MathUtils.mapLinear(d.depth, -3, -7, 0.58, 0.22);
+  const g = makePlateHoled(d.r, d.ir, d.h, plateFaceMat(op), plateEdgeMat(op));
+  g.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+  scene.add(g); return g;
 });
 
 // ── PARTICLES ──
@@ -532,21 +487,43 @@ pGeo.setAttribute('position', new THREE.Float32BufferAttribute(pPos,3));
 const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.015, transparent:true, opacity:0.14 }));
 scene.add(particles);
 
-// ── BLOOM ──
+// ── POST-PROCESSING ──
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
+
+// Bloom (subtle)
 const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.12, 0.40, 0.85);
 composer.addPass(bloom);
+
+// Chromatic aberration — subtle RGB edge split (lens effect)
+const chromaPass = new ShaderPass({
+  uniforms: { tDiffuse: { value: null }, amount: { value: 0.0016 } },
+  vertexShader: `varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;
+    uniform float amount;
+    varying vec2 vUv;
+    void main(){
+      vec2 dir = vUv - 0.5;
+      float d = length(dir);
+      vec2 offset = normalize(dir) * amount * d * d * 4.0;
+      float r = texture2D(tDiffuse, vUv + offset).r;
+      float g = texture2D(tDiffuse, vUv).g;
+      float b = texture2D(tDiffuse, vUv - offset).b;
+      gl_FragColor = vec4(r, g, b, 1.0);
+    }
+  `
+});
+composer.addPass(chromaPass);
 composer.addPass(new OutputPass());
 
 // ── STATE ──
-let mx=0, my=0;
-let scrollY=0;
+let mx=0, my=0, scrollY=0;
 const totalH = () => Math.max(1, document.body.scrollHeight - window.innerHeight);
 
 document.addEventListener('mousemove', e => { mx=(e.clientX/window.innerWidth-.5)*2; my=(e.clientY/window.innerHeight-.5)*2; });
 window.addEventListener('deviceorientation', e => {
-  if (e.gamma!=null) { mx=Math.max(-1,Math.min(1,e.gamma/28)); my=Math.max(-1,Math.min(1,(e.beta-30)/38)); }
+  if(e.gamma!=null){ mx=Math.max(-1,Math.min(1,e.gamma/28)); my=Math.max(-1,Math.min(1,(e.beta-30)/38)); }
 });
 window.addEventListener('scroll', () => { scrollY=window.scrollY; }, { passive:true });
 window.addEventListener('resize', () => {
@@ -563,74 +540,69 @@ const clock = new THREE.Clock();
   const t = clock.getElapsedTime();
   const p = scrollY / totalH();
 
-  // Cursor ring lerp (smooth lag)
+  // Cursor ring lerp
   ringX += (curX - ringX) * 0.11;
   ringY += (curY - ringY) * 0.11;
-  ring.style.left = ringX + 'px';
-  ring.style.top  = ringY + 'px';
+  ring.style.left = ringX + 'px'; ring.style.top = ringY + 'px';
 
   // Camera orbit on scroll
-  const camX = Math.sin(p * Math.PI * 0.38) * 2.8;
-  const camZ = 9 - p * 0.8;
-  const camY = 0.3 - p * 1.4;
-  camera.position.x += (camX - camera.position.x) * 0.04;
-  camera.position.y += (camY - camera.position.y) * 0.04;
-  camera.position.z += (camZ - camera.position.z) * 0.04;
+  camera.position.x += (Math.sin(p*Math.PI*0.38)*2.8 - camera.position.x) * 0.04;
+  camera.position.y += ((0.3 - p*1.4) - camera.position.y) * 0.04;
+  camera.position.z += ((9 - p*0.8)   - camera.position.z) * 0.04;
   camera.lookAt(0, 0, 0);
 
-  // Main dumbbell — mouse + float
-  db.rotation.y += (mx * 0.50 - db.rotation.y) * 0.05;
-  db.rotation.x += (my * 0.22 - db.rotation.x) * 0.05;
-  db.rotation.z  = -0.10 + Math.sin(t * 0.25) * 0.04;
-  db.position.y += (Math.sin(t * 0.55) * 0.12 - db.position.y) * 0.05;
+  // Main dumbbell
+  db.rotation.y += (mx*0.50 - db.rotation.y) * 0.05;
+  db.rotation.x += (my*0.22 - db.rotation.x) * 0.05;
+  db.rotation.z  = -0.10 + Math.sin(t*0.25)*0.04;
+  db.position.y += (Math.sin(t*0.55)*0.12 - db.position.y) * 0.05;
 
-  // Floating plates
-  floatPlates.forEach((g, i) => {
-    const d = floatDefs[i];
+  // Ghost wireframe mirrors main dumbbell exactly
+  ghostDb.rotation.copy(db.rotation);
+  ghostDb.position.copy(db.position);
+
+  // Free-floating plates
+  freePlates.forEach((g, i) => {
+    const d = freeDefs[i];
     g.rotation.x += d.sx; g.rotation.y += d.sy; g.rotation.z += d.sz;
-    g.position.y = d.pos[1] + Math.sin(t * 0.4 + d.ph) * 0.18;
-    g.position.x = d.pos[0] + Math.cos(t * 0.3 + d.ph) * 0.10 + mx * (0.06 + i*0.015);
-    g.position.y -= my * (0.04 + i*0.010);
+    g.position.y = d.pos[1] + Math.sin(t*0.4 + d.ph)*0.20;
+    g.position.x = d.pos[0] + Math.cos(t*0.3 + d.ph)*0.12 + mx*(0.06+i*0.014);
+    g.position.y -= my*(0.04+i*0.010);
+  });
+
+  // Orbiting plates — elliptical paths
+  orbitPlates.forEach((g, i) => {
+    const d = orbitDefs[i];
+    const angle = t * d.speed + d.ph;
+    // Parametric ellipse in XZ, tilted around X and Z axes
+    const ex = Math.cos(angle) * d.a;
+    const ey = Math.sin(angle) * d.b;
+    g.position.x = ex * Math.cos(d.tiltZ) - ey * Math.sin(d.tiltX) + mx*0.05;
+    g.position.y = ex * Math.sin(d.tiltZ) + ey * Math.cos(d.tiltX) - my*0.04;
+    g.position.z = d.zOff + Math.sin(angle*0.5)*0.4;
+    // Slow independent spin
+    g.rotation.x += 0.004 + i*0.002;
+    g.rotation.y += 0.003 + i*0.001;
   });
 
   particles.rotation.y += 0.0003; particles.rotation.x += 0.0001;
   composer.render();
 })();
 
-// ── GSAP ANIMATIONS ──
+// ── GSAP ──
 gsap.registerPlugin(ScrollTrigger);
 
-// App icon springs in
-gsap.to('#hicon', { opacity:1, scale:1, duration:0.9, ease:'back.out(1.8)', delay:0.1 });
+gsap.to('#hicon', { opacity:1, scale:1, duration:.9, ease:'back.out(1.8)', delay:.1 });
+gsap.to('#htag',  { opacity:1, y:0,     duration:.7, ease:'power3.out',    delay:.35 });
+gsap.to(['#w1','#w2','#w3'], { y:'0%', duration:1.05, ease:'power4.out', stagger:.14, delay:.55 });
+gsap.timeline({ delay:1.0 })
+  .to('#hsub',  { opacity:1, y:0, duration:.7, ease:'power3.out' })
+  .to('#hdl',   { opacity:1,      duration:.6, ease:'power3.out' }, '-=.4')
+  .to('#hnote', { opacity:1,      duration:.5, ease:'power2.out' }, '-=.3');
 
-// Eyebrow tag fades up
-gsap.to('#htag', { opacity:1, y:0, duration:0.7, ease:'power3.out', delay:0.35 });
-
-// Split-text word reveal — each word slides up from clip
-gsap.to(['#w1','#w2','#w3'], {
-  y: '0%',
-  duration: 1.05,
-  ease: 'power4.out',
-  stagger: 0.14,
-  delay: 0.55
-});
-
-// Subtitle + CTA
-gsap.timeline({ delay: 1.0 })
-  .to('#hsub',  { opacity:1, y:0, duration:0.7, ease:'power3.out' })
-  .to('#hdl',   { opacity:1,      duration:0.6, ease:'power3.out' }, '-=0.4')
-  .to('#hnote', { opacity:1,      duration:0.5, ease:'power2.out' }, '-=0.3');
-
-// Feature cards scroll reveal
-gsap.to('#flabel', {
-  opacity:1, y:0, duration:0.75, ease:'power3.out',
-  scrollTrigger: { trigger:'#flabel', start:'top 88%' }
-});
+gsap.to('#flabel', { opacity:1, y:0, duration:.75, ease:'power3.out', scrollTrigger:{ trigger:'#flabel', start:'top 88%' } });
 ['#fc1','#fc2','#fc3'].forEach((id,i) => {
-  gsap.to(id, {
-    opacity:1, y:0, duration:0.8, ease:'power3.out', delay:i*0.10,
-    scrollTrigger:{ trigger:id, start:'top 88%' }
-  });
+  gsap.to(id, { opacity:1, y:0, duration:.8, ease:'power3.out', delay:i*.10, scrollTrigger:{ trigger:id, start:'top 88%' } });
 });
 </script>
 </body>
