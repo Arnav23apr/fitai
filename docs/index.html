@@ -307,8 +307,7 @@ import { RenderPass }      from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass }      from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass }      from 'three/addons/postprocessing/OutputPass.js';
-import { RoomEnvironment }    from 'three/addons/environments/RoomEnvironment.js';
-import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // ── GRAIN ──
 const nc = document.createElement('canvas'); nc.width = nc.height = 256;
@@ -515,98 +514,6 @@ pGeo.setAttribute('position',new THREE.Float32BufferAttribute(partPos,3));
 const particles=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xffffff,size:.015,transparent:true,opacity:.16}));
 scene.add(particles);
 
-// ── CANVAS HELPER ──
-function rrect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
-
-// ── PHONE MOCKUP ──
-const phoneGroup=new THREE.Group();
-const phoneBody=new THREE.Mesh(new RoundedBoxGeometry(.88,1.90,.09,4,.046),new THREE.MeshStandardMaterial({color:0x1c1c1e,metalness:.88,roughness:.10,envMapIntensity:1.1}));
-phoneGroup.add(phoneBody);
-// Screen canvas
-const scrCv=document.createElement('canvas');scrCv.width=270;scrCv.height=585;
-(function(){const c=scrCv.getContext('2d');c.fillStyle='#080808';c.fillRect(0,0,270,585);
-c.fillStyle='rgba(255,255,255,.5)';c.font='600 11px system-ui';c.fillText('9:41',18,20);
-c.fillStyle='rgba(255,255,255,.35)';c.font='600 10px system-ui';c.fillText('BODY ANALYSIS',18,52);
-c.fillStyle='#fff';c.font='bold 18px system-ui';c.fillText('Scan Complete',18,76);
-// Score arc
-const cx=135,cy=188,r=66;c.strokeStyle='rgba(255,255,255,.08)';c.lineWidth=9;c.lineCap='round';c.beginPath();c.arc(cx,cy,r,0,Math.PI*2);c.stroke();
-c.strokeStyle='rgba(255,255,255,.88)';c.lineWidth=9;c.beginPath();c.arc(cx,cy,r,-Math.PI/2,-Math.PI/2+Math.PI*2*.82);c.stroke();
-c.fillStyle='#fff';c.font='bold 34px system-ui';c.textAlign='center';c.fillText('82',cx,cy+11);
-c.fillStyle='rgba(255,255,255,.42)';c.font='10px system-ui';c.fillText('PHYSIQUE SCORE',cx,cy+26);c.textAlign='left';
-// Metrics
-[{l:'Body Fat',v:'18.4%',p:.31},{l:'Muscle Mass',v:'72.1%',p:.72},{l:'Recovery',v:'Good',p:.68}].forEach((m,i)=>{
-  const y=310+i*52;c.fillStyle='rgba(255,255,255,.36)';c.font='10px system-ui';c.fillText(m.l,18,y);
-  c.fillStyle='#fff';c.font='600 13px system-ui';c.fillText(m.v,18,y+17);
-  c.fillStyle='rgba(255,255,255,.09)';rrect(c,18,y+26,234,5,2.5);c.fill();
-  c.fillStyle='rgba(255,255,255,.72)';rrect(c,18,y+26,234*m.p,5,2.5);c.fill();
-});})();
-const phoneScreen=new THREE.Mesh(new THREE.PlaneGeometry(.80,1.73),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(scrCv),transparent:true}));
-phoneScreen.position.z=.047;phoneGroup.add(phoneScreen);
-const notchM=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,.004,16),new THREE.MeshStandardMaterial({color:0x080808}));
-notchM.rotation.x=Math.PI/2;notchM.position.set(0,.885,.048);phoneGroup.add(notchM);
-const homeBarM=new THREE.Mesh(new THREE.CylinderGeometry(.004,.004,.18,8),new THREE.MeshBasicMaterial({color:0x3a3a3c}));
-homeBarM.rotation.z=Math.PI/2;homeBarM.position.set(0,-.855,.047);phoneGroup.add(homeBarM);
-phoneGroup.position.set(3.2,0,1.0);phoneGroup.rotation.y=-.24;
-scene.add(phoneGroup);
-
-// ── ACTIVITY RINGS ──
-const ringsGroup=new THREE.Group();
-function arcMesh(radius,progress,tubeR,bright){
-  const n=Math.max(4,Math.round(progress*72)),pts=[];
-  for(let i=0;i<=n;i++){const a=(i/n)*progress*Math.PI*2-Math.PI/2;pts.push(new THREE.Vector3(Math.cos(a)*radius,Math.sin(a)*radius,0));}
-  return new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),n*2,tubeR,8,false),new THREE.MeshStandardMaterial({color:new THREE.Color(bright,bright,bright),metalness:.2,roughness:.5,transparent:true,opacity:bright*.95}));
-}
-[[.85,.88,.030,.96],[.62,.72,.026,.72],[.42,.95,.022,.50]].forEach(([r,fill,tr,br])=>{
-  ringsGroup.add(new THREE.Mesh(new THREE.TorusGeometry(r,tr*.85,8,80),new THREE.MeshBasicMaterial({color:0x1e1e1e,transparent:true,opacity:.4})));
-  ringsGroup.add(arcMesh(r,fill,tr,br));
-});
-ringsGroup.position.set(-4.0,.2,-.4);ringsGroup.rotation.x=.3;ringsGroup.rotation.y=.22;
-scene.add(ringsGroup);
-
-// ── LEADERBOARD CARD ──
-const lbCv=document.createElement('canvas');lbCv.width=320;lbCv.height=360;
-(function(){const c=lbCv.getContext('2d');
-c.fillStyle='rgba(18,18,18,.94)';rrect(c,0,0,320,360,20);c.fill();
-c.strokeStyle='rgba(255,255,255,.11)';c.lineWidth=1;rrect(c,.5,.5,319,359,20);c.stroke();
-c.fillStyle='rgba(255,255,255,.06)';c.fillRect(20,1,280,1);
-c.fillStyle='rgba(255,255,255,.36)';c.font='600 10px system-ui';c.fillText('GLOBAL LEADERBOARD',20,30);
-c.fillStyle='#fff';c.font='bold 16px system-ui';c.fillText('This Week',20,54);
-c.fillStyle='rgba(255,255,255,.06)';c.fillRect(20,64,280,1);
-[['1','@alexfit_','12,840',false],['2','@sarahgains','11,220',false],['3','@benchbro_','9,840',false],['4','@you','7,310',true],['5','@fitlife99','6,890',false]].forEach(([rank,name,pts,hl],i)=>{
-  const y=80+i*52;
-  if(hl){c.fillStyle='rgba(255,255,255,.055)';rrect(c,12,y-2,296,40,10);c.fill();}
-  c.fillStyle=hl?'#fff':'rgba(255,255,255,.30)';c.font=(hl?'bold ':'')+'12px system-ui';c.fillText('#'+rank,20,y+18);
-  c.fillStyle=hl?'#fff':'rgba(255,255,255,.70)';c.font=(hl?'600 ':'')+'13px system-ui';c.fillText(name,56,y+18);
-  c.fillStyle=hl?'rgba(255,255,255,.9)':'rgba(255,255,255,.44)';c.textAlign='right';c.fillText(pts+' pts',300,y+18);c.textAlign='left';
-  if(i<4){c.fillStyle='rgba(255,255,255,.04)';c.fillRect(20,y+32,280,1);}
-});})();
-const lbCard=new THREE.Mesh(new THREE.PlaneGeometry(2.4,2.7),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(lbCv),transparent:true,side:THREE.DoubleSide}));
-lbCard.position.set(4.8,1.6,-2.8);lbCard.rotation.y=-.38;
-scene.add(lbCard);
-
-// ── BODY SCAN SILHOUETTE ──
-const bodyGroup=new THREE.Group();
-const bMat=new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:.13});
-function bLine(...pts){return new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts.map(p=>new THREE.Vector3(...p))),bMat);}
-const hdPts=[];for(let i=0;i<=36;i++){const a=(i/36)*Math.PI*2;hdPts.push(new THREE.Vector3(Math.cos(a)*.18,2.12+Math.sin(a)*.22,0));}
-bodyGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(hdPts),bMat));
-[[[0,1.9,0],[0,1.72,0]],[[0,1.72,0],[-.52,1.55,0]],[[0,1.72,0],[.52,1.55,0]],
- [[-.52,1.55,0],[-.65,.88,0]],[[-.65,.88,0],[-.70,.10,0]],
- [[.52,1.55,0],[.65,.88,0]],[[.65,.88,0],[.70,.10,0]],
- [[-.52,1.55,0],[-.44,.18,0]],[[.52,1.55,0],[.44,.18,0]],[[-.44,.18,0],[.44,.18,0]],
- [[-.44,.18,0],[-.38,-.82,0]],[[-.38,-.82,0],[-.34,-1.88,0]],
- [[.44,.18,0],[.38,-.82,0]],[[.38,-.82,0],[.34,-1.88,0]],
- [[-.34,-1.88,0],[-.54,-1.96,0]],[[.34,-1.88,0],[.54,-1.96,0]]
-].forEach(([a,b])=>bodyGroup.add(bLine(a,b)));
-bodyGroup.scale.setScalar(1.5);bodyGroup.position.set(0,.2,-4.8);
-scene.add(bodyGroup);
-const sweepLineMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.055,side:THREE.DoubleSide,depthWrite:false});
-const sweepLine=new THREE.Mesh(new THREE.PlaneGeometry(3.0,.007),sweepLineMat);
-sweepLine.position.set(0,0,-4.76);scene.add(sweepLine);
-const sweepGlowMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.022,side:THREE.DoubleSide,depthWrite:false});
-const sweepGlow=new THREE.Mesh(new THREE.PlaneGeometry(3.0,.16),sweepGlowMat);
-sweepGlow.position.set(0,0,-4.8);scene.add(sweepGlow);
-
 // Raycaster for mouse→3D conversion
 const raycaster=new THREE.Raycaster();
 const mousePlane=new THREE.Plane(new THREE.Vector3(0,0,1),0);
@@ -761,24 +668,6 @@ const clock=new THREE.Clock();
   }
   pAttr.needsUpdate=true;
   particles.rotation.y+=.0002;
-
-  // Phone mockup
-  phoneGroup.rotation.y=-.24+mx*.08;
-  phoneGroup.rotation.x=my*.05;
-  phoneGroup.position.y=Math.sin(t*.38)*.06;
-
-  // Activity rings — slow spin + mouse tilt
-  ringsGroup.rotation.z=t*.09;
-  ringsGroup.rotation.y=.22-mx*.05;
-  ringsGroup.position.y=.2+Math.sin(t*.28)*.05;
-
-  // Leaderboard card — gentle float
-  lbCard.position.y=1.6+Math.sin(t*.32+1.2)*.08;
-  lbCard.rotation.y=-.38+mx*.04;
-
-  // Body scan sweep (±range mapped to body height in world space)
-  const sweepY=Math.sin(t*.55)*2.9+.3;
-  sweepLine.position.y=sweepY;sweepGlow.position.y=sweepY;
 
   composer.render();
 })();
