@@ -535,7 +535,7 @@ scene.add(particles);
 // ── BLOOM ──
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.32, 0.55, 0.72);
+const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.12, 0.40, 0.85);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
