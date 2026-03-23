@@ -22,7 +22,7 @@ class StoreViewModel {
     private func listenForUpdates() async {
         guard Purchases.isConfigured else { return }
         for await info in Purchases.shared.customerInfoStream {
-            isPremium = info.entitlements["premium"]?.isActive == true
+            isPremium = info.entitlements["Fit AI Pro"]?.isActive == true
         }
     }
 
@@ -44,7 +44,7 @@ class StoreViewModel {
         do {
             let result = try await Purchases.shared.purchase(package: package)
             if !result.userCancelled {
-                isPremium = result.customerInfo.entitlements["premium"]?.isActive == true
+                isPremium = result.customerInfo.entitlements["Fit AI Pro"]?.isActive == true
                 return isPremium
             }
         } catch ErrorCode.purchaseCancelledError {
@@ -59,22 +59,36 @@ class StoreViewModel {
         guard Purchases.isConfigured else { return }
         do {
             let info = try await Purchases.shared.restorePurchases()
-            isPremium = info.entitlements["premium"]?.isActive == true
+            isPremium = info.entitlements["Fit AI Pro"]?.isActive == true
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    /// Refresh premium status from RevenueCat. Call after any entitlement-gating check.
+    func refreshPremiumStatus() async {
+        guard Purchases.isConfigured else { return }
+        do {
+            let info = try await Purchases.shared.customerInfo()
+            isPremium = info.entitlements["Fit AI Pro"]?.isActive == true
         } catch {
             self.error = error.localizedDescription
         }
     }
 
     var monthlyPackage: Package? {
-        offerings?.current?.package(identifier: "$rc_monthly")
+        offerings?.current?.package(identifier: "monthly")
+            ?? offerings?.current?.package(identifier: "$rc_monthly")
     }
 
     var annualPackage: Package? {
-        offerings?.current?.package(identifier: "$rc_annual")
+        offerings?.current?.package(identifier: "yearly")
+            ?? offerings?.current?.package(identifier: "$rc_annual")
     }
 
     var lifetimePackage: Package? {
-        offerings?.current?.package(identifier: "$rc_lifetime")
+        offerings?.current?.package(identifier: "lifetime")
+            ?? offerings?.current?.package(identifier: "$rc_lifetime")
     }
 
     var monthlyPriceString: String {

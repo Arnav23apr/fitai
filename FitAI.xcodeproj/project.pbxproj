@@ -11,6 +11,7 @@
 		XX9C355859F76B2000C5BDXX /* FitAIWorkoutActivity.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		XXMM01AA892FE936243B52XX /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = XXMM02BB206458B4E90481XX /* MuscleMap */; };
 		XXRC01AA892FE936243B52XX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXRC02BB206458B4E90481XX /* RevenueCat */; };
+		XXRCUI01892FE936243B52XX /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = XXRCUI02206458B4E90481XX /* RevenueCatUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -102,6 +103,7 @@
 				XX35EA3B892FE936243B52XX /* Auth in Frameworks */,
 				XXMM01AA892FE936243B52XX /* MuscleMap in Frameworks */,
 				XXRC01AA892FE936243B52XX /* RevenueCat in Frameworks */,
+				XXRCUI01892FE936243B52XX /* RevenueCatUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -176,6 +178,7 @@
 				XX7F1BC1206458B4E90481XX /* Auth */,
 				XXMM02BB206458B4E90481XX /* MuscleMap */,
 				XXRC02BB206458B4E90481XX /* RevenueCat */,
+				XXRCUI02206458B4E90481XX /* RevenueCatUI */,
 			);
 			productName = FitAI;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */;
@@ -517,6 +520,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
+				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = "test_WZhaefVVBzlJbMMNczIttHTaapu";
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = "sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP";
 				INFOPLIST_KEY_SUPABASE_URL = "https://vwnlfwdsmhanicjgtfgj.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -560,6 +564,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
+				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = "test_WZhaefVVBzlJbMMNczIttHTaapu";
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = "sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP";
 				INFOPLIST_KEY_SUPABASE_URL = "https://vwnlfwdsmhanicjgtfgj.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -795,6 +800,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		XXRCUI02206458B4E90481XX /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 		XX7F1BC1206458B4E90481XX /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;

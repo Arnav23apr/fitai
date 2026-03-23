@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import RevenueCatUI
 
 struct ProfileView: View {
     @Environment(AppState.self) private var appState
@@ -11,6 +12,7 @@ struct ProfileView: View {
     @State private var showNotificationSettings: Bool = false
     @State private var showCurrentPlan: Bool = false
     @State private var showWeightHeightEditor: Bool = false
+    @State private var showCustomerCenter: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -76,6 +78,9 @@ struct ProfileView: View {
             .sheet(isPresented: $showAppleHealth) {
                 AppleHealthView()
                     .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showCustomerCenter) {
+                CustomerCenterView()
             }
         }
     }
@@ -308,6 +313,12 @@ struct ProfileView: View {
                             appState.profile.isPremium = true
                             appState.saveProfile()
                         }
+                    }
+                }
+                if appState.profile.isPremium {
+                    Divider().padding(.leading, 52)
+                    settingsRow(title: "Manage Subscription", icon: "crown.fill", iconColor: .yellow) {
+                        showCustomerCenter = true
                     }
                 }
                 Divider().padding(.leading, 52)
