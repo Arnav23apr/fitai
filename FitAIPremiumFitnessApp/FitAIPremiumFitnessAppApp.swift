@@ -2,6 +2,7 @@ import SwiftUI
 import Auth
 import UserNotifications
 import RevenueCat
+import UIKit
 
 enum Config {
     static let SUPABASE_URL: String =
@@ -57,11 +58,26 @@ struct FitAIPremiumFitnessAppApp: App {
                         scanHistory: appState.scanHistory
                     )
                     await StoreViewModel.shared.fetchOfferings()
-                    if StoreViewModel.shared.isPremium && !appState.profile.isPremium {
-                        appState.profile.isPremium = true
-                        appState.saveProfile()
+                    syncPremiumStatus()
+                }
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                    Task {
+                        await StoreViewModel.shared.fetchOfferings()
+                        syncPremiumStatus()
                     }
                 }
+        }
+    }
+
+    private func syncPremiumStatus() {
+        let rcPremium = StoreViewModel.shared.isPremium
+        if rcPremium && !appState.profile.isPremium {
+            appState.profile.isPremium = true
+            appState.saveProfile()
+        } else if !rcPremium && appState.profile.isPremium && Purchases.isConfigured {
+            // RevenueCat is loaded and confirms not premium — revoke cached flag
+            appState.profile.isPremium = false
+            appState.saveProfile()
         }
     }
 }

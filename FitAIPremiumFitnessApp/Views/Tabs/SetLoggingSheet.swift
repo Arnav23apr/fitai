@@ -71,7 +71,8 @@ struct SetLoggingSheet: View {
                 let sugReps = exercise.suggestedReps[safe: i] ?? 0
                 initialSets.append(SetLog(weight: sugWeight, reps: sugReps, isBodyweight: false))
             } else {
-                initialSets.append(SetLog(weight: 0, reps: 0, isBodyweight: false))
+                let (defWeight, defReps) = Self.experienceDefaults()
+                initialSets.append(SetLog(weight: defWeight, reps: defReps, isBodyweight: false))
             }
         }
         _sets = State(initialValue: initialSets)
@@ -359,19 +360,19 @@ struct SetLoggingSheet: View {
 
             HStack(spacing: 0) {
                 statPill(
-                    value: history.personalBestWeight > 0 ? "\(Int(history.personalBestWeight))\(weightUnit)" : "—",
+                    value: history.personalBestWeight > 0 ? "\(Int(history.personalBestWeight))\(weightUnit)" : "-",
                     label: "Best Weight",
                     color: .orange
                 )
                 pillDivider
                 statPill(
-                    value: history.personalBestReps > 0 ? "\(history.personalBestReps)" : "—",
+                    value: history.personalBestReps > 0 ? "\(history.personalBestReps)" : "-",
                     label: "Best Reps",
                     color: .green
                 )
                 pillDivider
                 statPill(
-                    value: history.logs.count > 0 ? "\(history.logs.count)" : "—",
+                    value: history.logs.count > 0 ? "\(history.logs.count)" : "-",
                     label: "Sessions",
                     color: .cyan
                 )
@@ -611,6 +612,19 @@ struct SetLoggingSheet: View {
     }
 
     private static let repsValues: [Int] = Array(0...100)
+
+    private static func experienceDefaults() -> (weight: Double, reps: Int) {
+        guard let data = UserDefaults.standard.data(forKey: "userProfile"),
+              let profile = try? JSONDecoder().decode(UserProfile.self, from: data)
+        else { return (0, 10) }
+        let metric = profile.usesMetric
+        switch profile.trainingExperience.lowercased() {
+        case "beginner":   return (metric ? 5.0  : 10.0, 12)
+        case "intermediate": return (metric ? 12.5 : 27.5, 10)
+        case "advanced":   return (metric ? 22.5 : 50.0, 8)
+        default:           return (0, 10)
+        }
+    }
 
     private static func formatWeight(_ weight: Double) -> String {
         guard weight > 0 else { return "" }

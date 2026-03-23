@@ -240,13 +240,13 @@ struct WorkoutDetailSheet: View {
     private var aiNote: String {
         let focus = workout.focusAreas.joined(separator: " & ")
         if workout.name.lowercased().contains("push") {
-            return "Chest priority day — emphasize upper chest for V-taper development"
+            return "Chest priority day: emphasize upper chest for V-taper development"
         }
         if workout.name.lowercased().contains("pull") {
-            return "Back width focus — lat pulldowns and rows build your V-taper"
+            return "Back width focus: lat pulldowns and rows build your V-taper"
         }
         if workout.name.lowercased().contains("leg") {
-            return "Foundation day — compound leg movements boost testosterone"
+            return "Foundation day: compound leg movements boost testosterone"
         }
         if workout.name.lowercased().contains("weak") {
             return "Extra volume on \(focus) to accelerate lagging areas"
@@ -655,6 +655,22 @@ struct WorkoutDetailSheet: View {
                     .background(Color.primary.opacity(0.1))
                     .clipShape(.rect(cornerRadius: 16))
                 }
+            } else if workoutStarted {
+                Button {
+                    session.endSession()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "xmark.circle")
+                            .font(.system(size: 14))
+                        Text("Abandon Workout")
+                            .font(.headline)
+                    }
+                    .foregroundStyle(.red)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.red.opacity(0.1))
+                    .clipShape(.rect(cornerRadius: 16))
+                }
             }
         }
     }
@@ -806,7 +822,7 @@ struct WorkoutDetailSheet: View {
         }
 
         if !weakPts.isEmpty {
-            explanation += "\nYour scan shows \(weakPts) as areas to focus on — this plan accounts for that with targeted exercise selection."
+            explanation += "\nYour scan shows \(weakPts) as areas to focus on. This plan accounts for that with targeted exercise selection."
         }
 
         explanation += "\nThe rep ranges chosen optimize for hypertrophy (muscle growth) with enough volume to trigger adaptation without overtraining."

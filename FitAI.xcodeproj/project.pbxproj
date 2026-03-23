@@ -53,14 +53,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitAIPremiumFitnessApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAIPremiumFitnessAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAIPremiumFitnessAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC57A2E9EAD3100EA8BCF /* FitAI.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FitAI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5892E9EAD3200EA8BCF /* FitAI.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAI.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5932E9EAD3200EA8BCF /* FitAI.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitAI.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FitAIWorkoutActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		XXBCA6BFF210607FE2A774XX /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+		XXBCA6BFF210607FE2A774XX /* Exceptions for "FitAIWorkoutActivity" folder in "FitAIWorkoutActivity" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -87,11 +87,11 @@
 		};
 		XX847D4FDDF05380C4D054XX /* FitAIWorkoutActivity */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				XXBCA6BFF210607FE2A774XX /* Exceptions for "FitAIWorkoutActivity" folder in "FitAIWorkoutActivity" target */,
+			);
 			path = FitAIWorkoutActivity;
 			sourceTree = "<group>";
-			exceptions = (
-				XXBCA6BFF210607FE2A774XX /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
-			);
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
@@ -145,9 +145,9 @@
 		105FC57B2E9EAD3100EA8BCF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */,
-				105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */,
-				105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */,
+				105FC57A2E9EAD3100EA8BCF /* FitAI.app */,
+				105FC5892E9EAD3200EA8BCF /* FitAI.xctest */,
+				105FC5932E9EAD3200EA8BCF /* FitAI.xctest */,
 				XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */,
 			);
 			name = Products;
@@ -181,7 +181,7 @@
 				XXRCUI02206458B4E90481XX /* RevenueCatUI */,
 			);
 			productName = FitAI;
-			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp.app */;
+			productReference = 105FC57A2E9EAD3100EA8BCF /* FitAI.app */;
 			productType = "com.apple.product-type.application";
 		};
 		105FC5882E9EAD3200EA8BCF /* FitAI */ = {
@@ -204,7 +204,7 @@
 			packageProductDependencies = (
 			);
 			productName = FitAI;
-			productReference = 105FC5892E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests.xctest */;
+			productReference = 105FC5892E9EAD3200EA8BCF /* FitAI.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
 		105FC5922E9EAD3200EA8BCF /* FitAI */ = {
@@ -227,7 +227,7 @@
 			packageProductDependencies = (
 			);
 			productName = FitAI;
-			productReference = 105FC5932E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests.xctest */;
+			productReference = 105FC5932E9EAD3200EA8BCF /* FitAI.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */ = {
@@ -242,13 +242,13 @@
 			);
 			dependencies = (
 			);
+			fileSystemSynchronizedGroups = (
+				XX847D4FDDF05380C4D054XX /* FitAIWorkoutActivity */,
+			);
 			name = FitAIWorkoutActivity;
 			productName = FitAIWorkoutActivity;
 			productReference = XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */;
 			productType = "com.apple.product-type.app-extension";
-			fileSystemSynchronizedGroups = (
-				XX847D4FDDF05380C4D054XX /* FitAIWorkoutActivity */,
-			);
 		};
 /* End PBXNativeTarget section */
 
@@ -282,6 +282,11 @@
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				XXMM03CC6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "MuscleMap" */,
+				XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 105FC57B2E9EAD3100EA8BCF /* Products */;
 			projectDirPath = "";
@@ -291,11 +296,6 @@
 				105FC5882E9EAD3200EA8BCF /* FitAI */,
 				105FC5922E9EAD3200EA8BCF /* FitAI */,
 				XX0F7C4027B12F8E4ECE86XX /* FitAIWorkoutActivity */,
-			);
-			packageReferences = (
-				XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */,
-				XXMM03CC6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "MuscleMap" */,
-				XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 			);
 		};
 /* End PBXProject section */
@@ -510,9 +510,10 @@
 				CODE_SIGN_ENTITLEMENTS = FitAIPremiumFitnessApp/FitAIPremiumFitnessApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = test_WZhaefVVBzlJbMMNczIttHTaapu;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fit AI needs camera access to take physique photos for analysis.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
@@ -520,8 +521,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
-				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = "test_WZhaefVVBzlJbMMNczIttHTaapu";
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = "sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP";
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP;
 				INFOPLIST_KEY_SUPABASE_URL = "https://vwnlfwdsmhanicjgtfgj.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -533,7 +533,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC";
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -552,11 +552,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FitAIPremiumFitnessApp/FitAIPremiumFitnessApp.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = test_WZhaefVVBzlJbMMNczIttHTaapu;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "Fit AI needs camera access to take physique photos for analysis.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
@@ -564,8 +566,7 @@
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
-				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = "test_WZhaefVVBzlJbMMNczIttHTaapu";
-				INFOPLIST_KEY_SUPABASE_ANON_KEY = "sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP";
+				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP;
 				INFOPLIST_KEY_SUPABASE_URL = "https://vwnlfwdsmhanicjgtfgj.supabase.co";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -577,7 +578,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC";
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -596,11 +597,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -616,13 +617,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.tests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -639,10 +641,10 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -657,12 +659,13 @@
 		105FC5A52E9EAD3200EA8BCF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.uitests";
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.uitests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -677,44 +680,57 @@
 		XXDE884D7F0EDFA4524FADXX /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.fitaiworkoutactivity";
-				PRODUCT_NAME = FitAIWorkoutActivity;
-				SWIFT_VERSION = 5.0;
-				SDKROOT = iphoneos;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_STYLE[sdk=*]" = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FitAIWorkoutActivity/Info.plist;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				MARKETING_VERSION = 1.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.fitaiworkoutactivity;
+				PRODUCT_NAME = FitAIWorkoutActivity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
 		XXE6C11C3DF96997D35840XX /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.fitaiworkoutactivity";
-				PRODUCT_NAME = FitAIWorkoutActivity;
-				SWIFT_VERSION = 5.0;
-				SDKROOT = iphoneos;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
+				CODE_SIGN_STYLE = Automatic;
+				"CODE_SIGN_STYLE[sdk=*]" = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = FitAIWorkoutActivity/Info.plist;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SKIP_INSTALL = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				MARKETING_VERSION = 1.0;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks";
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.fitaiworkoutactivity;
+				PRODUCT_NAME = FitAIWorkoutActivity;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -769,14 +785,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.0.0;
-			};
-		};
 		XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/supabase/supabase-swift.git";
@@ -787,25 +795,23 @@
 		};
 		XXMM03CC6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "MuscleMap" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = https://github.com/melihcolpan/MuscleMap.git;
+			repositoryURL = "https://github.com/melihcolpan/MuscleMap.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.6.0;
 			};
 		};
+		XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		XXRC02BB206458B4E90481XX /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCat;
-		};
-		XXRCUI02206458B4E90481XX /* RevenueCatUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCatUI;
-		};
 		XX7F1BC1206458B4E90481XX /* Auth */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */;
@@ -815,6 +821,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XXMM03CC6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "MuscleMap" */;
 			productName = MuscleMap;
+		};
+		XXRC02BB206458B4E90481XX /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		XXRCUI02206458B4E90481XX /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

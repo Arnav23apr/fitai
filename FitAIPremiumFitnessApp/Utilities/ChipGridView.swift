@@ -28,6 +28,8 @@ struct ChipButton: View {
         Button(action: action) {
             Text(title)
                 .font(.subheadline.weight(.medium))
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
                 .foregroundStyle(isSelected ? .black : .white.opacity(0.8))
                 .padding(.horizontal, 18)
                 .padding(.vertical, 12)

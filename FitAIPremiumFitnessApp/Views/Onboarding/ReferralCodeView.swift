@@ -89,8 +89,7 @@ struct ReferralCodeView: View {
                     Button(action: onContinue) {
                         Text(L.t("noCode", lang))
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.primary)
-                            .underline()
+                            .foregroundStyle(isDark ? .white.opacity(0.55) : .black.opacity(0.55))
                     }
                 }
             }

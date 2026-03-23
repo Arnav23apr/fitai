@@ -259,7 +259,7 @@ struct ProfileView: View {
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(.primary)
                     if let discount = appState.profile.spinDiscount {
-                        Text("\(discount)% off Pro — Claim now")
+                        Text("\(discount)% off Pro - Claim now")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

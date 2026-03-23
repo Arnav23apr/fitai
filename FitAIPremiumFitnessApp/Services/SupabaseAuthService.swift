@@ -4,15 +4,25 @@ import UIKit
 import AuthenticationServices
 
 let supabaseAuth: AuthClient = {
-    guard
-        !Config.SUPABASE_URL.isEmpty,
-        let authURL = URL(string: "\(Config.SUPABASE_URL)/auth/v1")
+    let urlStr = Config.SUPABASE_URL
+    let key    = Config.SUPABASE_ANON_KEY
+    guard !urlStr.isEmpty, !key.isEmpty,
+          let authURL = URL(string: "\(urlStr)/auth/v1")
     else {
-        fatalError("SUPABASE_URL is missing or invalid — check Info.plist configuration.")
+        assertionFailure("SUPABASE_URL or SUPABASE_ANON_KEY missing from Info.plist.")
+        // Returns a non-functional client rather than crashing in production.
+        // Auth calls will fail at runtime, not at launch.
+        return AuthClient(
+            url: URL(string: "https://supabase.invalid/auth/v1")!,
+            headers: [:],
+            flowType: .pkce,
+            redirectToURL: nil,
+            localStorage: AuthClient.Configuration.defaultLocalStorage
+        )
     }
     return AuthClient(
         url: authURL,
-        headers: ["apikey": Config.SUPABASE_ANON_KEY],
+        headers: ["apikey": key],
         flowType: .pkce,
         redirectToURL: URL(string: "fitaipremium://auth-callback"),
         localStorage: AuthClient.Configuration.defaultLocalStorage

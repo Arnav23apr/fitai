@@ -273,7 +273,7 @@ private enum WorkoutReminderCopy {
 private enum MissedWorkoutCopy {
     static let all: [NotifCopy] = [
         NotifCopy(title: "👀 Missed today?", body: "No stress. Get back on track tomorrow."),
-        NotifCopy(title: "🔥 Your streak is still alive", body: "Don't let it slip — one workout is all it takes."),
+        NotifCopy(title: "🔥 Your streak is still alive", body: "Don't let it slip. One workout is all it takes."),
         NotifCopy(title: "💪 Reset your momentum", body: "One session is all it takes to get back in rhythm."),
     ]
 }

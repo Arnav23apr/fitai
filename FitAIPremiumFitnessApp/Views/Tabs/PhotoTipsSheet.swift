@@ -8,8 +8,8 @@ struct PhotoTipsSheet: View {
 
     private let tips: [(icon: String, color: Color, title: String, description: String)] = [
         ("sun.max.fill", .yellow, "Good Lighting", "Stand near a window or in a well-lit room. Avoid harsh shadows or backlighting. Natural light gives the most accurate scan."),
-        ("figure.stand", .blue, "Neutral Pose", "Stand straight with arms slightly away from your body. Feet shoulder-width apart. Look straight ahead — not at the camera."),
-        ("tshirt.fill", .orange, "Minimal Clothing", "Wear fitted clothing or no shirt (for males). The AI needs to see your body shape clearly — baggy clothes hide muscle definition."),
+        ("figure.stand", .blue, "Neutral Pose", "Stand straight with arms slightly away from your body. Feet shoulder-width apart. Look straight ahead, not at the camera."),
+        ("tshirt.fill", .orange, "Minimal Clothing", "Wear fitted clothing or no shirt (for males). The AI needs to see your body shape clearly. Baggy clothes hide muscle definition."),
         ("photo", .green, "Plain Background", "Stand against a plain white or light-coloured wall. Remove clutter from behind you. High contrast between you and the background helps accuracy."),
         ("ruler", .purple, "Full Body Shot", "The camera should capture from your head to your feet. Hold the phone 6–8 feet away, or use a timer on a flat surface."),
         ("camera.rotate.fill", .cyan, "Front & Back", "Take both a front-facing and back-facing photo for the most accurate muscle analysis. Side photos are optional."),
