@@ -14,17 +14,20 @@ class StoreViewModel {
     var error: String?
 
     private init() {
+        guard Purchases.isConfigured else { return }
         Task { await listenForUpdates() }
         Task { await fetchOfferings() }
     }
 
     private func listenForUpdates() async {
+        guard Purchases.isConfigured else { return }
         for await info in Purchases.shared.customerInfoStream {
             isPremium = info.entitlements["premium"]?.isActive == true
         }
     }
 
     func fetchOfferings() async {
+        guard Purchases.isConfigured else { return }
         isLoading = true
         do {
             offerings = try await Purchases.shared.offerings()
@@ -35,6 +38,7 @@ class StoreViewModel {
     }
 
     func purchase(package: Package) async -> Bool {
+        guard Purchases.isConfigured else { return false }
         isPurchasing = true
         defer { isPurchasing = false }
         do {
@@ -52,6 +56,7 @@ class StoreViewModel {
     }
 
     func restore() async {
+        guard Purchases.isConfigured else { return }
         do {
             let info = try await Purchases.shared.restorePurchases()
             isPremium = info.entitlements["premium"]?.isActive == true

@@ -19,10 +19,13 @@ struct FitAIPremiumFitnessAppApp: App {
 
     init() {
         #if DEBUG
-        Purchases.configure(withAPIKey: Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY)
+        let rcKey = Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY
         #else
-        Purchases.configure(withAPIKey: Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY)
+        let rcKey = Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
         #endif
+        if !rcKey.isEmpty {
+            Purchases.configure(withAPIKey: rcKey)
+        }
     }
 
     var body: some Scene {
