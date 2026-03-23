@@ -71,48 +71,6 @@ struct PaywallView: View {
     }
 }
 
-// MARK: - PaywallSheet
-// Lightweight wrapper used in ProfileView: .sheet(isPresented:) { PaywallSheet() }
-
-struct PaywallSheet: View {
-    @Environment(AppState.self) private var appState
-    @Environment(\.dismiss) private var dismiss
-    @State private var store = StoreViewModel.shared
-
-    var body: some View {
-        if Purchases.isConfigured {
-            RevenueCatUI.PaywallView()
-                .onPurchaseCompleted { customerInfo in
-                    handleSuccess(customerInfo)
-                    dismiss()
-                }
-                .onRestoreCompleted { customerInfo in
-                    handleSuccess(customerInfo)
-                    dismiss()
-                }
-                .onPurchaseCancelled { dismiss() }
-                .onPurchaseFailure { _ in }
-        } else {
-            CustomPaywallView(
-                onSubscribe: {
-                    appState.profile.isPremium = true
-                    appState.saveProfile()
-                    dismiss()
-                },
-                onSkip: { dismiss() }
-            )
-            .environment(appState)
-        }
-    }
-
-    private func handleSuccess(_ customerInfo: CustomerInfo) {
-        if customerInfo.entitlements["Fit AI Pro"]?.isActive == true {
-            appState.profile.isPremium = true
-            appState.saveProfile()
-        }
-    }
-}
-
 // MARK: - CustomPaywallView
 // Fallback paywall — shown when RevenueCat is not configured or no offering is set.
 
