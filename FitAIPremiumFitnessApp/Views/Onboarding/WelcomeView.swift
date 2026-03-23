@@ -5,11 +5,11 @@ struct WelcomeView: View {
     var onContinue: () -> Void
     var onLogin: (() -> Void)?
 
-    @State private var appeared      = false
-    @State private var floatY: CGFloat = 0
+    @State private var appeared        = false
     @State private var scanProgress: CGFloat = 0
     @State private var bracketOpacity: Double = 1.0
     @State private var showLanguagePicker = false
+    @State private var glassShimmer: CGFloat = -1.0   // for liquid-glass shimmer
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -17,14 +17,13 @@ struct WelcomeView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
-
-            // Ambient particles
-            particleLayer.ignoresSafeArea()
+            // ── Metal background: noise + iridescent + scan glow + GPU particles ──
+            WelcomeMetalView()
+                .ignoresSafeArea()
 
             VStack(spacing: 0) {
 
-                // Language picker button
+                // Language picker
                 HStack {
                     Spacer()
                     Button { showLanguagePicker = true } label: {
@@ -33,78 +32,108 @@ struct WelcomeView: View {
                                 .font(.system(size: 14, weight: .medium))
                             Text(currentFlag).font(.system(size: 17))
                         }
-                        .foregroundStyle(.white.opacity(0.7))
+                        .foregroundStyle(.white.opacity(0.75))
                         .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(.white.opacity(0.08))
-                        .clipShape(Capsule())
+                        .background(.white.opacity(0.10), in: Capsule())
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.15), lineWidth: 1))
                     }
                 }
-                .padding(.horizontal, 20).padding(.top, 8)
+                .padding(.horizontal, 20).padding(.top, 10)
                 .opacity(appeared ? 1 : 0)
 
                 Spacer()
 
-                // Dumbbell + scan brackets
+                // ── 3-D Dumbbell (SceneKit / Metal) ──
+                DumbbellSceneView()
+                    .frame(width: 340, height: 200)
+                    .opacity(appeared ? 1 : 0)
+
+                Spacer(minLength: 32)
+
+                // ── Headline with scan brackets overlaid ──
                 ZStack {
                     scanBracketsView
-                    dumbbellView
-                        .offset(y: floatY)
-                }
-                .frame(width: 280, height: 160)
-                .opacity(appeared ? 1 : 0)
 
-                // Headline
-                VStack(spacing: 14) {
-                    VStack(alignment: .center, spacing: -6) {
-                        Text("Scan.")
-                            .font(.system(size: 58, weight: .bold))
-                            .foregroundStyle(.white)
-                            .tracking(-2)
-                        Text("Plan.")
-                            .font(.system(size: 58, weight: .thin))
-                            .foregroundStyle(.white.opacity(0.45))
-                            .tracking(-2)
-                        Text("Compete.")
-                            .font(.system(size: 58, weight: .bold))
-                            .foregroundStyle(.white)
-                            .tracking(-2)
-                    }
+                    VStack(spacing: 14) {
+                        VStack(alignment: .center, spacing: -8) {
+                            Text("Scan.")
+                                .font(.system(size: 60, weight: .black))
+                                .foregroundStyle(.white)
+                                .tracking(-2)
+                            Text("Plan.")
+                                .font(.system(size: 60, weight: .thin))
+                                .foregroundStyle(.white.opacity(0.40))
+                                .tracking(-2)
+                            Text("Compete.")
+                                .font(.system(size: 60, weight: .black))
+                                .foregroundStyle(.white)
+                                .tracking(-2)
+                        }
 
-                    // AI badge
-                    HStack(spacing: 7) {
-                        BlinkingDot()
-                        Text("AI-Powered Fitness")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.5))
-                            .tracking(0.8)
+                        // AI badge
+                        HStack(spacing: 7) {
+                            BlinkingDot()
+                            Text("AI-Powered Fitness")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.white.opacity(0.55))
+                                .tracking(0.8)
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 7)
+                        .background(.white.opacity(0.08), in: Capsule())
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 1))
                     }
-                    .padding(.horizontal, 14).padding(.vertical, 7)
-                    .background(.white.opacity(0.07))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().strokeBorder(.white.opacity(0.1), lineWidth: 1))
                 }
-                .padding(.top, 36)
+                .padding(.horizontal, 28)
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 16)
 
                 Spacer()
                 Spacer()
 
-                // CTA
+                // ── CTA ──
                 VStack(spacing: 14) {
+                    // Primary – Liquid Glass
                     Button(action: onContinue) {
-                        Text(L.t("getStarted", lang))
-                            .font(.system(.headline, weight: .bold))
-                            .foregroundStyle(.black)
-                            .frame(maxWidth: .infinity).frame(height: 56)
-                            .background(Color.white)
-                            .clipShape(.rect(cornerRadius: 28))
+                        ZStack {
+                            // Shimmer sweep
+                            GeometryReader { geo in
+                                LinearGradient(
+                                    colors: [.clear, .white.opacity(0.18), .clear],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                                .frame(width: geo.size.width * 0.5)
+                                .offset(x: glassShimmer * geo.size.width * 1.5)
+                                .clipped()
+                            }
+                            Text(L.t("getStarted", lang))
+                                .font(.system(.headline, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                        .frame(maxWidth: .infinity).frame(height: 56)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28)
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [
+                                            .white.opacity(0.60),
+                                            .white.opacity(0.15),
+                                            .white.opacity(0.40)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.0
+                                )
+                        )
                     }
 
+                    // Secondary – ghost text
                     Button(action: { onLogin?() ?? onContinue() }) {
                         Text("\(L.t("alreadyHaveAccount", lang)) **\(L.t("logIn", lang))**")
                             .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.5))
+                            .foregroundStyle(.white.opacity(0.50))
                     }
                 }
                 .padding(.horizontal, 24)
@@ -122,21 +151,25 @@ struct WelcomeView: View {
                     Button(L.t("privacyPolicy", lang)) {}
                         .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.38))
                 }
-                .padding(.top, 12).padding(.bottom, 16)
+                .padding(.top, 12).padding(.bottom, 18)
                 .opacity(appeared ? 1 : 0)
             }
         }
         .preferredColorScheme(.dark)
         .onAppear {
             withAnimation(.easeOut(duration: 0.9)) { appeared = true }
-            withAnimation(.easeInOut(duration: 2.8).repeatForever(autoreverses: true)) {
-                floatY = -13
-            }
-            withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true).delay(0.6)) {
+
+            // Scan bracket pulse
+            withAnimation(.easeInOut(duration: 2.6).repeatForever(autoreverses: true).delay(0.4)) {
                 scanProgress = 1
             }
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
-                bracketOpacity = 0.45
+                bracketOpacity = 0.35
+            }
+
+            // Liquid glass shimmer loop
+            withAnimation(.linear(duration: 2.4).repeatForever(autoreverses: false).delay(1.0)) {
+                glassShimmer = 1.0
             }
         }
         .sheet(isPresented: $showLanguagePicker) {
@@ -147,97 +180,36 @@ struct WelcomeView: View {
         }
     }
 
-    // MARK: - Dumbbell
-
-    private var dumbbellView: some View {
-        HStack(spacing: 0) {
-            // Left plates
-            HStack(spacing: 2) {
-                weightPlate(width: 15, height: 58)
-                weightPlate(width: 12, height: 46)
-            }
-            collarView
-            barSegment(width: 38)
-            gripView
-            barSegment(width: 38)
-            collarView
-            // Right plates
-            HStack(spacing: 2) {
-                weightPlate(width: 12, height: 46)
-                weightPlate(width: 15, height: 58)
-            }
-        }
-    }
-
-    private func weightPlate(width: CGFloat, height: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 4)
-            .fill(Color.white)
-            .frame(width: width, height: height)
-    }
-
-    private var collarView: some View {
-        RoundedRectangle(cornerRadius: 3)
-            .fill(Color.white.opacity(0.55))
-            .frame(width: 7, height: 20)
-            .padding(.horizontal, 1)
-    }
-
-    private func barSegment(width: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 3)
-            .fill(Color.white.opacity(0.82))
-            .frame(width: width, height: 8)
-    }
-
-    private var gripView: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.white.opacity(0.28))
-                .frame(width: 30, height: 13)
-            HStack(spacing: 4) {
-                ForEach(0..<5, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.white.opacity(0.35))
-                        .frame(width: 1.5, height: 10)
-                }
-            }
-        }
-    }
-
-    // MARK: - Scan Brackets
+    // MARK: - Scan Brackets (overlaid on text block)
 
     private var scanBracketsView: some View {
-        let bracketLen: CGFloat = 22
+        let bracketLen: CGFloat  = 20
         let bracketThick: CGFloat = 1.5
         let color = Color.white
 
         return ZStack {
-            // Four corners
             GeometryReader { geo in
                 let w = geo.size.width
                 let h = geo.size.height
 
                 ZStack {
-                    // Top-left
                     cornerBracket(len: bracketLen, thick: bracketThick, color: color, flipH: false, flipV: false)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-                    // Top-right
-                    cornerBracket(len: bracketLen, thick: bracketThick, color: color, flipH: true, flipV: false)
+                    cornerBracket(len: bracketLen, thick: bracketThick, color: color, flipH: true,  flipV: false)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-
-                    // Bottom-left
                     cornerBracket(len: bracketLen, thick: bracketThick, color: color, flipH: false, flipV: true)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-
-                    // Bottom-right
-                    cornerBracket(len: bracketLen, thick: bracketThick, color: color, flipH: true, flipV: true)
+                    cornerBracket(len: bracketLen, thick: bracketThick, color: color, flipH: true,  flipV: true)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
 
-                    // Scan line
+                    // Scan sweep line across the text
                     Rectangle()
-                        .fill(LinearGradient(
-                            colors: [.clear, .white.opacity(0.55), .clear],
-                            startPoint: .leading, endPoint: .trailing))
+                        .fill(
+                            LinearGradient(
+                                colors: [.clear, .white.opacity(0.65), .clear],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
                         .frame(height: 1.5)
                         .offset(y: (scanProgress - 0.5) * h)
                 }
@@ -247,45 +219,20 @@ struct WelcomeView: View {
         .opacity(bracketOpacity)
     }
 
-    private func cornerBracket(len: CGFloat, thick: CGFloat, color: Color, flipH: Bool, flipV: Bool) -> some View {
-        ZStack(alignment: flipH ? (flipV ? .bottomTrailing : .topTrailing) : (flipV ? .bottomLeading : .topLeading)) {
-            Rectangle().fill(color.opacity(0.55))
+    private func cornerBracket(len: CGFloat, thick: CGFloat, color: Color,
+                                flipH: Bool, flipV: Bool) -> some View {
+        let align: Alignment = flipH
+            ? (flipV ? .bottomTrailing : .topTrailing)
+            : (flipV ? .bottomLeading  : .topLeading)
+        return ZStack(alignment: align) {
+            Rectangle().fill(color.opacity(0.60))
                 .frame(width: len, height: thick)
-                .frame(maxWidth: .infinity, maxHeight: .infinity,
-                       alignment: flipH ? (flipV ? .bottomTrailing : .topTrailing) : (flipV ? .bottomLeading : .topLeading))
-            Rectangle().fill(color.opacity(0.55))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: align)
+            Rectangle().fill(color.opacity(0.60))
                 .frame(width: thick, height: len)
-                .frame(maxWidth: .infinity, maxHeight: .infinity,
-                       alignment: flipH ? (flipV ? .bottomTrailing : .topTrailing) : (flipV ? .bottomLeading : .topLeading))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: align)
         }
         .frame(width: len, height: len)
-    }
-
-    // MARK: - Particles
-
-    private var particleLayer: some View {
-        let positions: [(Double, Double, Double, Double)] = [
-            (0.10, 0.18, 0.0, 1.4), (0.88, 0.12, 1.3, 1.1),
-            (0.04, 0.50, 2.2, 1.8), (0.94, 0.60, 0.7, 1.3),
-            (0.22, 0.82, 1.8, 1.0), (0.75, 0.86, 3.1, 1.6),
-            (0.48, 0.06, 0.4, 1.5), (0.62, 0.94, 2.7, 1.2),
-            (0.14, 0.70, 1.5, 0.9), (0.82, 0.35, 2.4, 1.7),
-            (0.35, 0.25, 3.3, 1.1), (0.68, 0.55, 0.9, 1.3),
-        ]
-        return TimelineView(.animation(minimumInterval: 1.0/30.0)) { tl in
-            Canvas { ctx, size in
-                let t = tl.date.timeIntervalSinceReferenceDate
-                for (px, py, phase, r) in positions {
-                    let x = px * size.width
-                    let y = py * size.height + sin(t * 0.45 + phase) * 7
-                    let alpha = (sin(t * 0.7 + phase) + 1) / 2 * 0.14 + 0.04
-                    ctx.fill(
-                        Path(ellipseIn: CGRect(x: x - r, y: y - r, width: r * 2, height: r * 2)),
-                        with: .color(.white.opacity(alpha))
-                    )
-                }
-            }
-        }
     }
 
     // MARK: - Helpers
@@ -301,7 +248,7 @@ struct WelcomeView: View {
         return langs.first(where: { $0.0 == appState.profile.selectedLanguage })?.1 ?? "🇺🇸"
     }
 
-    // MARK: - Language Picker Sheet (unchanged)
+    // MARK: - Language Picker Sheet
 
     private var languagePickerSheet: some View {
         let languages: [(name: String, flag: String, native: String)] = [
@@ -325,7 +272,9 @@ struct WelcomeView: View {
                             HStack(spacing: 14) {
                                 Text(language.flag).font(.system(size: 28))
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(language.native).font(.system(.body, weight: .semibold)).foregroundStyle(.primary)
+                                    Text(language.native)
+                                        .font(.system(.body, weight: .semibold))
+                                        .foregroundStyle(.primary)
                                     if language.native != language.name {
                                         Text(language.name).font(.caption).foregroundStyle(.secondary)
                                     }
@@ -338,7 +287,10 @@ struct WelcomeView: View {
                                 }
                             }
                             .padding(.horizontal, 16).padding(.vertical, 12)
-                            .background(RoundedRectangle(cornerRadius: 12).fill(isSelected ? Color(.systemGray5) : Color.clear))
+                            .background(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(isSelected ? Color(.systemGray5) : Color.clear)
+                            )
                         }
                     }
                 }
@@ -349,7 +301,8 @@ struct WelcomeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(L.t("done", lang)) { showLanguagePicker = false }.fontWeight(.semibold)
+                    Button(L.t("done", lang)) { showLanguagePicker = false }
+                        .fontWeight(.semibold)
                 }
             }
         }
