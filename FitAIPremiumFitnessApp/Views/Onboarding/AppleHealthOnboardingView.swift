@@ -38,7 +38,7 @@ struct AppleHealthOnboardingView: View {
                             .font(.system(size: 26, weight: .bold))
                             .foregroundStyle(.white)
 
-                        Text("FitAI syncs your workouts and body\nmetrics — all stored privately on device.")
+                        Text("FitAI syncs your workouts and body\nmetrics, all stored privately on device.")
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.50))
                             .multilineTextAlignment(.center)

@@ -4,8 +4,7 @@
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -16,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "105FC5792E9EAD3100EA8BCF"
-               BuildableName = "FitAIPremiumFitnessApp.app"
+               BuildableName = "FitAI.app"
                BlueprintName = "FitAI"
                ReferencedContainer = "container:FitAI.xcodeproj">
             </BuildableReference>
@@ -36,8 +35,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "105FC5882E9EAD3200EA8BCF"
-               BuildableName = "FitAIPremiumFitnessAppTests.xctest"
-               BlueprintName = "FitAIPremiumFitnessAppTests"
+               BuildableName = "FitAI.xctest"
+               BlueprintName = "FitAI"
                ReferencedContainer = "container:FitAI.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -47,8 +46,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "105FC5922E9EAD3200EA8BCF"
-               BuildableName = "FitAIPremiumFitnessAppUITests.xctest"
-               BlueprintName = "FitAIPremiumFitnessAppUITests"
+               BuildableName = "FitAI.xctest"
+               BlueprintName = "FitAI"
                ReferencedContainer = "container:FitAI.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -69,7 +68,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "105FC5792E9EAD3100EA8BCF"
-            BuildableName = "FitAIPremiumFitnessApp.app"
+            BuildableName = "FitAI.app"
             BlueprintName = "FitAI"
             ReferencedContainer = "container:FitAI.xcodeproj">
          </BuildableReference>
@@ -86,7 +85,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "105FC5792E9EAD3100EA8BCF"
-            BuildableName = "FitAIPremiumFitnessApp.app"
+            BuildableName = "FitAI.app"
             BlueprintName = "FitAI"
             ReferencedContainer = "container:FitAI.xcodeproj">
          </BuildableReference>

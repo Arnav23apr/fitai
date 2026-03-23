@@ -821,7 +821,7 @@ struct PlanView: View {
             .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
         }
         .padding(.trailing, 20)
-        .padding(.bottom, session.isActive ? 108 : 24)
+        .padding(.bottom, session.isActive ? 148 : 24)
         .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
         .animation(.spring(duration: 0.3), value: session.isActive)
     }
@@ -841,7 +841,7 @@ struct PlanView: View {
             return "Your plan targets \(weakPoints.prefix(2).joined(separator: " and ")). Prioritize these areas with proper form and mind-muscle connection."
         }
         if streak >= 3 {
-            return "Nice momentum with \(streak) consecutive days! Recovery is equally important — make sure you're sleeping 7-8 hours."
+            return "Nice momentum with \(streak) consecutive days! Recovery is equally important. Make sure you're sleeping 7-8 hours."
         }
         return "Consistency beats intensity. Show up today and your future self will thank you. Every rep counts toward your goal."
     }

@@ -29,16 +29,32 @@ class AppState {
     }
 
     func saveProfile() {
+        // Save photo to filesystem with encryption (excluded from UserDefaults JSON)
+        let photoURL = AppState.profilePhotoURL
+        if let photoData = profile.customPhotoData {
+            try? photoData.write(to: photoURL, options: .completeFileProtection)
+        } else if FileManager.default.fileExists(atPath: photoURL.path) {
+            try? FileManager.default.removeItem(at: photoURL)
+        }
+        // Save profile JSON without photo data
         if let data = try? JSONEncoder().encode(profile) {
             UserDefaults.standard.set(data, forKey: "userProfile")
         }
     }
 
+    nonisolated private static var profilePhotoURL: URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        return support.appendingPathComponent("profile_photo.jpg")
+    }
+
     nonisolated private static func loadProfile() -> UserProfile {
         guard let data = UserDefaults.standard.data(forKey: "userProfile"),
-              let profile = try? JSONDecoder().decode(UserProfile.self, from: data) else {
+              var profile = try? JSONDecoder().decode(UserProfile.self, from: data) else {
             return UserProfile()
         }
+        // Load photo from filesystem
+        profile.customPhotoData = try? Data(contentsOf: profilePhotoURL)
         return profile
     }
 

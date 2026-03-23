@@ -59,7 +59,7 @@ struct WorkoutShareCardView: View {
     }
 
     private var topSetString: String {
-        guard data.topSetWeight > 0 else { return "—" }
+        guard data.topSetWeight > 0 else { return "-" }
         return "\(Int(data.topSetWeight))\(data.weightUnit) × \(data.topSetReps)"
     }
 

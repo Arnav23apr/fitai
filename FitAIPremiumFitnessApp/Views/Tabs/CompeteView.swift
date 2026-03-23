@@ -799,7 +799,7 @@ struct CompeteView: View {
 
     private var userLeaderboardRow: some View {
         HStack(spacing: 12) {
-            Text("—")
+            Text("-")
                 .font(.system(.callout, design: .rounded, weight: .bold))
                 .foregroundStyle(.green)
                 .frame(width: 28)

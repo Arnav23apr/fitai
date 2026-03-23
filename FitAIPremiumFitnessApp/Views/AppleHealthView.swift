@@ -91,7 +91,7 @@ struct AppleHealthView: View {
     }
 
     private var descriptionSection: some View {
-        Text("FitAI uses Apple Health to automatically log your workouts, track body weight trends, and give you a complete picture of your fitness progress — all stored privately on your device.")
+        Text("FitAI uses Apple Health to automatically log your workouts, track body weight trends, and give you a complete picture of your fitness progress, all stored privately on your device.")
             .font(.subheadline)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)

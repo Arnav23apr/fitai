@@ -1,6 +1,20 @@
 import Foundation
 
 nonisolated struct UserProfile: Codable, Sendable {
+
+    // customPhotoData is excluded from Codable — stored separately in FileManager
+    enum CodingKeys: String, CodingKey {
+        case name, username, email, avatarSystemName, bio, gender
+        case workoutsPerWeek, trainingExperience, trainingLocation, primaryGoal
+        case holdingBack, goals, trainingConfidence
+        case heightCm, weightKg, usesMetric, dateOfBirth, selectedLanguage
+        case referralCode, isPremium, spinDiscount
+        case totalScans, totalWorkouts, currentStreak, points, tier
+        case latestScore, lastScanDate, weakPoints, strongPoints
+        case workoutLogs, completedDaysThisWeek, weekStartDate
+        case forceDarkMode, freeScansEarned
+    }
+
     var name: String = ""
     var username: String = ""
     var email: String = ""
@@ -36,4 +50,5 @@ nonisolated struct UserProfile: Codable, Sendable {
     var weekStartDate: Date? = nil
     var customPhotoData: Data? = nil
     var forceDarkMode: Bool = false
+    var freeScansEarned: Int = 0
 }
