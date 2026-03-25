@@ -146,6 +146,9 @@ struct PlanView: View {
             .onChange(of: session.isActive) { _, newValue in
                 if newValue && selectedDay == nil {
                     autoResumeIfNeeded()
+                } else if !newValue {
+                    // Session ended — reset so next workout can auto-resume
+                    hasAutoResumed = false
                 }
             }
         }
@@ -821,7 +824,7 @@ struct PlanView: View {
             .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
         }
         .padding(.trailing, 20)
-        .padding(.bottom, session.isActive ? 148 : 24)
+        .padding(.bottom, session.isActive ? 96 : 24)
         .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
         .animation(.spring(duration: 0.3), value: session.isActive)
     }

@@ -258,6 +258,7 @@ struct ScanView: View {
                 PhotoTipsSheet()
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+                    .presentationBackground(.ultraThinMaterial)
             }
         }
         .padding(20)

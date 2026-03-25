@@ -5,11 +5,19 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground).ignoresSafeArea()
+            // Background color matches the active screen to eliminate color flash on transition:
+            // SwipeUpSplash → white, WelcomeView → near-black, MainTabView → systemBackground
+            if appState.showSplash {
+                Color.white.ignoresSafeArea()
+            } else if !appState.hasCompletedOnboarding {
+                Color(red: 0.028, green: 0.028, blue: 0.034).ignoresSafeArea()
+            } else {
+                Color(.systemBackground).ignoresSafeArea()
+            }
 
             if appState.showSplash {
-                SplashView {
-                    withAnimation(.easeInOut(duration: 0.4)) {
+                SwipeUpSplashView {
+                    withAnimation(.easeInOut(duration: 0.5)) {
                         appState.showSplash = false
                     }
                 }
@@ -22,7 +30,7 @@ struct ContentView: View {
                     .transition(.opacity)
             }
         }
-        .animation(.easeInOut(duration: 0.4), value: appState.showSplash)
+        .animation(.easeInOut(duration: 0.5), value: appState.showSplash)
         .animation(.easeInOut(duration: 0.4), value: appState.hasCompletedOnboarding)
     }
 }

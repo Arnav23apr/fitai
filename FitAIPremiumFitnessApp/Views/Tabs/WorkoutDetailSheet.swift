@@ -19,6 +19,8 @@ struct WorkoutDetailSheet: View {
     @State private var showShareCard: Bool = false
     @State private var selectedMuscle: Muscle? = nil
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private var workoutStarted: Bool { session.isActive && session.workoutName == workout.name }
     private var completedExercises: Set<String> { session.completedExerciseIds }
     private var elapsedSeconds: Int { session.elapsedSeconds }
@@ -100,7 +102,7 @@ struct WorkoutDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
                 if workoutStarted && !isAlreadyDone {
@@ -612,7 +614,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 14))
-                        Text("Start Workout")
+                        Text(L.t("startWorkout", lang))
                             .font(.headline)
                     }
                     .foregroundStyle(.black)
@@ -628,7 +630,7 @@ struct WorkoutDetailSheet: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
                         VStack(spacing: 2) {
-                            Text("Complete Workout")
+                            Text(L.t("completeWorkout", lang))
                                 .font(.headline)
                             Text("+\(workoutPoints) pts")
                                 .font(.system(.caption2, design: .rounded, weight: .bold))
@@ -646,7 +648,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "flag.checkered")
                             .font(.system(size: 14))
-                        Text("Finish Early (\(completedExercises.count)/\(workout.exercises.count))")
+                        Text("\(L.t("finishEarly", lang)) (\(completedExercises.count)/\(workout.exercises.count))")
                             .font(.headline)
                     }
                     .foregroundStyle(.primary)
@@ -662,7 +664,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "xmark.circle")
                             .font(.system(size: 14))
-                        Text("Abandon Workout")
+                        Text(L.t("abandonWorkout", lang))
                             .font(.headline)
                     }
                     .foregroundStyle(.red)
@@ -683,7 +685,7 @@ struct WorkoutDetailSheet: View {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.yellow)
-                Text("Compete Rewards")
+                Text(L.t("competeRewards", lang))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
             }
