@@ -130,7 +130,6 @@ struct CompeteView: View {
             .sheet(isPresented: $showRankProgression) {
                 RankProgressionSheet(currentPoints: appState.profile.points)
                     .presentationDetents([.large])
-                    .presentationBackground(.ultraThinMaterial)
             }
             .onAppear {
                 if !appState.profile.username.isEmpty {

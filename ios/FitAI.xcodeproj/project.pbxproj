@@ -60,7 +60,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		XXBCA6BFF210607FE2A774XX /* Exceptions for "FitAIWorkoutActivity" folder in "FitAIWorkoutActivity" target */ = {
+		XXBCA6BFF210607FE2A774XX /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -88,7 +88,7 @@
 		XX847D4FDDF05380C4D054XX /* FitAIWorkoutActivity */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				XXBCA6BFF210607FE2A774XX /* Exceptions for "FitAIWorkoutActivity" folder in "FitAIWorkoutActivity" target */,
+				XXBCA6BFF210607FE2A774XX /* PBXFileSystemSynchronizedBuildFileExceptionSet */,
 			);
 			path = FitAIWorkoutActivity;
 			sourceTree = "<group>";
@@ -522,7 +522,7 @@
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP;
-				INFOPLIST_KEY_SUPABASE_URL = "https://vwnlfwdsmhanicjgtfgj.supabase.co";
+				INFOPLIST_KEY_SUPABASE_URL = https://vwnlfwdsmhanicjgtfgj.supabase.co;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -533,7 +533,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -567,7 +567,7 @@
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP;
-				INFOPLIST_KEY_SUPABASE_URL = "https://vwnlfwdsmhanicjgtfgj.supabase.co";
+				INFOPLIST_KEY_SUPABASE_URL = https://vwnlfwdsmhanicjgtfgj.supabase.co;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -578,7 +578,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -601,7 +601,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -624,7 +624,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.tests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -644,7 +644,7 @@
 				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -665,7 +665,7 @@
 				DEVELOPMENT_TEAM = M5AK284BH4;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.uitests;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.uitests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -694,7 +694,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.fitaiworkoutactivity;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.fitaiworkoutactivity";
 				PRODUCT_NAME = FitAIWorkoutActivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -723,7 +723,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.arnavkashyap.fitai.fitaiworkoutactivity;
+				PRODUCT_BUNDLE_IDENTIFIER = "app.rork.fitAI-SPC.fitaiworkoutactivity";
 				PRODUCT_NAME = FitAIWorkoutActivity;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -795,7 +795,7 @@
 		};
 		XXMM03CC6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "MuscleMap" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/melihcolpan/MuscleMap.git";
+			repositoryURL = https://github.com/melihcolpan/MuscleMap.git;
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.6.0;

@@ -385,16 +385,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI was made for people like you",
             "millionsOfUsers": "5M+ FitAI Users",
             "appRatingsCount": "200K+ App Ratings",
-
-            // Workout Detail Sheet
-            "completeWorkout": "Complete Workout",
-            "finishEarly": "Finish Early",
-            "abandonWorkout": "Abandon Workout",
-            "competeRewards": "Compete Rewards",
-
-            // Next scan
-            "nextScanIn": "Next scan in %@ days",
-            "scanDue": "Scan due today",
         ],
 
         "Spanish": [
@@ -676,12 +666,6 @@ nonisolated struct L {
             "perYear": "/año",
             "oneTime": "único pago",
             "bestValue": "MEJOR VALOR",
-            "completeWorkout": "Completar Entrenamiento",
-            "finishEarly": "Terminar antes",
-            "abandonWorkout": "Abandonar Entrenamiento",
-            "competeRewards": "Recompensas de Competencia",
-            "nextScanIn": "Próximo escaneo en %@ días",
-            "scanDue": "Escaneo de hoy",
         ],
 
         "French": [
@@ -890,10 +874,6 @@ nonisolated struct L {
             "monthly": "Mensuel",
             "annual": "Annuel",
             "lifetime": "À vie",
-            "completeWorkout": "Terminer l'entraînement",
-            "finishEarly": "Terminer en avance",
-            "abandonWorkout": "Abandonner l'entraînement",
-            "competeRewards": "Récompenses de compétition",
         ],
 
         "German": [
@@ -1045,11 +1025,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI wurde für Menschen wie dich gemacht",
             "millionsOfUsers": "5M+ FitAI Nutzer",
             "appRatingsCount": "200K+ Bewertungen",
-            "xp": "XP",
-            "completeWorkout": "Training abschließen",
-            "finishEarly": "Früh beenden",
-            "abandonWorkout": "Training abbrechen",
-            "competeRewards": "Wettkampf-Belohnungen",
         ],
 
         "Portuguese": [
@@ -1174,12 +1149,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI foi feito para pessoas como você",
             "millionsOfUsers": "5M+ usuários FitAI",
             "appRatingsCount": "200K+ avaliações",
-            "rank": "Classificação",
-            "xp": "XP",
-            "completeWorkout": "Concluir treino",
-            "finishEarly": "Terminar mais cedo",
-            "abandonWorkout": "Abandonar treino",
-            "competeRewards": "Recompensas de competição",
         ],
 
         "Italian": [
@@ -1304,12 +1273,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI è stato creato per persone come te",
             "millionsOfUsers": "5M+ utenti FitAI",
             "appRatingsCount": "200K+ valutazioni",
-            "rank": "Posizione",
-            "xp": "XP",
-            "completeWorkout": "Completa allenamento",
-            "finishEarly": "Termina in anticipo",
-            "abandonWorkout": "Abbandona allenamento",
-            "competeRewards": "Premi competizione",
         ],
 
         "Russian": [
@@ -1432,12 +1395,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI создан для таких людей, как вы",
             "millionsOfUsers": "5M+ пользователей FitAI",
             "appRatingsCount": "200K+ оценок",
-            "rank": "Ранг",
-            "xp": "XP",
-            "completeWorkout": "Завершить тренировку",
-            "finishEarly": "Закончить досрочно",
-            "abandonWorkout": "Прекратить тренировку",
-            "competeRewards": "Награды за соревнования",
         ],
 
         "Japanese": [
@@ -1550,12 +1507,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAIはあなたのような人のために作られました",
             "millionsOfUsers": "500万+ FitAIユーザー",
             "appRatingsCount": "20万+の評価",
-            "rank": "ランク",
-            "xp": "XP",
-            "completeWorkout": "トレーニング完了",
-            "finishEarly": "早めに終了",
-            "abandonWorkout": "トレーニング中止",
-            "competeRewards": "競争報酬",
         ],
 
         "Korean": [
@@ -1658,12 +1609,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI는 당신 같은 사람을 위해 만들어졌습니다",
             "millionsOfUsers": "500만+ FitAI 사용자",
             "appRatingsCount": "20만+ 평가",
-            "rank": "순위",
-            "xp": "XP",
-            "completeWorkout": "운동 완료",
-            "finishEarly": "일찍 마치기",
-            "abandonWorkout": "운동 포기",
-            "competeRewards": "경쟁 보상",
         ],
 
         "Chinese": [
@@ -1767,12 +1712,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI是为像你这样的人打造的",
             "millionsOfUsers": "500万+ FitAI用户",
             "appRatingsCount": "20万+评分",
-            "rank": "排名",
-            "xp": "XP",
-            "completeWorkout": "完成训练",
-            "finishEarly": "提前结束",
-            "abandonWorkout": "放弃训练",
-            "competeRewards": "竞赛奖励",
         ],
 
         "Arabic": [
@@ -1836,20 +1775,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI صُنع لأشخاص مثلك",
             "millionsOfUsers": "+5 مليون مستخدم FitAI",
             "appRatingsCount": "+200 ألف تقييم",
-            "startWorkout": "ابدأ التمرين",
-            "resumeWorkout": "استئناف التمرين",
-            "weeklyStreak": "السلسلة الأسبوعية",
-            "rank": "الترتيب",
-            "xp": "XP",
-            "leaderboard": "المتصدرون",
-            "achievements": "الإنجازات",
-            "challenges": "التحديات",
-            "yourAICoach": "مدربك الذكي",
-            "editProfile": "تعديل الملف الشخصي",
-            "completeWorkout": "إكمال التمرين",
-            "finishEarly": "الإنهاء مبكراً",
-            "abandonWorkout": "التخلي عن التمرين",
-            "competeRewards": "مكافآت المنافسة",
         ],
 
         "Hindi": [
@@ -1907,21 +1832,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI आप जैसे लोगों के लिए बनाया गया",
             "millionsOfUsers": "50 लाख+ FitAI उपयोगकर्ता",
             "appRatingsCount": "2 लाख+ रेटिंग",
-            "startWorkout": "कसरत शुरू करें",
-            "resumeWorkout": "कसरत फिर शुरू करें",
-            "weeklyStreak": "साप्ताहिक श्रृंखला",
-            "streak": "श्रृंखला",
-            "rank": "रैंक",
-            "xp": "XP",
-            "leaderboard": "लीडरबोर्ड",
-            "achievements": "उपलब्धियां",
-            "challenges": "चुनौतियां",
-            "yourAICoach": "आपका AI कोच",
-            "editProfile": "प्रोफ़ाइल संपादित करें",
-            "completeWorkout": "कसरत पूरी करें",
-            "finishEarly": "जल्दी समाप्त करें",
-            "abandonWorkout": "कसरत छोड़ें",
-            "competeRewards": "प्रतिस्पर्धा पुरस्कार",
         ],
 
         "Turkish": [
@@ -2016,12 +1926,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI sizin gibi insanlar için yapıldı",
             "millionsOfUsers": "5M+ FitAI kullanıcısı",
             "appRatingsCount": "200K+ değerlendirme",
-            "rank": "Sıra",
-            "xp": "XP",
-            "completeWorkout": "Antrenmanu tamamla",
-            "finishEarly": "Erken bitir",
-            "abandonWorkout": "Antrenmandan çık",
-            "competeRewards": "Yarışma ödülleri",
         ],
 
         "Dutch": [
@@ -2078,22 +1982,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI is gemaakt voor mensen zoals jij",
             "millionsOfUsers": "5M+ FitAI gebruikers",
             "appRatingsCount": "200K+ beoordelingen",
-            "startWorkout": "Training starten",
-            "resumeWorkout": "Training hervatten",
-            "weeklyStreak": "Wekelijkse reeks",
-            "streak": "Reeks",
-            "rank": "Rang",
-            "xp": "XP",
-            "leaderboard": "Ranglijst",
-            "achievements": "Prestaties",
-            "challenges": "Uitdagingen",
-            "aiCoach": "AI Coach",
-            "yourAICoach": "Jouw AI Coach",
-            "editProfile": "Profiel bewerken",
-            "completeWorkout": "Training voltooien",
-            "finishEarly": "Vroeg beëindigen",
-            "abandonWorkout": "Training verlaten",
-            "competeRewards": "Wedstrijdbeloningen",
         ],
 
         "Polish": [
@@ -2143,23 +2031,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI został stworzony dla ludzi takich jak Ty",
             "millionsOfUsers": "5M+ użytkowników FitAI",
             "appRatingsCount": "200K+ ocen",
-            "startWorkout": "Rozpocznij trening",
-            "resumeWorkout": "Wznów trening",
-            "weeklyStreak": "Tygodniowa seria",
-            "points": "Punkty",
-            "streak": "Seria",
-            "rank": "Ranga",
-            "xp": "XP",
-            "leaderboard": "Ranking",
-            "achievements": "Osiągnięcia",
-            "challenges": "Wyzwania",
-            "aiCoach": "Trener AI",
-            "yourAICoach": "Twój Trener AI",
-            "editProfile": "Edytuj profil",
-            "completeWorkout": "Ukończ trening",
-            "finishEarly": "Zakończ wcześniej",
-            "abandonWorkout": "Porzuć trening",
-            "competeRewards": "Nagrody za rywalizację",
         ],
 
         "Swedish": [
@@ -2209,23 +2080,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI skapades för människor som du",
             "millionsOfUsers": "5M+ FitAI-användare",
             "appRatingsCount": "200K+ betyg",
-            "startWorkout": "Starta träning",
-            "resumeWorkout": "Återuppta träning",
-            "weeklyStreak": "Veckosvit",
-            "points": "Poäng",
-            "streak": "Svit",
-            "rank": "Rang",
-            "xp": "XP",
-            "leaderboard": "Topplista",
-            "achievements": "Prestationer",
-            "challenges": "Utmaningar",
-            "aiCoach": "AI Coach",
-            "yourAICoach": "Din AI Coach",
-            "editProfile": "Redigera profil",
-            "completeWorkout": "Slutför träning",
-            "finishEarly": "Avsluta tidigt",
-            "abandonWorkout": "Avbryt träning",
-            "competeRewards": "Tävlingsbelöningar",
         ],
 
         "Romanian": [
@@ -2578,10 +2432,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI a fost creat pentru oameni ca tine",
             "millionsOfUsers": "5M+ utilizatori FitAI",
             "appRatingsCount": "200K+ evaluări",
-            "completeWorkout": "Finalizează antrenamentul",
-            "finishEarly": "Termină devreme",
-            "abandonWorkout": "Abandonează antrenamentul",
-            "competeRewards": "Recompense competiție",
         ],
 
         "Hebrew": [
@@ -2934,10 +2784,6 @@ nonisolated struct L {
             "fitAIMadeForYou": "FitAI נוצר עבור אנשים כמוך",
             "millionsOfUsers": "+5 מיליון משתמשי FitAI",
             "appRatingsCount": "+200 אלף דירוגים",
-            "completeWorkout": "השלם אימון",
-            "finishEarly": "סיים מוקדם",
-            "abandonWorkout": "נטוש אימון",
-            "competeRewards": "פרסי תחרות",
         ],
     ]
 }

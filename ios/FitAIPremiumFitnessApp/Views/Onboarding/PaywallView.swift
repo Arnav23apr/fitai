@@ -50,6 +50,8 @@ private struct CustomPaywallView: View {
             Color(white: 0.04).ignoresSafeArea()
 
             VStack(spacing: 0) {
+                topBar
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         heroSection
@@ -62,18 +64,6 @@ private struct CustomPaywallView: View {
                         legalText
                     }
                     .padding(.bottom, 32)
-                }
-
-                .safeAreaInset(edge: .top, spacing: 0) {
-                    topBar
-                        .background(
-                            LinearGradient(
-                                colors: [Color(white: 0.04), Color(white: 0.04).opacity(0)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                            .ignoresSafeArea()
-                        )
                 }
             }
         }
