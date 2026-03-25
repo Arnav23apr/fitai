@@ -1046,7 +1046,6 @@ nonisolated struct L {
             "millionsOfUsers": "5M+ FitAI Nutzer",
             "appRatingsCount": "200K+ Bewertungen",
             "xp": "XP",
-            "rank": "Rang",
             "completeWorkout": "Training abschließen",
             "finishEarly": "Früh beenden",
             "abandonWorkout": "Training abbrechen",

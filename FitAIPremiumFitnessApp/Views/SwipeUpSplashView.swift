@@ -1,170 +1,268 @@
 import SwiftUI
 
-/// Wabi-inspired swipe-up splash:
-/// White screen → FitAI wordmark at top → liquid glass bubble at bottom containing the 3D dumbbell.
-/// User drags the bubble upward; at threshold it snaps to the top and triggers onFinished.
+/// Swipe-up splash:
+/// White screen. Scan corner brackets fixed in center. "Scan. Plan. Compete." text
+/// below the brackets. 3D dumbbell at the bottom, rotating.
+/// Swipe the dumbbell up — it travels through the scan grid (grid stays on top, creating
+/// a "scanning" effect). Text fades as dumbbell passes. At threshold, snap-launch.
 struct SwipeUpSplashView: View {
     var onFinished: () -> Void
 
-    @State private var dragOffset: CGFloat = 0
+    @State private var appeared: Bool = false
+    @State private var dragY: CGFloat = 0          // ≤ 0 (upward only)
     @State private var isDragging: Bool = false
-    @State private var launched: Bool = false
-    @State private var logoOpacity: Double = 0
-    @State private var bubbleOpacity: Double = 0
     @State private var completed: Bool = false
+    @State private var scanActivated: Bool = false
 
     private let impactMed   = UIImpactFeedbackGenerator(style: .medium)
     private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy)
     private let selection   = UISelectionFeedbackGenerator()
 
+    private let dbSize: CGFloat = 240
+
     var body: some View {
         GeometryReader { geo in
-            let screenH = geo.size.height
-            // Bubble resting Y (distance from bottom of screen)
-            let restingBottomPad: CGFloat = 64
-            // How far from bottom the bubble center sits at rest
-            let bubbleSize: CGFloat = 180
-            let restingY = screenH - restingBottomPad - bubbleSize / 2
+            let sw = geo.size.width
+            let sh = geo.size.height
+            let safeBottom = geo.safeAreaInsets.bottom
+            let safeTop    = geo.safeAreaInsets.top
 
+            // ── Positions ──────────────────────────────────────────────
+            // Dumbbell rests at the very bottom of the screen
+            let dbRestY: CGFloat = sh - safeBottom - 40 - dbSize / 2
+
+            // Current dumbbell center Y (moves upward with drag)
+            let dbCenterY = dbRestY + dragY
+
+            // Scan frame centered slightly above the middle
+            let frameSize: CGFloat = 270
+            let frameCenterY: CGFloat = sh * 0.36
+
+            // 0 = at rest, 1 = dumbbell center is at scan frame center
+            let travelDist = dbRestY - frameCenterY
+            let progress: CGFloat = travelDist > 0 ? max(0, min(1.2, -dragY / travelDist)) : 0
+
+            // ── Layout ─────────────────────────────────────────────────
             ZStack {
-                // White background
                 Color.white.ignoresSafeArea()
 
-                // FitAI wordmark — top area
-                VStack {
-                    HStack(spacing: 8) {
-                        Image(systemName: "dumbbell.fill")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(Color(white: 0.1))
-                        Text("FitAI")
-                            .font(.system(size: 24, weight: .black))
-                            .foregroundStyle(Color(white: 0.1))
-                            .tracking(-0.5)
-                    }
-                    .padding(.top, geo.safeAreaInsets.top + 28)
+                // ── Z1: 3D Dumbbell (moves, behind everything else) ────
+                DumbbellSceneView()
+                    .frame(width: dbSize, height: dbSize)
+                    .clipShape(Circle())
+                    .allowsHitTesting(false)
+                    .opacity(appeared ? 1 : 0)
+                    .position(x: sw / 2, y: dbCenterY)
+                    .zIndex(1)
 
+                // ── Z2: Scan corner brackets (fixed center) ─────────────
+                scanFrameView(size: frameSize)
+                    .position(x: sw / 2, y: frameCenterY)
+                    .opacity(appeared ? 1 : 0)
+                    .zIndex(2)
+
+                // Scan sweep line — activates when dumbbell enters frame
+                if scanActivated {
+                    SplashSweepLine()
+                        .frame(width: frameSize, height: frameSize)
+                        .position(x: sw / 2, y: frameCenterY)
+                        .zIndex(2)
+                }
+
+                // ── Z3: "Scan. / Plan. / Compete." text ─────────────────
+                // Sits just below the scan frame. Fades as dumbbell approaches.
+                headlineText
+                    .position(x: sw / 2, y: frameCenterY + frameSize / 2 + 62)
+                    .opacity(appeared ? Double(max(0, 1 - progress * 1.8)) : 0)
+                    .zIndex(3)
+
+                // ── Z4: FitAI wordmark (top) ────────────────────────────
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 7) {
+                        Image(systemName: "dumbbell.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Color(white: 0.12))
+                        Text("FitAI")
+                            .font(.system(size: 20, weight: .black))
+                            .foregroundStyle(Color(white: 0.08))
+                            .tracking(-0.4)
+                    }
+                    .padding(.top, safeTop + 20)
+                    .padding(.leading, 22)
                     Spacer()
                 }
-                .opacity(logoOpacity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .opacity(appeared ? 1 : 0)
+                .zIndex(4)
 
-                // Hint label
-                if !completed {
-                    VStack {
-                        Spacer()
-                        Text("Swipe up to start")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color(white: 0.55))
-                            .padding(.bottom, restingBottomPad + bubbleSize + 20)
+                // ── Z4: Swipe hint ──────────────────────────────────────
+                VStack(spacing: 0) {
+                    Spacer()
+                    VStack(spacing: 7) {
+                        Image(systemName: "chevron.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color(white: 0.42))
+                        Text("Swipe up")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color(white: 0.42))
                     }
-                    .opacity(bubbleOpacity * Double(1 - abs(dragOffset) / (screenH * 0.3)))
-                    .animation(.easeOut(duration: 0.2), value: dragOffset)
+                    .padding(.bottom, safeBottom + dbSize + 24)
                 }
-
-                // Liquid glass bubble with dumbbell inside
-                bubbleView(geo: geo)
-                    .position(x: geo.size.width / 2,
-                              y: restingY + dragOffset)
-                    .opacity(bubbleOpacity)
-                    .gesture(
-                        DragGesture(minimumDistance: 6)
-                            .onChanged { value in
-                                guard !completed else { return }
-                                let dy = min(0, value.translation.height) // only allow upward
-                                if !isDragging {
-                                    isDragging = true
-                                    impactMed.impactOccurred()
-                                }
-                                dragOffset = dy
-                                // Subtle selection tick every 40pt
-                                if Int(abs(dy)) % 40 < 4 && abs(dy) > 20 {
-                                    selection.selectionChanged()
-                                }
-                            }
-                            .onEnded { value in
-                                guard !completed else { return }
-                                isDragging = false
-                                let velocity = value.predictedEndTranslation.height
-                                let threshold = screenH * 0.32
-
-                                if dragOffset < -threshold || velocity < -600 {
-                                    // Launch!
-                                    triggerLaunch(screenH: screenH)
-                                } else {
-                                    // Snap back
-                                    withAnimation(.spring(response: 0.45, dampingFraction: 0.68)) {
-                                        dragOffset = 0
-                                    }
-                                }
-                            }
-                    )
+                .opacity(appeared ? Double(max(0, 1 - progress * 5)) : 0)
+                .zIndex(4)
             }
+            // Drag gesture — on the whole view so user can start from anywhere near bottom
+            .gesture(
+                DragGesture(minimumDistance: 6)
+                    .onChanged { value in
+                        guard !completed else { return }
+                        // Only track upward motion
+                        let dy = min(0, value.translation.height)
+
+                        if !isDragging {
+                            isDragging = true
+                            impactMed.impactOccurred()
+                        }
+
+                        // Direct 1:1 tracking while dragging
+                        dragY = dy
+
+                        // Activate scan when dumbbell enters the frame area
+                        let p = travelDist > 0 ? -dy / travelDist : 0
+                        if p > 0.42 && !scanActivated {
+                            scanActivated = true
+                            selection.selectionChanged()
+                        } else if p < 0.25 && scanActivated {
+                            scanActivated = false
+                        }
+
+                        // Subtle haptic ticks every ~50pt
+                        if Int(abs(dy)) % 50 < 3 && abs(dy) > 30 {
+                            selection.selectionChanged()
+                        }
+                    }
+                    .onEnded { value in
+                        guard !completed else { return }
+                        isDragging = false
+
+                        let velocity = value.predictedEndTranslation.height
+                        let p = travelDist > 0 ? -dragY / travelDist : 0
+
+                        if p > 0.52 || velocity < -700 {
+                            triggerLaunch(dbRestY: dbRestY, sh: sh)
+                        } else {
+                            scanActivated = false
+                            withAnimation(.spring(response: 0.45, dampingFraction: 0.74)) {
+                                dragY = 0
+                            }
+                        }
+                    }
+            )
         }
         .onAppear {
             impactMed.prepare(); impactHeavy.prepare(); selection.prepare()
-            withAnimation(.easeOut(duration: 0.55)) {
-                logoOpacity = 1
-            }
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.65).delay(0.3)) {
-                bubbleOpacity = 1
+            withAnimation(.easeOut(duration: 0.6).delay(0.05)) {
+                appeared = true
             }
         }
     }
 
-    // MARK: - Bubble
+    // MARK: - Headline
 
-    private func bubbleView(geo: GeometryProxy) -> some View {
-        let bubbleSize: CGFloat = 180
-        // Scale down slightly as it's dragged up (feels like it's shrinking into distance)
-        let progress = min(abs(dragOffset) / (geo.size.height * 0.5), 1.0)
-        let scale = 1.0 - progress * 0.12
-
-        return ZStack {
-            // Liquid glass capsule/circle
-            Circle()
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    Circle()
-                        .strokeBorder(Color.white.opacity(0.5), lineWidth: 1.5)
-                )
-                .shadow(color: .black.opacity(0.10), radius: 24, y: 8)
-                .shadow(color: .black.opacity(0.06), radius: 8, y: 3)
-
-            // 3D dumbbell scene inside the bubble
-            DumbbellSceneView()
-                .clipShape(Circle())
-                .allowsHitTesting(false)
-
-            // Grab handle at the bottom of bubble
-            VStack {
-                Spacer()
-                Capsule()
-                    .fill(Color(white: 0.55).opacity(0.5))
-                    .frame(width: 36, height: 5)
-                    .padding(.bottom, 14)
-            }
+    private var headlineText: some View {
+        VStack(alignment: .center, spacing: -3) {
+            Text("Scan.")
+                .font(.system(size: 52, weight: .bold))
+                .foregroundStyle(Color(white: 0.08))
+                .tracking(-2.5)
+            Text("Plan.")
+                .font(.system(size: 52, weight: .thin))
+                .foregroundStyle(Color(white: 0.08).opacity(0.38))
+                .tracking(-2.5)
+            Text("Compete.")
+                .font(.system(size: 52, weight: .bold))
+                .foregroundStyle(Color(white: 0.08))
+                .tracking(-2.5)
         }
-        .frame(width: bubbleSize, height: bubbleSize)
-        .scaleEffect(scale)
-        .animation(.interactiveSpring(response: 0.25, dampingFraction: 0.78), value: dragOffset)
+        .lineLimit(1)
+        .minimumScaleFactor(0.62)
+    }
+
+    // MARK: - Scan Frame (corner brackets only, no fill so dumbbell shows through)
+
+    private func scanFrameView(size: CGFloat) -> some View {
+        let len: CGFloat = 32
+        let thick: CGFloat = 2.0
+        let color = Color(white: 0.14).opacity(0.65)
+        return ZStack {
+            cornerBracket(len: len, thick: thick, color: color, flipH: false, flipV: false)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            cornerBracket(len: len, thick: thick, color: color, flipH: true, flipV: false)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            cornerBracket(len: len, thick: thick, color: color, flipH: false, flipV: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            cornerBracket(len: len, thick: thick, color: color, flipH: true, flipV: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+        }
+        .frame(width: size, height: size)
+    }
+
+    private func cornerBracket(len: CGFloat, thick: CGFloat, color: Color,
+                                flipH: Bool, flipV: Bool) -> some View {
+        let align: Alignment = flipH
+            ? (flipV ? .bottomTrailing : .topTrailing)
+            : (flipV ? .bottomLeading   : .topLeading)
+        return ZStack(alignment: align) {
+            Rectangle().fill(color).frame(width: len, height: thick)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: align)
+            Rectangle().fill(color).frame(width: thick, height: len)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: align)
+        }
+        .frame(width: len, height: len)
     }
 
     // MARK: - Launch
 
-    private func triggerLaunch(screenH: CGFloat) {
+    private func triggerLaunch(dbRestY: CGFloat, sh: CGFloat) {
         completed = true
         impactHeavy.impactOccurred()
 
-        withAnimation(.spring(response: 0.38, dampingFraction: 0.72)) {
-            dragOffset = -screenH
+        withAnimation(.spring(response: 0.40, dampingFraction: 0.76)) {
+            dragY = -(dbRestY + 120)   // fly off screen top
         }
 
-        withAnimation(.easeOut(duration: 0.3).delay(0.2)) {
-            logoOpacity = 0
-            bubbleOpacity = 0
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.48) {
             onFinished()
+        }
+    }
+}
+
+// MARK: - Scan sweep line (self-contained, light mode)
+
+private struct SplashSweepLine: View {
+    @State private var progress: CGFloat = 0
+    @State private var opacity: Double = 0
+
+    var body: some View {
+        GeometryReader { geo in
+            Rectangle()
+                .fill(LinearGradient(
+                    colors: [.clear, Color(white: 0.18).opacity(0.55), .clear],
+                    startPoint: .leading, endPoint: .trailing))
+                .frame(height: 1)
+                .offset(y: progress * geo.size.height)
+                .opacity(opacity)
+        }
+        .onAppear { animate() }
+    }
+
+    private func animate() {
+        progress = 0; opacity = 0
+        withAnimation(.easeIn(duration: 0.18)) { opacity = 0.9 }
+        withAnimation(.easeInOut(duration: 2.8)) { progress = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            withAnimation(.easeOut(duration: 0.25)) { opacity = 0 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { animate() }
         }
     }
 }
