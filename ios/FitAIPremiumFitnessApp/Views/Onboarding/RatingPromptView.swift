@@ -73,6 +73,9 @@ struct RatingPromptView: View {
                 starScale = 1.0
                 starOpacity = 1.0
             }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                requestReview()
+            }
         }
     }
 

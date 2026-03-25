@@ -50,9 +50,6 @@ class TourManager {
         withAnimation(.spring(duration: 0.4)) {
             showWelcome = false
         }
-        // Clear stale anchors so re-registration happens cleanly
-        anchorFrames = [:]
-        stepReady = false
         currentStepIndex = 1
         isActive = true
         isTransitioning = true
@@ -162,7 +159,6 @@ class TourManager {
     private func waitForAnchorThenShow() {
         waitTask?.cancel()
         waitTask = Task {
-            guard currentStepIndex < TourStep.allSteps.count else { return }
             let anchorID = TourStep.allSteps[currentStepIndex].anchorID
             let minDelay: Duration = isTransitioning ? .milliseconds(400) : .milliseconds(150)
             try? await Task.sleep(for: minDelay)
@@ -177,18 +173,7 @@ class TourManager {
             let maxAttempts = 30
             while anchorFrames[anchorID] == nil || anchorFrames[anchorID] == .zero {
                 attempts += 1
-                if Task.isCancelled { return }
-                if attempts >= maxAttempts {
-                    // Anchor not found — skip to next step instead of getting stuck
-                    let nextIndex = currentStepIndex + 1
-                    if nextIndex >= TourStep.allSteps.count {
-                        completeTour()
-                    } else {
-                        currentStepIndex = nextIndex
-                        waitForAnchorThenShow()
-                    }
-                    return
-                }
+                if attempts >= maxAttempts || Task.isCancelled { break }
                 try? await Task.sleep(for: .milliseconds(100))
             }
 
