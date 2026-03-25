@@ -21,7 +21,7 @@ struct RankProgressionSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 40)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.clear)
             .navigationTitle("Rank Progression")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

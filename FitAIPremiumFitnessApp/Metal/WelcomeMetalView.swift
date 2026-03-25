@@ -233,25 +233,47 @@ struct DumbbellSceneView: UIViewRepresentable {
         let gripMat   = pbr(UIColor(white:0.16, alpha:1),   0.05, 0.92)
         let edgeMat   = pbr(UIColor.white,                   0.95, 0.05)
 
-        // ── Main dumbbell ──
+        // ── Main dumbbell (logo-style: rounded-rect plates, thick bar, center collar) ──
         let db = SCNNode(); db.eulerAngles = SCNVector3(-0.08, 0.22, -0.10)
 
+        // Bar (horizontal cylinder, laid along X axis)
         func cyl(_ r: Float, _ h: Float, _ m: SCNMaterial, _ x: Float) {
-            let g = SCNCylinder(radius: CGFloat(r), height: CGFloat(h)); g.radialSegmentCount = 64; g.materials = [m]
-            let n = SCNNode(geometry: g); n.eulerAngles.z = Float.pi/2; n.position = SCNVector3(x,0,0); db.addChildNode(n)
+            let g = SCNCylinder(radius: CGFloat(r), height: CGFloat(h))
+            g.radialSegmentCount = 48; g.materials = [m]
+            let n = SCNNode(geometry: g)
+            n.eulerAngles.z = Float.pi / 2; n.position = SCNVector3(x, 0, 0)
+            db.addChildNode(n)
         }
-        func ring(_ r: Float, _ tube: Float, _ m: SCNMaterial, _ x: Float) {
-            let g = SCNTorus(ringRadius: CGFloat(r), pipeRadius: CGFloat(tube)); g.ringSegmentCount = 80; g.materials = [m]
-            let n = SCNNode(geometry: g); n.eulerAngles.y = Float.pi/2; n.position = SCNVector3(x,0,0); db.addChildNode(n)
+
+        // Rounded rectangular plate (logo-style thick disc with chamfer)
+        func plate(_ w: Float, _ h: Float, _ d: Float, _ chamfer: Float, _ m: SCNMaterial, _ x: Float) {
+            let g = SCNBox(width: CGFloat(w), height: CGFloat(h), length: CGFloat(d), chamferRadius: CGFloat(chamfer))
+            g.materials = [m]
+            let n = SCNNode(geometry: g); n.position = SCNVector3(x, 0, 0)
+            db.addChildNode(n)
         }
-        func side(_ s: Float) {
-            cyl(0.085,0.10,edgeMat,  s*0.71); cyl(0.095,0.14,edgeMat,  s*0.86)
-            cyl(0.520,0.13,plateMat, s*1.00); cyl(0.520,0.13,plateDark, s*1.14)
-            cyl(0.420,0.10,plateMat, s*1.26); cyl(0.320,0.09,plateDark, s*1.36)
-            cyl(0.110,0.18,edgeMat,  s*1.46); ring(0.520,0.013,edgeMat, s*1.00)
-        }
-        cyl(0.048,4.40,barMat,0); cyl(0.072,1.30,gripMat,0)
-        side(1); side(-1)
+
+        // Main connecting bar
+        cyl(0.055, 4.20, barMat, 0)
+        // Grip knurl in center
+        cyl(0.075, 1.10, gripMat, 0)
+
+        // Center collar (small rounded-rect plate at mid-point, logo feature)
+        plate(0.16, 0.70, 0.70, 0.08, edgeMat, 0)
+
+        // Left & right plate assemblies
+        // sleeve collar (thin collar connecting bar to plate)
+        cyl(0.095, 0.18, edgeMat,  1.20); cyl(0.095, 0.18, edgeMat, -1.20)
+        // inner retainer ring
+        cyl(0.110, 0.10, edgeMat,  1.38); cyl(0.110, 0.10, edgeMat, -1.38)
+        // main outer plates — large rounded-rect matching the logo shape
+        plate(0.34, 1.10, 1.10, 0.14, plateMat,  1.60)
+        plate(0.34, 1.10, 1.10, 0.14, plateMat, -1.60)
+        // outer edge cap
+        plate(0.18, 0.90, 0.90, 0.10, plateDark,  1.84)
+        plate(0.18, 0.90, 0.90, 0.10, plateDark, -1.84)
+        // end nut
+        cyl(0.080, 0.14, edgeMat,  1.96); cyl(0.080, 0.14, edgeMat, -1.96)
 
         let up = SCNAction.moveBy(x:0,y:0.12,z:0,duration:2.8); up.timingMode = .easeInEaseOut
         let dn = SCNAction.moveBy(x:0,y:-0.12,z:0,duration:2.8); dn.timingMode = .easeInEaseOut

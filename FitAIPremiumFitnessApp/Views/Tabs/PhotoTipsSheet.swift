@@ -27,7 +27,7 @@ struct PhotoTipsSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.clear)
             .navigationTitle("Photo Guidelines")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
