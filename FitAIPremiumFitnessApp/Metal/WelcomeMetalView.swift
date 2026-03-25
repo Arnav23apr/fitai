@@ -11,6 +11,8 @@ import CoreMotion
 struct DumbbellSceneView: UIViewRepresentable {
 
     var transparent: Bool = false
+    /// When true (light mode), use near-black chrome so it pops on white background
+    var darkChrome:  Bool = false
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -23,7 +25,7 @@ struct DumbbellSceneView: UIViewRepresentable {
         v.rendersContinuously      = true
         v.autoenablesDefaultLighting = false
 
-        let result = buildScene(transparent: transparent)
+        let result = buildScene(transparent: transparent, darkChrome: darkChrome)
         v.scene    = result.scene
         v.delegate = context.coordinator
 
@@ -204,7 +206,7 @@ struct DumbbellSceneView: UIViewRepresentable {
 
     // MARK: - Scene construction
 
-    func buildScene(transparent: Bool) -> SceneResult {
+    func buildScene(transparent: Bool, darkChrome: Bool = false) -> SceneResult {
         let scene = SCNScene()
         scene.background.contents = transparent ? UIColor.clear : UIColor.black
 
@@ -214,8 +216,9 @@ struct DumbbellSceneView: UIViewRepresentable {
             scene.fogEndDistance   = 11.0
         }
 
-        scene.lightingEnvironment.contents  = Self.makeEnvMap()
-        scene.lightingEnvironment.intensity = transparent ? 2.4 : 1.8
+        // Dark chrome on white bg needs a bright env map for visible specular highlights
+        scene.lightingEnvironment.contents  = darkChrome ? Self.makeEnvMapBright() : Self.makeEnvMap()
+        scene.lightingEnvironment.intensity = darkChrome ? 3.2 : (transparent ? 2.4 : 1.8)
 
         // Camera — PerspectiveCamera(38) at (0, 0.3, 9)
         let cam = SCNNode(); cam.camera = SCNCamera()
@@ -237,20 +240,34 @@ struct DumbbellSceneView: UIViewRepresentable {
         scene.rootNode.addChildNode(fillNode)
 
         // ── PBR materials ──
-        // Transparent mode uses slightly darker silver so chrome is visible on white bg
-        let barMat    = Self.pbr(transparent ? UIColor(white:0.68,alpha:1) : UIColor.white,
-                                 transparent ? 0.88 : 0.92,
-                                 transparent ? 0.12 : 0.08)
-        let plateMat  = Self.pbr(transparent ? UIColor(white:0.65,alpha:1) : UIColor(white:0.88,alpha:1),
-                                 transparent ? 0.78 : 0.80,
-                                 transparent ? 0.22 : 0.18)
-        let plateDark = Self.pbr(transparent ? UIColor(white:0.50,alpha:1) : UIColor(white:0.69,alpha:1),
-                                 transparent ? 0.68 : 0.70,
-                                 transparent ? 0.32 : 0.28)
-        let gripMat   = Self.pbr(UIColor(white:0.16,alpha:1), 0.05, 0.92)
-        let edgeMat   = Self.pbr(transparent ? UIColor(white:0.78,alpha:1) : UIColor.white,
-                                 transparent ? 0.92 : 0.95,
-                                 transparent ? 0.08 : 0.05)
+        // darkChrome = light mode → near-black metal so it pops on white background
+        // transparent (dark mode) → slightly grey so it's visible on black background
+        // default (welcome screen) → full chrome white matching website
+        let barMat: SCNMaterial
+        let plateMat: SCNMaterial
+        let plateDark: SCNMaterial
+        let gripMat: SCNMaterial
+        let edgeMat: SCNMaterial
+
+        if darkChrome {
+            barMat    = Self.pbr(UIColor(white:0.08,alpha:1), 0.72, 0.18)
+            plateMat  = Self.pbr(UIColor(white:0.10,alpha:1), 0.65, 0.25)
+            plateDark = Self.pbr(UIColor(white:0.05,alpha:1), 0.60, 0.32)
+            gripMat   = Self.pbr(UIColor(white:0.04,alpha:1), 0.04, 0.96)
+            edgeMat   = Self.pbr(UIColor(white:0.22,alpha:1), 0.78, 0.14)
+        } else if transparent {
+            barMat    = Self.pbr(UIColor(white:0.68,alpha:1), 0.88, 0.12)
+            plateMat  = Self.pbr(UIColor(white:0.65,alpha:1), 0.78, 0.22)
+            plateDark = Self.pbr(UIColor(white:0.50,alpha:1), 0.68, 0.32)
+            gripMat   = Self.pbr(UIColor(white:0.16,alpha:1), 0.05, 0.92)
+            edgeMat   = Self.pbr(UIColor(white:0.78,alpha:1), 0.92, 0.08)
+        } else {
+            barMat    = Self.pbr(UIColor.white,                 0.92, 0.08)
+            plateMat  = Self.pbr(UIColor(white:0.88,alpha:1),  0.80, 0.18)
+            plateDark = Self.pbr(UIColor(white:0.69,alpha:1),  0.70, 0.28)
+            gripMat   = Self.pbr(UIColor(white:0.16,alpha:1),  0.05, 0.92)
+            edgeMat   = Self.pbr(UIColor.white,                 0.95, 0.05)
+        }
 
         // ── Main dumbbell — geometry matching website 1:1 ──
         let db = SCNNode()
@@ -416,6 +433,30 @@ struct DumbbellSceneView: UIViewRepresentable {
         return m
     }
 
+    /// Bright studio environment for dark chrome on white background
+    private static func makeEnvMapBright() -> UIImage {
+        let w = 256, h = 128
+        return UIGraphicsImageRenderer(size: CGSize(width:w, height:h)).image { ctx in
+            let gc = ctx.cgContext
+            let cs = CGColorSpaceCreateDeviceRGB()
+            gc.setFillColor(UIColor(white:0.78, alpha:1).cgColor)
+            gc.fill(CGRect(x:0, y:0, width:w, height:h))
+            let g1 = CGGradient(colorsSpace:cs,
+                colors:[UIColor(white:1.0,alpha:1).cgColor, UIColor(white:0.78,alpha:0).cgColor] as CFArray,
+                locations:[0,1])!
+            gc.drawRadialGradient(g1,
+                startCenter:.init(x:w/2, y:0), startRadius:0,
+                endCenter:.init(x:w/2, y:0),   endRadius:CGFloat(h)*0.95, options:[])
+            let g2 = CGGradient(colorsSpace:cs,
+                colors:[UIColor(white:0.92,alpha:1).cgColor, UIColor(white:0.78,alpha:0).cgColor] as CFArray,
+                locations:[0,1])!
+            gc.drawRadialGradient(g2,
+                startCenter:.init(x:0, y:CGFloat(h/2)), startRadius:0,
+                endCenter:.init(x:0, y:CGFloat(h/2)),   endRadius:CGFloat(w)*0.5, options:[])
+        }
+    }
+
+    /// Dark studio environment — gives chrome a silver/white tint on dark backgrounds
     private static func makeEnvMap() -> UIImage {
         let w = 256, h = 128
         return UIGraphicsImageRenderer(size: CGSize(width:w, height:h)).image { ctx in

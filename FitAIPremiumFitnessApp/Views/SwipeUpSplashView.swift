@@ -1,25 +1,24 @@
 import SwiftUI
 
-/// Splash screen flow:
-/// 1. Dumbbell sits at the bottom, rotating. Apple-style swipe-up hint above it.
-/// 2. User swipes dumbbell upward. 1:1 tracking, no rubber-banding.
-/// 3. Threshold crossed → dumbbell spring-snaps to scan frame center.
-/// 4. Scan brackets, "Scan. Plan. Compete." text, and "Get Started" button fade in.
-/// 5. Tap "Get Started" → onFinished().
 struct SwipeUpSplashView: View {
     var onFinished: () -> Void
 
-    @State private var appeared:      Bool    = false
-    @State private var dragY:         CGFloat = 0      // ≤ 0 (upward only)
-    @State private var isDragging:    Bool    = false
-    @State private var placed:        Bool    = false  // dumbbell locked at scan frame
-    @State private var contentVisible: Bool   = false  // content revealed after placed
+    @Environment(\.colorScheme) private var colorScheme
 
-    private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy)
-    private let impactMed   = UIImpactFeedbackGenerator(style: .medium)
-    private let selection   = UISelectionFeedbackGenerator()
+    @State private var appeared:       Bool    = false
+    @State private var dragY:          CGFloat = 0
+    @State private var isDragging:     Bool    = false
+    @State private var placed:         Bool    = false
+    @State private var contentVisible: Bool    = false
+    @State private var nearThreshold:  Bool    = false   // for escalating haptics
 
-    private let dbSize: CGFloat = 300
+    private let impactHeavy  = UIImpactFeedbackGenerator(style: .heavy)
+    private let impactMed    = UIImpactFeedbackGenerator(style: .medium)
+    private let impactLight  = UIImpactFeedbackGenerator(style: .light)
+    private let selection    = UISelectionFeedbackGenerator()
+    private let notification = UINotificationFeedbackGenerator()
+
+    private let dbSize: CGFloat = 360
 
     var body: some View {
         GeometryReader { geo in
@@ -28,38 +27,32 @@ struct SwipeUpSplashView: View {
             let safeBottom = geo.safeAreaInsets.bottom
             let safeTop    = geo.safeAreaInsets.top
 
-            // ── Geometry ────────────────────────────────────────────────────
             let frameCenterY: CGFloat = sh * 0.38
             let frameSize:    CGFloat = 260
-            let dbRestY:      CGFloat = sh - safeBottom - 16 - dbSize / 2
+            let dbRestY:      CGFloat = sh - safeBottom - 8 - dbSize / 2
             let travelDist            = dbRestY - frameCenterY
             let progress: CGFloat     = travelDist > 0
                 ? max(0, min(1.2, -dragY / travelDist)) : 0
-
-            // Dumbbell Y: follows drag until placed, then locked at frameCenterY
-            let dbCenterY: CGFloat = placed ? frameCenterY : (dbRestY + dragY)
+            let dbCenterY: CGFloat    = placed ? frameCenterY : (dbRestY + dragY)
 
             ZStack(alignment: .top) {
-
-                // ── Background (follows system dark / light mode) ────────────
                 Color(.systemBackground).ignoresSafeArea()
 
-                // ── Z1: Dumbbell ─────────────────────────────────────────────
-                DumbbellSceneView(transparent: true)
+                // ── Z1: Dumbbell — inverted color vs background ───────────────
+                DumbbellSceneView(transparent: true, darkChrome: colorScheme == .light)
                     .frame(width: dbSize, height: dbSize)
-                    .shadow(color: Color.primary.opacity(0.10), radius: 28, y: 12)
+                    .shadow(color: Color.primary.opacity(0.12), radius: 32, y: 14)
                     .allowsHitTesting(false)
                     .opacity(appeared ? 1 : 0)
                     .position(x: sw / 2, y: dbCenterY)
                     .zIndex(1)
 
-                // ── Z2: Scan corner brackets ─────────────────────────────────
+                // ── Z2: Scan frame ────────────────────────────────────────────
                 scanFrameView(size: frameSize)
                     .position(x: sw / 2, y: frameCenterY)
                     .opacity(contentVisible ? 1 : 0)
                     .zIndex(2)
 
-                // Sweep line inside brackets
                 if contentVisible {
                     SplashSweepLine()
                         .frame(width: frameSize, height: frameSize)
@@ -67,14 +60,14 @@ struct SwipeUpSplashView: View {
                         .zIndex(2)
                 }
 
-                // ── Z3: Headline text ────────────────────────────────────────
+                // ── Z3: Headline text ─────────────────────────────────────────
                 headlineText
                     .position(x: sw / 2, y: frameCenterY + frameSize / 2 + 76)
                     .opacity(contentVisible ? 1 : 0)
                     .offset(y: contentVisible ? 0 : 18)
                     .zIndex(3)
 
-                // ── Z4: FitAI wordmark (top-left) ────────────────────────────
+                // ── Z4: FitAI wordmark ────────────────────────────────────────
                 HStack(spacing: 7) {
                     Image(systemName: "dumbbell.fill")
                         .font(.system(size: 13, weight: .bold))
@@ -90,10 +83,13 @@ struct SwipeUpSplashView: View {
                 .opacity(contentVisible ? 1 : 0)
                 .zIndex(4)
 
-                // ── Z5: Get Started button (bottom) ──────────────────────────
+                // ── Z5: Get Started button ────────────────────────────────────
                 VStack {
                     Spacer()
-                    Button(action: { impactHeavy.impactOccurred(); onFinished() }) {
+                    Button {
+                        impactHeavy.impactOccurred()
+                        onFinished()
+                    } label: {
                         Text("Get Started")
                             .font(.system(.headline, weight: .bold))
                             .foregroundStyle(Color(.systemBackground))
@@ -109,16 +105,15 @@ struct SwipeUpSplashView: View {
                 .offset(y: contentVisible ? 0 : 22)
                 .zIndex(5)
 
-                // ── Z6: Swipe-up hint (only before placed) ───────────────────
+                // ── Z6: Swipe hint ────────────────────────────────────────────
                 if !placed {
                     SwipeHintView()
                         .position(x: sw / 2, y: dbRestY - dbSize / 2 - 32)
                         .opacity(appeared && !isDragging ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.25), value: isDragging)
+                        .animation(.easeInOut(duration: 0.2), value: isDragging)
                         .zIndex(6)
                 }
             }
-            // Gesture overlay — removed after placement so buttons are tappable
             .overlay {
                 if !placed {
                     Color.clear
@@ -128,24 +123,38 @@ struct SwipeUpSplashView: View {
                             DragGesture(minimumDistance: 6)
                                 .onChanged { value in
                                     let dy = min(0, value.translation.height)
+
                                     if !isDragging {
                                         isDragging = true
                                         impactMed.impactOccurred()
                                     }
-                                    // Direct 1:1 tracking — no animation wrapper
-                                    dragY = dy
 
-                                    // Tick haptics every ~50 pt
+                                    dragY = dy   // direct 1:1, no animation
+
+                                    let p = travelDist > 0 ? -dy / travelDist : 0
+
+                                    // Tick every ~50 pt
                                     if Int(abs(dy)) % 50 < 3 && abs(dy) > 30 {
                                         selection.selectionChanged()
+                                    }
+
+                                    // Escalate: medium tick when 60% of the way
+                                    if p > 0.60 && !nearThreshold {
+                                        nearThreshold = true
+                                        impactMed.impactOccurred()
+                                    } else if p < 0.40 && nearThreshold {
+                                        nearThreshold = false
                                     }
                                 }
                                 .onEnded { value in
                                     isDragging = false
+                                    nearThreshold = false
                                     let velocity = value.predictedEndTranslation.height
                                     if progress > 0.52 || velocity < -700 {
-                                        triggerPlace(dbRestY: dbRestY, travelDist: travelDist)
+                                        triggerPlace()
                                     } else {
+                                        // Light feedback — snapped back
+                                        impactLight.impactOccurred()
                                         withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) {
                                             dragY = 0
                                         }
@@ -155,30 +164,38 @@ struct SwipeUpSplashView: View {
                         .zIndex(10)
                 }
             }
+            // Re-read progress inside onChange so the escalation check has fresh value
+            .onChange(of: dragY) { _, _ in }
         }
         .onAppear {
-            impactMed.prepare(); impactHeavy.prepare(); selection.prepare()
+            impactMed.prepare()
+            impactHeavy.prepare()
+            impactLight.prepare()
+            selection.prepare()
+            notification.prepare()
             withAnimation(.easeOut(duration: 0.55).delay(0.08)) { appeared = true }
         }
     }
 
-    // MARK: - Place trigger
+    // MARK: - Snap to frame
 
-    private func triggerPlace(dbRestY: CGFloat, travelDist: CGFloat) {
+    private func triggerPlace() {
+        // Satisfying "locked in" haptic — heavy + success notification back to back
         impactHeavy.impactOccurred()
-        // Spring the dumbbell to scan frame center
-        withAnimation(.spring(response: 0.42, dampingFraction: 0.80)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+            self.notification.notificationOccurred(.success)
+        }
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
             placed = true
         }
-        // Reveal content shortly after
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.40) {
             withAnimation(.easeOut(duration: 0.55)) {
                 contentVisible = true
             }
         }
     }
 
-    // MARK: - Scan Frame
+    // MARK: - Scan frame
 
     private var headlineText: some View {
         VStack(alignment: .center, spacing: -4) {
@@ -231,11 +248,11 @@ struct SwipeUpSplashView: View {
     }
 }
 
-// MARK: - Swipe hint (Apple lock-screen style)
+// MARK: - Swipe hint
 
 private struct SwipeHintView: View {
-    @State private var bounce: CGFloat = 0
-    @State private var opacity: Double = 1
+    @State private var bounce:  CGFloat = 0
+    @State private var opacity: Double  = 1
 
     var body: some View {
         VStack(spacing: 5) {
@@ -253,7 +270,6 @@ private struct SwipeHintView: View {
             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
                 bounce = -6
             }
-            // Pulse the whole hint subtly
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true).delay(0.4)) {
                 opacity = 0.45
             }
@@ -261,7 +277,7 @@ private struct SwipeHintView: View {
     }
 }
 
-// MARK: - Sweep line (adapts to dark/light)
+// MARK: - Sweep line
 
 private struct SplashSweepLine: View {
     @State private var progress: CGFloat = 0
@@ -282,10 +298,10 @@ private struct SplashSweepLine: View {
 
     private func animate() {
         progress = 0; opacity = 0
-        withAnimation(.easeIn(duration: 0.18))          { opacity   = 0.9 }
-        withAnimation(.easeInOut(duration: 2.8))        { progress  = 1   }
+        withAnimation(.easeIn(duration: 0.18))   { opacity  = 0.9 }
+        withAnimation(.easeInOut(duration: 2.8)) { progress = 1   }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            withAnimation(.easeOut(duration: 0.25))     { opacity   = 0   }
+            withAnimation(.easeOut(duration: 0.25)) { opacity = 0 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { animate() }
         }
     }
