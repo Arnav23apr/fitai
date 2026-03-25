@@ -18,7 +18,7 @@ struct SwipeUpSplashView: View {
     private let impactHeavy = UIImpactFeedbackGenerator(style: .heavy)
     private let selection   = UISelectionFeedbackGenerator()
 
-    private let dbSize: CGFloat = 240
+    private let dbSize: CGFloat = 300
 
     var body: some View {
         GeometryReader { geo in
@@ -47,9 +47,8 @@ struct SwipeUpSplashView: View {
                 Color.white.ignoresSafeArea()
 
                 // ── Z1: 3D Dumbbell (moves, behind everything else) ────
-                DumbbellSceneView()
+                DumbbellSceneView(transparent: true)
                     .frame(width: dbSize, height: dbSize)
-                    .clipShape(Circle())
                     .allowsHitTesting(false)
                     .opacity(appeared ? 1 : 0)
                     .position(x: sw / 2, y: dbCenterY)
