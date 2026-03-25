@@ -236,12 +236,21 @@ struct DumbbellSceneView: UIViewRepresentable {
         fillNode.position = SCNVector3(-5, 2, 5)
         scene.rootNode.addChildNode(fillNode)
 
-        // ── PBR materials matching the website exactly ──
-        let barMat    = Self.pbr(UIColor.white,                  0.92, 0.08)
-        let plateMat  = Self.pbr(UIColor(white:0.88, alpha:1),  0.80, 0.18)
-        let plateDark = Self.pbr(UIColor(white:0.69, alpha:1),  0.70, 0.28)
-        let gripMat   = Self.pbr(UIColor(white:0.16, alpha:1),  0.05, 0.92)
-        let edgeMat   = Self.pbr(UIColor.white,                  0.95, 0.05)
+        // ── PBR materials ──
+        // Transparent mode uses slightly darker silver so chrome is visible on white bg
+        let barMat    = Self.pbr(transparent ? UIColor(white:0.68,alpha:1) : UIColor.white,
+                                 transparent ? 0.88 : 0.92,
+                                 transparent ? 0.12 : 0.08)
+        let plateMat  = Self.pbr(transparent ? UIColor(white:0.65,alpha:1) : UIColor(white:0.88,alpha:1),
+                                 transparent ? 0.78 : 0.80,
+                                 transparent ? 0.22 : 0.18)
+        let plateDark = Self.pbr(transparent ? UIColor(white:0.50,alpha:1) : UIColor(white:0.69,alpha:1),
+                                 transparent ? 0.68 : 0.70,
+                                 transparent ? 0.32 : 0.28)
+        let gripMat   = Self.pbr(UIColor(white:0.16,alpha:1), 0.05, 0.92)
+        let edgeMat   = Self.pbr(transparent ? UIColor(white:0.78,alpha:1) : UIColor.white,
+                                 transparent ? 0.92 : 0.95,
+                                 transparent ? 0.08 : 0.05)
 
         // ── Main dumbbell — geometry matching website 1:1 ──
         let db = SCNNode()
