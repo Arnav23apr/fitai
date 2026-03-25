@@ -6,9 +6,9 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             // Background color matches the active screen to eliminate color flash on transition:
-            // SwipeUpSplash → white, WelcomeView → near-black, MainTabView → systemBackground
+            // SwipeUpSplash → systemBackground (dark/light), WelcomeView → near-black, MainTabView → systemBackground
             if appState.showSplash {
-                Color.white.ignoresSafeArea()
+                Color(.systemBackground).ignoresSafeArea()
             } else if !appState.hasCompletedOnboarding {
                 Color(red: 0.028, green: 0.028, blue: 0.034).ignoresSafeArea()
             } else {
