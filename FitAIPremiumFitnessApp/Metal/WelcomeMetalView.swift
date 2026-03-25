@@ -25,7 +25,9 @@ struct DumbbellSceneView: UIViewRepresentable {
         v.rendersContinuously      = true
         v.autoenablesDefaultLighting = false
 
-        let result = buildScene(transparent: transparent, darkChrome: darkChrome)
+        // Read trait collection directly — more reliable than SwiftUI @Environment in makeUIView
+        let isLightMode = UITraitCollection.current.userInterfaceStyle != .dark
+        let result = buildScene(transparent: transparent, darkChrome: transparent && isLightMode)
         v.scene    = result.scene
         v.delegate = context.coordinator
 
@@ -216,9 +218,8 @@ struct DumbbellSceneView: UIViewRepresentable {
             scene.fogEndDistance   = 11.0
         }
 
-        // Dark chrome on white bg needs a bright env map for visible specular highlights
-        scene.lightingEnvironment.contents  = darkChrome ? Self.makeEnvMapBright() : Self.makeEnvMap()
-        scene.lightingEnvironment.intensity = darkChrome ? 3.2 : (transparent ? 2.4 : 1.8)
+        scene.lightingEnvironment.contents  = Self.makeEnvMap()
+        scene.lightingEnvironment.intensity = darkChrome ? 0.6 : (transparent ? 2.4 : 1.8)
 
         // Camera — PerspectiveCamera(38) at (0, 0.3, 9)
         let cam = SCNNode(); cam.camera = SCNCamera()
@@ -227,13 +228,18 @@ struct DumbbellSceneView: UIViewRepresentable {
         cam.position           = SCNVector3(0, 0.3, 9)
         scene.rootNode.addChildNode(cam)
 
-        // Lights
-        Self.addLight(scene, .ambient,     UIColor.white,                        500, .init(0,0,0))
-        Self.addLight(scene, .directional, UIColor.white,                       1800, .init(-0.95, -0.55, 0))
-        Self.addLight(scene, .directional, UIColor(white:0.85, alpha:1),         750, .init( 0.55,  0.78, 0))
+        // Lights — boosted for darkChrome so black metal gets visible shading against white bg
+        let ambientInt:   CGFloat = darkChrome ? 200  : 500
+        let keyInt:       CGFloat = darkChrome ? 2400 : 1800
+        let rimInt:       CGFloat = darkChrome ? 900  : 750
+        let fillInt:      CGFloat = darkChrome ? 600  : 950
+
+        Self.addLight(scene, .ambient,     UIColor.white,                    ambientInt, .init(0,0,0))
+        Self.addLight(scene, .directional, UIColor.white,                    keyInt,     .init(-0.95, -0.55, 0))
+        Self.addLight(scene, .directional, UIColor(white:0.85, alpha:1),     rimInt,     .init( 0.55,  0.78, 0))
 
         let fillLight = SCNLight(); fillLight.type = .omni
-        fillLight.intensity = 950; fillLight.color = UIColor.white
+        fillLight.intensity = fillInt; fillLight.color = UIColor.white
         fillLight.attenuationStartDistance = 4; fillLight.attenuationEndDistance = 28
         let fillNode = SCNNode(); fillNode.light = fillLight
         fillNode.position = SCNVector3(-5, 2, 5)
@@ -250,11 +256,13 @@ struct DumbbellSceneView: UIViewRepresentable {
         let edgeMat: SCNMaterial
 
         if darkChrome {
-            barMat    = Self.pbr(UIColor(white:0.08,alpha:1), 0.72, 0.18)
-            plateMat  = Self.pbr(UIColor(white:0.10,alpha:1), 0.65, 0.25)
-            plateDark = Self.pbr(UIColor(white:0.05,alpha:1), 0.60, 0.32)
+            // Low metalness → diffuse dark color dominates over reflections
+            // This guarantees the dumbbell is visibly dark/black on a white background
+            barMat    = Self.pbr(UIColor(white:0.08,alpha:1), 0.14, 0.62)
+            plateMat  = Self.pbr(UIColor(white:0.10,alpha:1), 0.12, 0.68)
+            plateDark = Self.pbr(UIColor(white:0.05,alpha:1), 0.10, 0.74)
             gripMat   = Self.pbr(UIColor(white:0.04,alpha:1), 0.04, 0.96)
-            edgeMat   = Self.pbr(UIColor(white:0.22,alpha:1), 0.78, 0.14)
+            edgeMat   = Self.pbr(UIColor(white:0.20,alpha:1), 0.22, 0.44)
         } else if transparent {
             barMat    = Self.pbr(UIColor(white:0.68,alpha:1), 0.88, 0.12)
             plateMat  = Self.pbr(UIColor(white:0.65,alpha:1), 0.78, 0.22)
