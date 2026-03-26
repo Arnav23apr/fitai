@@ -61,26 +61,39 @@ struct ProfileView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showEditProfile) { EditProfileSheet() }
+            .sheet(isPresented: $showEditProfile) {
+                EditProfileSheet()
+                    .presentationBackground(.ultraThinMaterial)
+            }
             .sheet(isPresented: $showPaywall) { PaywallSheet() }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
                     .presentationDetents([.fraction(0.75), .large])
                     .presentationDragIndicator(.hidden)
+                    .presentationBackground(.ultraThinMaterial)
             }
-            .sheet(isPresented: $showNotificationSettings) { NotificationSettingsView() }
-            .sheet(isPresented: $showLanguagePicker) { LanguagePickerSheet() }
+            .sheet(isPresented: $showNotificationSettings) {
+                NotificationSettingsView()
+                    .presentationBackground(.ultraThinMaterial)
+            }
+            .sheet(isPresented: $showLanguagePicker) {
+                LanguagePickerSheet()
+                    .presentationBackground(.ultraThinMaterial)
+            }
             .sheet(isPresented: $showWeightHeightEditor) {
                 WeightHeightEditorSheet()
                     .presentationDetents([.fraction(0.65), .large])
                     .presentationDragIndicator(.visible)
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showAppleHealth) {
                 AppleHealthView()
                     .presentationDetents([.large])
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showCustomerCenter) {
                 CustomerCenterView()
+                    .presentationBackground(.ultraThinMaterial)
             }
         }
     }

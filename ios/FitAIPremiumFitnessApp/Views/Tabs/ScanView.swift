@@ -61,11 +61,13 @@ struct ScanView: View {
             .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showResultsSheet) {
                 ScanResultsSheet(result: viewModel.analysisResult, onDismiss: {
                     showResultsSheet = false
                 })
+                .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showTransformationSheet) {
                 TransformationSheet(
@@ -80,10 +82,12 @@ struct ScanView: View {
                         }
                     }
                 )
+                .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showStreakSheet) {
                 StreakSheet()
                     .presentationDetents([.fraction(0.75)])
+                    .presentationBackground(.ultraThinMaterial)
             }
             .onChange(of: viewModel.frontPickerItem) { _, _ in
                 Task { await viewModel.loadFrontImage() }
@@ -555,6 +559,7 @@ struct ScanResultsSheet: View {
             .sheet(isPresented: $showRatingsCard) {
                 if let result {
                     RatingsCardSheet(result: result)
+                        .presentationBackground(.ultraThinMaterial)
                 }
             }
         }

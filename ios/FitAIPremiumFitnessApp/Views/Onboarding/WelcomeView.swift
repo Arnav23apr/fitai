@@ -102,7 +102,7 @@ struct WelcomeView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(nil)
         .onAppear {
             withAnimation(.easeOut(duration: 0.9)) { appeared = true }
         }

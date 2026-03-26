@@ -49,6 +49,7 @@ struct MainTabView: View {
             if session.isActive {
                 let resumeWorkout = buildResumeWorkoutDay()
                 WorkoutDetailSheet(workout: resumeWorkout)
+                    .presentationBackground(.ultraThinMaterial)
             }
         }
         .onAppear {

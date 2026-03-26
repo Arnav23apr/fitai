@@ -117,9 +117,11 @@ struct PlanView: View {
             .navigationBarTitleDisplayMode(.large)
                         .sheet(isPresented: $showCoach) {
                 CoachView()
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(item: $selectedDay) { day in
                 WorkoutDetailSheet(workout: day)
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(item: $selectedMuscleFromHeatmap) { muscle in
                 MuscleDetailSheet(
@@ -128,6 +130,7 @@ struct PlanView: View {
                     exerciseLogs: ExerciseLogService.shared.loadAll()
                 )
                 .presentationDetents([.medium, .large])
+                .presentationBackground(.ultraThinMaterial)
             }
             .sheet(item: $selectedFocusItem) { item in
                 FocusAreaDetailSheet(
@@ -136,6 +139,7 @@ struct PlanView: View {
                     score: focusAreaScore(item.area),
                     exercises: focusAreaExercises(item.area)
                 )
+                .presentationBackground(.ultraThinMaterial)
             }
             .onAppear {
                 withAnimation(.easeOut(duration: 0.5)) {
