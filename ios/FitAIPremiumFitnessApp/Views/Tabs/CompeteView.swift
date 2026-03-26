@@ -123,9 +123,11 @@ struct CompeteView: View {
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showBattleSetup) {
                 BattleSetupView()
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showFriends) {
                 FriendsView()
+                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showRankProgression) {
                 RankProgressionSheet(currentPoints: appState.profile.points)

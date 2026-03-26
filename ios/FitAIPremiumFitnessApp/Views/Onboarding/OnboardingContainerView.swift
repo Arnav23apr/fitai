@@ -2,7 +2,7 @@ import SwiftUI
 
 struct OnboardingContainerView: View {
     @Environment(AppState.self) private var appState
-    @State private var currentStep: OnboardingStep = .welcome
+    @State private var currentStep: OnboardingStep = .gender
     @State private var paywallSkipped: Bool = false
     @State private var isGoingBack: Bool = false
 
