@@ -86,7 +86,7 @@ struct TourCoachMarkView: View {
                     .font(.system(.subheadline, weight: .bold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("\(stepIndex + 1) / \(totalSteps)")
+                Text("\(stepIndex) / \(totalSteps - 1)")
                     .font(.system(.caption2, design: .rounded, weight: .semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 8)
@@ -166,7 +166,7 @@ struct TourCoachMarkView: View {
 
     private var progressDots: some View {
         HStack(spacing: 4) {
-            ForEach(0..<totalSteps, id: \.self) { i in
+            ForEach(1..<totalSteps, id: \.self) { i in
                 Capsule()
                     .fill(i == stepIndex ? Color.blue : Color.primary.opacity(0.1))
                     .frame(width: i == stepIndex ? 16 : 6, height: 4)

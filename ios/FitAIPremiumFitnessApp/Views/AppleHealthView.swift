@@ -166,20 +166,20 @@ struct AppleHealthView: View {
                 Group {
                     if isRequesting {
                         ProgressView()
-                            .tint(isDark ? .black : .white)
+                            .tint(Color(.systemBackground))
                     } else if isConnected {
                         Label("Connected", systemImage: "checkmark")
                             .font(.headline)
-                            .foregroundStyle(isDark ? .black : .white)
+                            .foregroundStyle(Color(.systemBackground))
                     } else {
                         Text("Connect Apple Health")
                             .font(.headline)
-                            .foregroundStyle(isDark ? .black : .white)
+                            .foregroundStyle(Color(.systemBackground))
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(isDark ? Color.white : Color.black)
+                .background(Color.primary)
                 .clipShape(.rect(cornerRadius: 16))
             }
             .disabled(isRequesting || isConnected)

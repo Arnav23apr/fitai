@@ -3,7 +3,9 @@ import PhotosUI
 
 struct BattleSetupView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     @State private var viewModel = BattleViewModel()
+    @State private var showDefaultSaved: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -12,11 +14,7 @@ struct BattleSetupView: View {
                     headerSection
 
                     HStack(spacing: 16) {
-                        photoCard(
-                            title: "You",
-                            image: viewModel.playerPhoto,
-                            pickerItem: $viewModel.playerPickerItem
-                        )
+                        playerPhotoCard
 
                         vsLabel
 
@@ -49,7 +47,7 @@ struct BattleSetupView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(.white.opacity(0.6))
+                        .foregroundStyle(.secondary)
                 }
             }
             .overlay {
@@ -60,8 +58,18 @@ struct BattleSetupView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
+            .onAppear {
+                viewModel.prefillPlayerPhoto(
+                    battlePhotoData: appState.loadBattlePhoto(),
+                    profileData: appState.profile.customPhotoData,
+                    name: appState.profile.name
+                )
+            }
             .onChange(of: viewModel.playerPickerItem) { _, _ in
-                Task { await viewModel.loadPlayerPhoto() }
+                Task {
+                    await viewModel.loadPlayerPhoto()
+                    viewModel.playerPhotoIsDefault = false
+                }
             }
             .onChange(of: viewModel.opponentPickerItem) { _, _ in
                 Task { await viewModel.loadOpponentPhoto() }
@@ -98,14 +106,87 @@ struct BattleSetupView: View {
 
             Text("Physique Battle")
                 .font(.system(.title2, design: .rounded, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
 
             Text("Upload both physique photos and let AI decide who gets mogged")
                 .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.4))
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
         }
+    }
+
+    private var playerPhotoCard: some View {
+        VStack(spacing: 10) {
+            PhotosPicker(selection: $viewModel.playerPickerItem, matching: .images) {
+                if let img = viewModel.playerPhoto {
+                    Image(uiImage: img)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 140, height: 190)
+                        .clipShape(.rect(cornerRadius: 16))
+                        .overlay(alignment: .topTrailing) {
+                            if viewModel.playerPhotoIsDefault {
+                                Text("Default")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(.red.opacity(0.85))
+                                    .clipShape(Capsule())
+                                    .padding(6)
+                            }
+                        }
+                } else {
+                    VStack(spacing: 10) {
+                        Image(systemName: "person.crop.rectangle.badge.plus")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.tertiary)
+                        Text("Add Photo")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(width: 140, height: 190)
+                    .background(Color.primary.opacity(0.05))
+                    .clipShape(.rect(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.primary.opacity(0.12), style: StrokeStyle(lineWidth: 1.5, dash: [8, 4]))
+                    )
+                }
+            }
+
+            Text("You")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            if viewModel.playerPhoto != nil {
+                Button {
+                    if viewModel.playerPhotoIsDefault {
+                        appState.clearBattlePhoto()
+                        viewModel.playerPhotoIsDefault = false
+                    } else if let photo = viewModel.playerPhoto,
+                              let data = photo.jpegData(compressionQuality: 0.85) {
+                        appState.saveBattlePhoto(data)
+                        viewModel.playerPhotoIsDefault = true
+                        showDefaultSaved = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            showDefaultSaved = false
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: viewModel.playerPhotoIsDefault ? "checkmark.circle.fill" : "arrow.down.circle")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(viewModel.playerPhotoIsDefault ? "Remove Default" : "Set as Default")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(viewModel.playerPhotoIsDefault ? .red : .secondary)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.snappy(duration: 0.25), value: viewModel.playerPhotoIsDefault)
     }
 
     private func photoCard(title: String, image: UIImage?, pickerItem: Binding<PhotosPickerItem?>) -> some View {
@@ -121,24 +202,24 @@ struct BattleSetupView: View {
                     VStack(spacing: 10) {
                         Image(systemName: "person.crop.rectangle.badge.plus")
                             .font(.system(size: 28))
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                         Text("Add Photo")
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.3))
+                            .foregroundStyle(.tertiary)
                     }
                     .frame(width: 140, height: 190)
-                    .background(Color.white.opacity(0.04))
+                    .background(Color.primary.opacity(0.05))
                     .clipShape(.rect(cornerRadius: 16))
                     .overlay(
                         RoundedRectangle(cornerRadius: 16)
-                            .strokeBorder(Color.white.opacity(0.08), style: StrokeStyle(lineWidth: 1.5, dash: [8, 4]))
+                            .strokeBorder(Color.primary.opacity(0.12), style: StrokeStyle(lineWidth: 1.5, dash: [8, 4]))
                     )
                 }
             }
 
             Text(title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.6))
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -153,17 +234,17 @@ struct BattleSetupView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Opponent's Name")
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white.opacity(0.5))
+                .foregroundStyle(.secondary)
 
-            TextField("", text: $viewModel.opponentName, prompt: Text("Enter name").foregroundStyle(.white.opacity(0.2)))
+            TextField("", text: $viewModel.opponentName, prompt: Text("Enter name").foregroundStyle(.tertiary))
                 .font(.body)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .padding(14)
-                .background(Color.white.opacity(0.06))
+                .background(Color(.secondarySystemBackground))
                 .clipShape(.rect(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
                 )
         }
     }
@@ -195,7 +276,7 @@ struct BattleSetupView: View {
             .background(
                 viewModel.canStartBattle && !viewModel.isAnalyzing
                     ? LinearGradient(colors: [.red, .red.opacity(0.8)], startPoint: .leading, endPoint: .trailing)
-                    : LinearGradient(colors: [.white.opacity(0.08), .white.opacity(0.06)], startPoint: .leading, endPoint: .trailing)
+                    : LinearGradient(colors: [Color.primary.opacity(0.12), Color.primary.opacity(0.08)], startPoint: .leading, endPoint: .trailing)
             )
             .clipShape(.rect(cornerRadius: 14))
         }

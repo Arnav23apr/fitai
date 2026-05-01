@@ -43,6 +43,7 @@ nonisolated class LeaderboardService: @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 15
         commonHeaders.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
         request.setValue("resolution=merge-duplicates", forHTTPHeaderField: "Prefer")
 
@@ -56,7 +57,18 @@ nonisolated class LeaderboardService: @unchecked Sendable {
         ]
 
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        _ = try? await URLSession.shared.data(for: request)
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                #if DEBUG
+                print("[Leaderboard] upsertProfile failed: HTTP \(http.statusCode)")
+                #endif
+            }
+        } catch {
+            #if DEBUG
+            print("[Leaderboard] upsertProfile error: \(error.localizedDescription)")
+            #endif
+        }
     }
 
     func fetchLeaderboard(limit: Int = 50) async -> [LeaderboardProfile] {
@@ -64,6 +76,7 @@ nonisolated class LeaderboardService: @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        request.timeoutInterval = 15
         ["apikey": anonKey, "Authorization": "Bearer \(anonKey)"].forEach {
             request.setValue($0.value, forHTTPHeaderField: $0.key)
         }
@@ -83,6 +96,7 @@ nonisolated class LeaderboardService: @unchecked Sendable {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        request.timeoutInterval = 15
         ["apikey": anonKey, "Authorization": "Bearer \(anonKey)"].forEach {
             request.setValue($0.value, forHTTPHeaderField: $0.key)
         }

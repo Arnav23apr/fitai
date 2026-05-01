@@ -13,6 +13,8 @@ struct ProfileView: View {
     @State private var showCurrentPlan: Bool = false
     @State private var showWeightHeightEditor: Bool = false
     @State private var showCustomerCenter: Bool = false
+    @State private var showDeleteConfirm: Bool = false
+    @State private var isDeletingAccount: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -61,39 +63,26 @@ struct ProfileView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileSheet()
-                    .presentationBackground(.ultraThinMaterial)
-            }
+            .sheet(isPresented: $showEditProfile) { EditProfileSheet() }
             .sheet(isPresented: $showPaywall) { PaywallSheet() }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
-                    .presentationDetents([.fraction(0.75), .large])
+                    .presentationDetents([.fraction(0.75)])
                     .presentationDragIndicator(.hidden)
-                    .presentationBackground(.ultraThinMaterial)
             }
-            .sheet(isPresented: $showNotificationSettings) {
-                NotificationSettingsView()
-                    .presentationBackground(.ultraThinMaterial)
-            }
-            .sheet(isPresented: $showLanguagePicker) {
-                LanguagePickerSheet()
-                    .presentationBackground(.ultraThinMaterial)
-            }
+            .sheet(isPresented: $showNotificationSettings) { NotificationSettingsView() }
+            .sheet(isPresented: $showLanguagePicker) { LanguagePickerSheet() }
             .sheet(isPresented: $showWeightHeightEditor) {
                 WeightHeightEditorSheet()
                     .presentationDetents([.fraction(0.65), .large])
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showAppleHealth) {
                 AppleHealthView()
                     .presentationDetents([.large])
-                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showCustomerCenter) {
                 CustomerCenterView()
-                    .presentationBackground(.ultraThinMaterial)
             }
         }
     }
@@ -160,8 +149,24 @@ struct ProfileView: View {
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.blue.opacity(0.05), .purple.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(
+                    LinearGradient(colors: [.blue.opacity(0.10), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private var weightHeightCard: some View {
@@ -225,8 +230,24 @@ struct ProfileView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [.green.opacity(0.04), .cyan.opacity(0.03), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
             .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        LinearGradient(colors: [.green.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 0.5
+                    )
+            )
         }
     }
 
@@ -239,8 +260,24 @@ struct ProfileView: View {
             profileStat(value: "\(appState.profile.currentStreak)", label: L.t("streak", lang))
         }
         .padding(20)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.purple.opacity(0.04), .pink.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(
+                    LinearGradient(colors: [.purple.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private var profileDivider: some View {
@@ -347,7 +384,16 @@ struct ProfileView: View {
                 Divider().padding(.leading, 52)
                 restartTourRow
             }
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [.cyan.opacity(0.03), .blue.opacity(0.02), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
             .clipShape(.rect(cornerRadius: 16))
             .tourAnchor(.profileSettings)
 
@@ -363,6 +409,40 @@ struct ProfileView: View {
                 .padding(16)
                 .background(Color(.secondarySystemGroupedBackground))
                 .clipShape(.rect(cornerRadius: 16))
+            }
+
+            Button(action: { showDeleteConfirm = true }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                    Text("Delete Account")
+                        .font(.subheadline)
+                }
+                .foregroundStyle(.red)
+                .frame(maxWidth: .infinity)
+                .padding(16)
+                .background(Color(.secondarySystemGroupedBackground))
+                .clipShape(.rect(cornerRadius: 16))
+            }
+            .confirmationDialog(
+                "Delete Account",
+                isPresented: $showDeleteConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Delete My Account", role: .destructive) {
+                    isDeletingAccount = true
+                    Task {
+                        await appState.deleteAccount()
+                        isDeletingAccount = false
+                    }
+                }
+            } message: {
+                Text("This will permanently delete your account and all associated data. This action cannot be undone.")
+            }
+            .overlay {
+                if isDeletingAccount {
+                    ProgressView()
+                }
             }
         }
     }
@@ -542,6 +622,8 @@ struct EditProfileSheet: View {
         "figure.boxing", "figure.martial.arts", "dumbbell.fill"
     ]
     @State private var selectedAvatar: String = "person.crop.circle.fill"
+    @State private var usernameError: String? = nil
+    @State private var isCheckingUsername: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -608,15 +690,28 @@ struct EditProfileSheet: View {
                             .padding(16).background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
 
-                        HStack(spacing: 0) {
-                            Text("@").font(.body.weight(.medium)).foregroundStyle(.secondary).padding(.leading, 16)
-                            TextField("username", text: $username)
-                                .font(.body).foregroundStyle(.primary)
-                                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                                .padding(.vertical, 16).padding(.leading, 4).padding(.trailing, 16)
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 0) {
+                                Text("@").font(.body.weight(.medium)).foregroundStyle(.secondary).padding(.leading, 16)
+                                TextField("username", text: $username)
+                                    .font(.body).foregroundStyle(.primary)
+                                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                                    .padding(.vertical, 16).padding(.leading, 4).padding(.trailing, 16)
+                                    .onChange(of: username) { _, _ in usernameError = nil }
+                                if isCheckingUsername {
+                                    ProgressView().scaleEffect(0.8).padding(.trailing, 16)
+                                }
+                            }
+                            .background(Color(.secondarySystemGroupedBackground))
+                            .clipShape(.rect(cornerRadius: 12))
+
+                            if let usernameError {
+                                Text(usernameError)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                                    .padding(.leading, 4)
+                            }
                         }
-                        .background(Color(.secondarySystemGroupedBackground))
-                        .clipShape(.rect(cornerRadius: 12))
 
                         TextField(L.t("shortBio", appState.profile.selectedLanguage), text: $bio)
                             .font(.body).foregroundStyle(.primary)
@@ -636,15 +731,10 @@ struct EditProfileSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.t("save", appState.profile.selectedLanguage)) {
-                        appState.profile.name = name
-                        appState.profile.username = username.lowercased().trimmingCharacters(in: .whitespaces)
-                        appState.profile.bio = bio
-                        appState.profile.avatarSystemName = selectedAvatar
-                        appState.profile.customPhotoData = customPhotoData
-                        appState.saveProfile()
-                        dismiss()
+                        Task { await save() }
                     }
                     .fontWeight(.semibold)
+                    .disabled(isCheckingUsername)
                 }
             }
             .onChange(of: selectedPhotoItem) { _, newValue in
@@ -663,6 +753,36 @@ struct EditProfileSheet: View {
             selectedAvatar = appState.profile.avatarSystemName
             customPhotoData = appState.profile.customPhotoData
         }
+    }
+
+    @MainActor
+    private func save() async {
+        let normalized = username.lowercased().trimmingCharacters(in: .whitespaces)
+        let current = appState.profile.username.lowercased()
+
+        if !normalized.isEmpty && normalized != current {
+            isCheckingUsername = true
+            let available = await appState.isUsernameAvailable(normalized)
+            isCheckingUsername = false
+            switch available {
+            case .some(false):
+                usernameError = "That username is already taken."
+                return
+            case .none:
+                usernameError = "Couldn't verify username. Check your connection and try again."
+                return
+            case .some(true):
+                break
+            }
+        }
+
+        appState.profile.name = name
+        appState.profile.username = normalized
+        appState.profile.bio = bio
+        appState.profile.avatarSystemName = selectedAvatar
+        appState.profile.customPhotoData = customPhotoData
+        appState.saveProfile()
+        dismiss()
     }
 }
 

@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import FitAIPremiumFitnessApp
+@testable import FitAI
 
 struct FitAIPremiumFitnessAppTests {
 

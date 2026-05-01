@@ -18,8 +18,11 @@ struct SetLoggingSheet: View {
     @State private var useBodyweight: Bool = false
     @State private var usedAISuggestions: Bool = false
     @State private var weightStrings: [String] = []
+    @State private var plateCalcSetIndex: Int? = nil
+    @State private var showWeightLimitAlert: Bool = false
 
     private let exerciseLogService = ExerciseLogService.shared
+    private let maxWeight: Double = 9999
 
     private var isBodyweightEligible: Bool {
         BodyweightDetector.isBodyweightExercise(exercise.name)
@@ -150,6 +153,11 @@ struct SetLoggingSheet: View {
         }
         .onDisappear { timer?.invalidate() }
         .sensoryFeedback(.success, trigger: showPRCelebration)
+        .alert("Slow down brother 😭", isPresented: $showWeightLimitAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("That's gonna break the app! Max weight is \(Int(maxWeight))\(weightUnit).")
+        }
     }
 
     // MARK: - AI Suggested Banner
@@ -646,6 +654,10 @@ struct SetLoggingSheet: View {
                         set: { val in
                             guard index < weightStrings.count else { return }
                             let filtered = val.filter { $0.isNumber || $0 == "." }
+                            if let parsed = Double(filtered), parsed > maxWeight {
+                                showWeightLimitAlert = true
+                                return
+                            }
                             weightStrings[index] = filtered
                             if let parsed = Double(filtered) {
                                 sets[index].weight = parsed
@@ -655,18 +667,47 @@ struct SetLoggingSheet: View {
                         }
                     )
 
-                    TextField("0", text: weightBinding)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.center)
-                        .font(.system(size: 22, weight: .bold, design: .rounded))
-                        .frame(width: 76, height: 68)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(.rect(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                        )
-                        .disabled(isDisabled)
+                    ZStack(alignment: .topTrailing) {
+                        TextField("0", text: weightBinding)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.center)
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .frame(width: 76, height: 68)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(.rect(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+                            )
+                            .disabled(isDisabled)
+
+                        if PlateCalculator.isBarbellExercise(exercise.name), sets[index].weight > 0 {
+                            Button {
+                                plateCalcSetIndex = index
+                            } label: {
+                                Image(systemName: "chart.bar.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 18, height: 18)
+                                    .background(Color.blue)
+                                    .clipShape(Circle())
+                                    .overlay(
+                                        Circle().stroke(Color(.systemBackground), lineWidth: 1.5)
+                                    )
+                            }
+                            .offset(x: 6, y: -6)
+                            .popover(isPresented: Binding(
+                                get: { plateCalcSetIndex == index },
+                                set: { if !$0 { plateCalcSetIndex = nil } }
+                            ), attachmentAnchor: .point(.top), arrowEdge: .top) {
+                                PlateCalculatorPopover(
+                                    target: sets[index].weight,
+                                    unit: appState.profile.usesMetric ? .kg : .lb
+                                )
+                                .presentationCompactAdaptation(.popover)
+                            }
+                        }
+                    }
                 }
             }
 

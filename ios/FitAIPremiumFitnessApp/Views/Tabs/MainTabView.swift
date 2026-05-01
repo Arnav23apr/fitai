@@ -16,15 +16,23 @@ struct MainTabView: View {
             Tab(L.t("scan", lang), systemImage: "camera.viewfinder", value: 0) {
                 ScanView()
             }
+            .accessibilityLabel("Scan tab")
+            .accessibilityHint("Body scan and physique analysis")
             Tab(L.t("plan", lang), systemImage: "calendar.badge.clock", value: 1) {
                 PlanView()
             }
+            .accessibilityLabel("Plan tab")
+            .accessibilityHint("Your workout plan and schedule")
             Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 2) {
                 CompeteView()
             }
+            .accessibilityLabel("Compete tab")
+            .accessibilityHint("Leaderboards, battles, and challenges")
             Tab(L.t("profile", lang), systemImage: "person.fill", value: 3) {
                 ProfileView()
             }
+            .accessibilityLabel("Profile tab")
+            .accessibilityHint("Your profile and settings")
         }
         .tint(.primary)
         .opacity(appeared ? 1 : 0)
@@ -36,7 +44,7 @@ struct MainTabView: View {
                 WorkoutResumePill(session: session) {
                     showResumeWorkout = true
                 }
-                .padding(.bottom, 84)
+                .padding(.bottom, 56)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .animation(.spring(duration: 0.4, bounce: 0.2), value: session.isActive)
             }
@@ -49,7 +57,6 @@ struct MainTabView: View {
             if session.isActive {
                 let resumeWorkout = buildResumeWorkoutDay()
                 WorkoutDetailSheet(workout: resumeWorkout)
-                    .presentationBackground(.ultraThinMaterial)
             }
         }
         .onAppear {
@@ -65,6 +72,12 @@ struct MainTabView: View {
             registerTabBarFrame()
             tourManager.checkAndShowWelcome()
             session.resumeIfNeeded()
+        }
+        .onChange(of: tourManager.isActive) { _, active in
+            if active { registerTabBarFrame() }
+        }
+        .onChange(of: tourManager.showWelcome) { _, showing in
+            if showing { registerTabBarFrame() }
         }
     }
 
@@ -91,11 +104,10 @@ struct MainTabView: View {
         } else {
             safeBottom = 34
         }
-        let tabBarPillHeight: CGFloat = 45
-        let bottomPadding: CGFloat = safeBottom > 0 ? 2 : 4
-        let pillBottomY = screen.height - safeBottom + bottomPadding
+        let tabBarPillHeight: CGFloat = 50
+        let pillBottomY = screen.height - safeBottom + 6
         let pillTopY = pillBottomY - tabBarPillHeight
-        let insetH: CGFloat = 16
+        let insetH: CGFloat = 25
         let frame = CGRect(
             x: insetH,
             y: pillTopY,

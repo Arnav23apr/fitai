@@ -3,8 +3,8 @@ import SwiftUI
 struct ShareCardView: View {
     let result: ScanResult
 
-    private var visibleScores: [(label: String, score: Double)] {
-        let allScores: [(key: String, label: String, score: Double)] = [
+    private var allScores: [(label: String, score: Double)] {
+        let scores: [(key: String, label: String, score: Double)] = [
             ("chest", "Chest", result.muscleScores.chest),
             ("shoulders", "Shoulders", result.muscleScores.shoulders),
             ("back", "Back", result.muscleScores.back),
@@ -12,154 +12,147 @@ struct ShareCardView: View {
             ("legs", "Legs", result.muscleScores.legs),
             ("core", "Core", result.muscleScores.core),
         ]
-        let visible = Set(result.visibleMuscleGroups.map { $0.lowercased() })
-        return allScores
-            .filter { visible.contains($0.key) && $0.score > 0 }
-            .map { ($0.label, $0.score) }
+        return scores.filter { $0.score > 0 }.map { ($0.label, $0.score) }
     }
 
-    private var gridItems: [[(label: String, score: Double)]] {
+    private var gridRows: [[(label: String, score: Double)]] {
         var rows: [[(label: String, score: Double)]] = []
-        let items = visibleScores
         var i = 0
-        while i < items.count {
-            if i + 1 < items.count {
-                rows.append([items[i], items[i + 1]])
+        while i < allScores.count {
+            if i + 1 < allScores.count {
+                rows.append([allScores[i], allScores[i + 1]])
                 i += 2
             } else {
-                rows.append([items[i]])
+                rows.append([allScores[i]])
                 i += 1
             }
         }
         return rows
     }
 
+    private let cardBg = Color(red: 0.07, green: 0.07, blue: 0.08)
+
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 20) {
-                if let photo = result.frontPhoto {
-                    Image(uiImage: photo)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 80, height: 80)
-                        .clipShape(Circle())
-                        .overlay(
-                            Circle()
-                                .strokeBorder(
-                                    LinearGradient(
-                                        colors: [.green.opacity(0.8), .mint.opacity(0.6)],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 2.5
-                                )
-                        )
-                        .padding(.top, 24)
+            // Title
+            Text("Ratings")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+
+            // Photo
+            if let photo = result.frontPhoto {
+                Image(uiImage: photo)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 110, height: 110)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.green.opacity(0.7), .mint.opacity(0.5), .green.opacity(0.3)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 3
+                            )
+                    )
+                    .shadow(color: .green.opacity(0.2), radius: 12, y: 4)
+                    .padding(.bottom, 24)
+            }
+
+            // Scores card
+            VStack(spacing: 18) {
+                // Overall + Potential (top row, larger)
+                HStack(spacing: 20) {
+                    scoreCell(label: "Overall", score: result.overallScore, isLarge: true, customColor: nil)
+                    scoreCell(label: "Potential", score: result.potentialRating, isLarge: true, customColor: potentialColor(result.potentialRating))
                 }
 
-                overallRow
-                    .padding(.horizontal, 24)
-
-                VStack(spacing: 14) {
-                    ForEach(Array(gridItems.enumerated()), id: \.offset) { _, row in
-                        HStack(spacing: 16) {
-                            ForEach(Array(row.enumerated()), id: \.offset) { _, item in
-                                scoreCell(label: item.label, score: item.score)
-                            }
-                            if row.count == 1 {
-                                Color.clear.frame(maxWidth: .infinity)
-                            }
+                // Muscle scores grid
+                ForEach(Array(gridRows.enumerated()), id: \.offset) { _, row in
+                    HStack(spacing: 20) {
+                        ForEach(Array(row.enumerated()), id: \.offset) { _, item in
+                            scoreCell(label: item.label, score: item.score, isLarge: false, customColor: nil)
+                        }
+                        if row.count == 1 {
+                            Color.clear.frame(maxWidth: .infinity)
                         }
                     }
                 }
-                .padding(.horizontal, 24)
             }
-            .padding(.bottom, 24)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 24)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+                    )
+            )
+            .padding(.horizontal, 20)
 
+            // Branding
             HStack(spacing: 6) {
-                Image(systemName: "sparkle")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.3))
-                Text("Fit AI")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.3))
+                Image("FitAILogoWhite")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 18)
+                    .opacity(0.35)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(Color.white.opacity(0.03))
+            .padding(.top, 20)
+            .padding(.bottom, 24)
         }
-        .background(Color(red: 0.08, green: 0.08, blue: 0.09))
-        .clipShape(.rect(cornerRadius: 20))
+        .frame(width: 360)
+        .background(cardBg)
+        .clipShape(.rect(cornerRadius: 22))
     }
 
-    private var overallRow: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Overall")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
-                Text(scoreText(result.overallScore))
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(.white)
-                scoreBar(value: result.overallScore, color: barColor(result.overallScore))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+    // MARK: - Score Cell
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Potential")
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.5))
-                Text(potentialText(result.potentialRating))
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
-                    .foregroundStyle(potentialColor(result.potentialRating))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                scoreBar(value: result.potentialRating, color: potentialColor(result.potentialRating))
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
+    private func scoreCell(label: String, score: Double, isLarge: Bool, customColor: Color?) -> some View {
+        let scaled = Int(round(score * 10))
+        let color = customColor ?? barColor(score)
 
-    private func scoreCell(label: String, score: Double) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .leading, spacing: 5) {
             Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.white.opacity(0.5))
-            Text(scoreText(score))
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
-            scoreBar(value: score, color: barColor(score))
+                .font(.system(size: isLarge ? 14 : 13, weight: .medium))
+                .foregroundStyle(.white.opacity(0.45))
+
+            Text("\(scaled)")
+                .font(.system(size: isLarge ? 44 : 36, weight: .bold, design: .rounded))
+                .foregroundStyle(customColor != nil ? color : .white)
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.08))
+                        .frame(height: 5)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.7)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(0, geo.size.width * (score / 10)), height: 5)
+                }
+            }
+            .frame(height: 5)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func potentialText(_ score: Double) -> String {
-        "\(Int(round(score * 10)))"
-    }
+    // MARK: - Colors
 
     private func potentialColor(_ score: Double) -> Color {
         if score >= 8 { return .cyan }
         if score >= 6 { return .green }
         return Color(red: 0.85, green: 0.75, blue: 0.1)
-    }
-
-    private func scoreBar(value: Double, color: Color) -> some View {
-        GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.08))
-                    .frame(height: 5)
-                Capsule()
-                    .fill(color)
-                    .frame(width: max(0, geo.size.width * (value / 10)), height: 5)
-            }
-        }
-        .frame(height: 5)
-    }
-
-    private func scoreText(_ score: Double) -> String {
-        let scaled = Int(round(score * 10))
-        return "\(scaled)"
     }
 
     private func barColor(_ score: Double) -> Color {
@@ -173,7 +166,6 @@ struct ShareCardRenderer {
     @MainActor
     static func render(result: ScanResult) -> UIImage? {
         let view = ShareCardView(result: result)
-            .frame(width: 360)
         let renderer = ImageRenderer(content: view)
         renderer.scale = 3.0
         return renderer.uiImage

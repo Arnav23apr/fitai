@@ -12,6 +12,9 @@ struct PlanView: View {
     @State private var coachQuestionSent: String? = nil
     @State private var hasAutoResumed: Bool = false
     @State private var selectedMuscleFromHeatmap: Muscle? = nil
+    @State private var showStreakSheet: Bool = false
+    @State private var showHistory: Bool = false
+    @State private var showCalendar: Bool = false
 
     private let session = WorkoutSessionManager.shared
 
@@ -66,48 +69,24 @@ struct PlanView: View {
     var body: some View {
         NavigationStack {
             ScrollViewReader { scrollProxy in
-                ScrollView(showsIndicators: false) {
+                ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 20) {
-                        planSummaryCard
-                            .transition(.opacity.combined(with: .move(edge: .top)))
-
                         todayGoalHero
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
 
-                        weeklyStreakSection
-
-                        if appState.profile.latestScore != nil {
-                            scanInsightCard
-                        } else {
-                            promptScanCard
-                        }
-
-                        if appState.profile.latestScore != nil && !appState.profile.weakPoints.isEmpty {
-                            focusAreasSection
-                        }
-
-                        WeeklyMuscleHeatMapView(
-                            workoutLogs: appState.profile.workoutLogs,
-                            exerciseLogs: ExerciseLogService.shared.loadAll(),
-                            onMuscleTapped: { muscle in
-                                selectedMuscleFromHeatmap = muscle
-                            }
-                        )
-
-                        competeIntegrationCard
+                        planSummaryCard
 
                         weeklyPlanSection
-
-                        nextScanReminderCard
-
-                        weeklySummaryCard
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                     .padding(.bottom, 100)
                     .opacity(appeared ? 1 : 0)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                     .tourAutoScroll(tab: 1, proxy: scrollProxy)
                 }
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
             .background(Color(.systemBackground))
             .overlay(alignment: .bottomTrailing) {
@@ -115,31 +94,37 @@ struct PlanView: View {
             }
             .navigationTitle(L.t("plan", lang))
             .navigationBarTitleDisplayMode(.large)
-                        .sheet(isPresented: $showCoach) {
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 12) {
+                        Button {
+                            showCalendar = true
+                        } label: {
+                            Image(systemName: "calendar")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                        Button {
+                            showHistory = true
+                        } label: {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showCoach) {
                 CoachView()
-                    .presentationBackground(.ultraThinMaterial)
+            }
+            .sheet(isPresented: $showHistory) {
+                WorkoutHistorySheet()
+            }
+            .sheet(isPresented: $showCalendar) {
+                WorkoutCalendarView()
             }
             .sheet(item: $selectedDay) { day in
                 WorkoutDetailSheet(workout: day)
-                    .presentationBackground(.ultraThinMaterial)
-            }
-            .sheet(item: $selectedMuscleFromHeatmap) { muscle in
-                MuscleDetailSheet(
-                    muscle: muscle,
-                    exercises: workoutPlan.flatMap(\.exercises),
-                    exerciseLogs: ExerciseLogService.shared.loadAll()
-                )
-                .presentationDetents([.medium, .large])
-                .presentationBackground(.ultraThinMaterial)
-            }
-            .sheet(item: $selectedFocusItem) { item in
-                FocusAreaDetailSheet(
-                    area: item.area,
-                    priority: focusAreaPriority(item.area),
-                    score: focusAreaScore(item.area),
-                    exercises: focusAreaExercises(item.area)
-                )
-                .presentationBackground(.ultraThinMaterial)
             }
             .onAppear {
                 withAnimation(.easeOut(duration: 0.5)) {
@@ -730,8 +715,24 @@ struct PlanView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(28)
-        .background(Color.primary.opacity(0.04))
+        .background(
+            ZStack {
+                Color.primary.opacity(0.04)
+                LinearGradient(
+                    colors: [.blue.opacity(0.05), .purple.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(
+                    LinearGradient(colors: [.blue.opacity(0.10), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     // MARK: - Focus Areas (Interactive)
@@ -799,8 +800,24 @@ struct PlanView: View {
             }
         }
         .padding(16)
-        .background(Color.primary.opacity(0.03))
+        .background(
+            ZStack {
+                Color.primary.opacity(0.03)
+                LinearGradient(
+                    colors: [.orange.opacity(0.05), .yellow.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(
+                    LinearGradient(colors: [.orange.opacity(0.10), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     // MARK: - AI Coach Floating Button
@@ -825,7 +842,7 @@ struct PlanView: View {
             .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
         }
         .padding(.trailing, 20)
-        .padding(.bottom, session.isActive ? 148 : 24)
+        .padding(.bottom, session.isActive ? 70 : 14)
         .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
         .animation(.spring(duration: 0.3), value: session.isActive)
     }
@@ -1273,8 +1290,24 @@ struct PlanView: View {
             }
         }
         .padding(16)
-        .background(Color.primary.opacity(0.04))
+        .background(
+            ZStack {
+                Color.primary.opacity(0.04)
+                LinearGradient(
+                    colors: [.cyan.opacity(0.04), .blue.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(colors: [.cyan.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private func summaryItem(value: String, label: String, color: Color) -> some View {

@@ -14,6 +14,8 @@ struct CompeteView: View {
     @State private var showRankProgression: Bool = false
     @State private var realLeaderboard: [LeaderboardProfile] = []
     @State private var isLoadingLeaderboard: Bool = false
+    @State private var leaderboardRefreshTask: Task<Void, Never>? = nil
+    @Environment(\.scenePhase) private var scenePhase
 
     private var currentTier: CompeteTier { CompeteTier.current(for: appState.profile.points) }
     private var nextTier: CompeteTier? { CompeteTier.next(for: appState.profile.points) }
@@ -27,12 +29,15 @@ struct CompeteView: View {
 
     private var achievements: [Achievement] {
         [
-            Achievement(id: "first_win", title: "First Blood", description: "Win your first battle", icon: "flame.fill", requiredValue: 1, currentValue: min(appState.profile.totalWorkouts > 0 ? 1 : 0, 1), xpReward: 100, tier: .bronze),
-            Achievement(id: "streak_7", title: "Week Warrior", description: "7-day workout streak", icon: "flame.fill", requiredValue: 7, currentValue: min(appState.profile.currentStreak, 7), xpReward: 500, tier: .silver),
-            Achievement(id: "battles_10", title: "Gladiator", description: "Complete 10 battles", icon: "figure.mixed.cardio", requiredValue: 10, currentValue: min(appState.profile.totalScans, 10), xpReward: 750, tier: .gold),
-            Achievement(id: "workouts_25", title: "Iron Will", description: "Complete 25 workouts", icon: "figure.strengthtraining.traditional", requiredValue: 25, currentValue: min(appState.profile.totalWorkouts, 25), xpReward: 1000, tier: .gold),
-            Achievement(id: "streak_30", title: "Unstoppable", description: "30-day streak", icon: "bolt.fill", requiredValue: 30, currentValue: min(appState.profile.currentStreak, 30), xpReward: 2000, tier: .diamond),
-            Achievement(id: "diamond", title: "Diamond League", description: "Reach Diamond tier", icon: "diamond.fill", requiredValue: 10000, currentValue: appState.profile.points, xpReward: 5000, tier: .diamond),
+            Achievement(id: "first_workout", title: "First Step", description: "Complete 1 workout", icon: "figure.walk", requiredValue: 1, currentValue: appState.profile.totalWorkouts, xpReward: 100, tier: .bronze),
+            Achievement(id: "first_scan", title: "Self Aware", description: "Complete 1 body scan", icon: "camera.viewfinder", requiredValue: 1, currentValue: appState.profile.totalScans, xpReward: 150, tier: .bronze),
+            Achievement(id: "streak_7", title: "Week Warrior", description: "7-day workout streak", icon: "flame.fill", requiredValue: 7, currentValue: appState.profile.currentStreak, xpReward: 500, tier: .silver),
+            Achievement(id: "workouts_10", title: "Iron Starter", description: "Complete 10 workouts", icon: "dumbbell.fill", requiredValue: 10, currentValue: appState.profile.totalWorkouts, xpReward: 500, tier: .silver),
+            Achievement(id: "scans_5", title: "Progress Tracker", description: "Complete 5 body scans", icon: "chart.line.uptrend.xyaxis", requiredValue: 5, currentValue: appState.profile.totalScans, xpReward: 600, tier: .silver),
+            Achievement(id: "workouts_25", title: "Iron Will", description: "Complete 25 workouts", icon: "figure.strengthtraining.traditional", requiredValue: 25, currentValue: appState.profile.totalWorkouts, xpReward: 1000, tier: .gold),
+            Achievement(id: "streak_30", title: "Unstoppable", description: "30-day workout streak", icon: "bolt.fill", requiredValue: 30, currentValue: appState.profile.currentStreak, xpReward: 2000, tier: .diamond),
+            Achievement(id: "workouts_100", title: "Centurion", description: "Complete 100 workouts", icon: "rosette", requiredValue: 100, currentValue: appState.profile.totalWorkouts, xpReward: 3000, tier: .diamond),
+            Achievement(id: "diamond", title: "Diamond League", description: "Reach 10,000 XP", icon: "diamond.fill", requiredValue: 10000, currentValue: appState.profile.points, xpReward: 5000, tier: .diamond),
         ]
     }
 
@@ -76,43 +81,17 @@ struct CompeteView: View {
             ScrollViewReader { scrollProxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    heroSection
+                    battleCard
+                        .padding(.horizontal, 20)
                         .padding(.bottom, 24)
-
-                    seasonBanner
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-
-                    activeChallenge
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
+                        .tourAnchor(.competeRankBadge)
 
                     friendsSection
                         .padding(.bottom, 20)
 
-                    battleCard
+                    comingSoonCard
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-
-                    weeklyRingsSection
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-
-                    challengesGrid
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-
-                    leaderboardSection
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-
-                    achievementsGrid
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-
-                    socialFeed
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 32)
                 }
                 .padding(.top, 8)
                 .tourAutoScroll(tab: 2, proxy: scrollProxy)
@@ -123,25 +102,36 @@ struct CompeteView: View {
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showBattleSetup) {
                 BattleSetupView()
-                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showFriends) {
                 FriendsView()
-                    .presentationBackground(.ultraThinMaterial)
-            }
-            .sheet(isPresented: $showRankProgression) {
-                RankProgressionSheet(currentPoints: appState.profile.points)
-                    .presentationDetents([.large])
             }
             .onAppear {
                 if !appState.profile.username.isEmpty {
                     friendVM.setUsername(appState.profile.username)
                 }
             }
-            .task {
+        }
+    }
+
+    private func startLeaderboardAutoRefresh() {
+        stopLeaderboardAutoRefresh()
+        leaderboardRefreshTask = Task { @MainActor in
+            // Pseudo-realtime: poll every 15s while the Compete tab is visible.
+            // Switching to Supabase Realtime would require linking the Realtime
+            // SPM product and publishing the leaderboard_profiles table — this
+            // gives a near-realtime feel without those changes.
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 15_000_000_000)
+                if Task.isCancelled { return }
                 await syncAndLoadLeaderboard()
             }
         }
+    }
+
+    private func stopLeaderboardAutoRefresh() {
+        leaderboardRefreshTask?.cancel()
+        leaderboardRefreshTask = nil
     }
 
     // MARK: - Hero Section
@@ -382,7 +372,6 @@ struct CompeteView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
                     ZStack {
-                        Color(.secondarySystemBackground)
                         Image(systemName: "figure.stand")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.quaternary)
@@ -398,24 +387,14 @@ struct CompeteView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 120)
 
-                    ZStack {
-                        Text("VS")
-                            .font(.system(.title2, design: .rounded, weight: .black))
-                            .foregroundStyle(.red)
-                            .shadow(color: .red.opacity(0.5), radius: 8)
-                    }
-                    .frame(width: 50)
-                    .frame(height: 120)
-                    .background(
-                        LinearGradient(
-                            colors: [Color.red.opacity(0.15), Color.red.opacity(0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    Text("VS")
+                        .font(.system(.title2, design: .rounded, weight: .black))
+                        .foregroundStyle(.red)
+                        .shadow(color: .red.opacity(0.5), radius: 8)
+                        .frame(width: 50)
+                        .frame(height: 120)
 
                     ZStack {
-                        Color(.secondarySystemBackground)
                         Image(systemName: "figure.stand")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(.quaternary)
@@ -431,7 +410,6 @@ struct CompeteView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 120)
                 }
-                .clipShape(.rect(cornerRadii: .init(topLeading: 18, topTrailing: 18)))
 
                 VStack(spacing: 8) {
                     HStack {
@@ -458,11 +436,23 @@ struct CompeteView: View {
                 }
                 .padding(16)
             }
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [.red.opacity(0.06), .orange.opacity(0.03), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
             .clipShape(.rect(cornerRadius: 18))
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
-                    .strokeBorder(Color.red.opacity(0.1), lineWidth: 1)
+                    .strokeBorder(
+                        LinearGradient(colors: [.red.opacity(0.12), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                        lineWidth: 0.5
+                    )
             )
         }
         .sensoryFeedback(.impact(weight: .light), trigger: showBattleSetup)
@@ -509,8 +499,24 @@ struct CompeteView: View {
             weekdayDots
         }
         .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.green.opacity(0.05), .cyan.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(colors: [.green.opacity(0.10), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private func ringLegend(color: Color, label: String, value: String) -> some View {
@@ -665,6 +671,11 @@ struct CompeteView: View {
                         .clipShape(Capsule())
                 }
 
+                Text(challenge.description)
+                    .font(.system(size: 11))
+                    .foregroundStyle(isLocked ? .quaternary : .secondary)
+                    .lineLimit(1)
+
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
                         Capsule()
@@ -690,7 +701,18 @@ struct CompeteView: View {
             }
         }
         .padding(12)
-        .background(challenge.completed ? Color.green.opacity(0.05) : Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                challenge.completed ? Color.green.opacity(0.05) : Color(.secondarySystemGroupedBackground)
+                if !challenge.completed {
+                    LinearGradient(
+                        colors: [.yellow.opacity(0.04), .orange.opacity(0.02), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            }
+        )
         .clipShape(.rect(cornerRadius: 14))
         .opacity(isLocked ? 0.5 : 1)
     }
@@ -795,7 +817,16 @@ struct CompeteView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(Color.primary.opacity(0.03))
+        .background(
+            ZStack {
+                Color.primary.opacity(0.03)
+                LinearGradient(
+                    colors: [.purple.opacity(0.04), .blue.opacity(0.02), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 12))
     }
 
@@ -910,9 +941,18 @@ struct CompeteView: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
 
-            Text("+\(achievement.xpReward) XP")
+            Text(achievement.description)
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .padding(.horizontal, 4)
+
+            Text(achievement.isUnlocked
+                 ? "+\(achievement.xpReward) XP"
+                 : "\(min(achievement.currentValue, achievement.requiredValue))/\(achievement.requiredValue)")
                 .font(.system(size: 9, weight: .bold, design: .rounded))
-                .foregroundStyle(achievement.isUnlocked ? .green : Color(.systemGray3))
+                .foregroundStyle(achievement.isUnlocked ? .green : .yellow)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -1143,6 +1183,87 @@ struct CompeteView: View {
         case "Diamond": return Color(red: 0.7, green: 0.85, blue: 1.0)
         default: return Color(red: 0.80, green: 0.50, blue: 0.20)
         }
+    }
+
+    // MARK: - Coming Soon
+
+    private var comingSoonCard: some View {
+        let features: [(icon: String, title: String, desc: String, color: Color)] = [
+            ("trophy.fill", "Weekly Tournaments", "Compete in ranked weekly events for exclusive badges", .orange),
+            ("globe.americas.fill", "Global Leaderboards", "See where you rank against users worldwide", .blue),
+            ("gift.fill", "Achievement Rewards", "Unlock custom themes, badges, and profile flair", .purple),
+        ]
+
+        return VStack(spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.blue)
+                Text("Coming Soon")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.primary)
+                Spacer()
+            }
+
+            VStack(spacing: 0) {
+                ForEach(Array(features.enumerated()), id: \.offset) { idx, feature in
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(feature.color.opacity(0.12))
+                                .frame(width: 40, height: 40)
+                            Image(systemName: feature.icon)
+                                .font(.system(size: 16))
+                                .foregroundStyle(feature.color)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(feature.title)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                            Text(feature.desc)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 14)
+
+                    if idx < features.count - 1 {
+                        Divider()
+                            .padding(.leading, 68)
+                    }
+                }
+            }
+            .background(Color(.tertiarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 14))
+        }
+        .padding(20)
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.blue.opacity(0.05), .purple.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
+        .clipShape(.rect(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(
+                    LinearGradient(colors: [.blue.opacity(0.12), .purple.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     // MARK: - Helpers
