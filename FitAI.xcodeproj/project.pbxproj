@@ -70,27 +70,27 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* FitAIPremiumFitnessApp */ = {
+		105FC57C2E9EAD3100EA8BCF /* ios/FitAIPremiumFitnessApp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FitAIPremiumFitnessApp;
+			path = ios/FitAIPremiumFitnessApp;
 			sourceTree = "<group>";
 		};
-		105FC58C2E9EAD3200EA8BCF /* FitAIPremiumFitnessAppTests */ = {
+		105FC58C2E9EAD3200EA8BCF /* ios/FitAIPremiumFitnessAppTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FitAIPremiumFitnessAppTests;
+			path = ios/FitAIPremiumFitnessAppTests;
 			sourceTree = "<group>";
 		};
-		105FC5962E9EAD3200EA8BCF /* FitAIPremiumFitnessAppUITests */ = {
+		105FC5962E9EAD3200EA8BCF /* ios/FitAIPremiumFitnessAppUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FitAIPremiumFitnessAppUITests;
+			path = ios/FitAIPremiumFitnessAppUITests;
 			sourceTree = "<group>";
 		};
-		XX847D4FDDF05380C4D054XX /* FitAIWorkoutActivity */ = {
+		XX847D4FDDF05380C4D054XX /* ios/FitAIWorkoutActivity */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				XXBCA6BFF210607FE2A774XX /* Exceptions for "ios/FitAIWorkoutActivity" folder in "FitAIWorkoutActivity" target */,
 			);
-			path = FitAIWorkoutActivity;
+			path = ios/FitAIWorkoutActivity;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -200,10 +200,10 @@
 			fileSystemSynchronizedGroups = (
 				105FC58C2E9EAD3200EA8BCF /* ios/FitAIPremiumFitnessAppTests */,
 			);
-			name = FitAIPremiumFitnessAppTests;
+			name = FitAI;
 			packageProductDependencies = (
 			);
-			productName = FitAIPremiumFitnessAppTests;
+			productName = FitAI;
 			productReference = 105FC5892E9EAD3200EA8BCF /* FitAI.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
@@ -223,10 +223,10 @@
 			fileSystemSynchronizedGroups = (
 				105FC5962E9EAD3200EA8BCF /* ios/FitAIPremiumFitnessAppUITests */,
 			);
-			name = FitAIPremiumFitnessAppUITests;
+			name = FitAI;
 			packageProductDependencies = (
 			);
-			productName = FitAIPremiumFitnessAppUITests;
+			productName = FitAI;
 			productReference = 105FC5932E9EAD3200EA8BCF /* FitAI.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
@@ -507,9 +507,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = FitAIPremiumFitnessApp/FitAIPremiumFitnessApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = FitAI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -551,9 +551,9 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = FitAIPremiumFitnessApp/FitAIPremiumFitnessApp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = FitAI.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -595,7 +595,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -608,7 +608,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FitAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FitAI";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FitAIPremiumFitnessApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FitAIPremiumFitnessApp";
 			};
 			name = Debug;
 		};
@@ -618,7 +618,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -631,7 +631,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FitAI.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FitAI";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FitAIPremiumFitnessApp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FitAIPremiumFitnessApp";
 			};
 			name = Release;
 		};
@@ -639,7 +639,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -660,7 +660,7 @@
 			buildSettings = {
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -681,10 +681,10 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				"CODE_SIGN_STYLE[sdk=*]" = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FitAIWorkoutActivity/Info.plist;
+				INFOPLIST_FILE = ios/FitAIWorkoutActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -709,10 +709,10 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				"CODE_SIGN_STYLE[sdk=*]" = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043001;
+				CURRENT_PROJECT_VERSION = 2026043003;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FitAIWorkoutActivity/Info.plist;
+				INFOPLIST_FILE = ios/FitAIWorkoutActivity/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "$(PRODUCT_NAME)";
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
