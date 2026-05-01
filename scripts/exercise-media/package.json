@@ -1,0 +1,12 @@
+{
+  "name": "fitai-exercise-media",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.654.0",
+    "dotenv": "^16.4.5"
+  }
+}
