@@ -24,6 +24,9 @@ class WorkoutSessionManager {
     var currentExerciseName: String = ""
     var isResting: Bool = false
     var restSecondsRemaining: Int = 0
+    /// True after the user taps Finish but before commit lands (8s undo window).
+    /// While true the session data is preserved so the user can revert.
+    var isPendingFinish: Bool = false
 
     private var timer: Timer?
     private var activity: Activity<WorkoutActivityAttributes>?
@@ -90,10 +93,26 @@ class WorkoutSessionManager {
 
     func endSession() {
         isActive = false
+        isPendingFinish = false
         timer?.invalidate()
         timer = nil
         clearPersistedSession()
         endLiveActivity()
+    }
+
+    /// Enter the undo-grace-period: timer pauses, state preserved, Live Activity
+    /// kept around. Commit by calling `endSession()`; revert with `cancelPendingFinish()`.
+    func beginPendingFinish() {
+        isPendingFinish = true
+        timer?.invalidate()
+        timer = nil
+    }
+
+    /// Roll back from a grace period: resume the timer, leave session active.
+    func cancelPendingFinish() {
+        guard isPendingFinish else { return }
+        isPendingFinish = false
+        if isActive { startTimer() }
     }
 
     func resumeIfNeeded() {
@@ -179,7 +198,12 @@ class WorkoutSessionManager {
     // MARK: - Live Activity
 
     private func startLiveActivity() {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            #if DEBUG
+            print("[LiveActivity] Activities not enabled by user")
+            #endif
+            return
+        }
 
         let attributes = WorkoutActivityAttributes(workoutDayLabel: workoutDayLabel)
         let state = WorkoutActivityAttributes.ContentState(
@@ -199,8 +223,13 @@ class WorkoutSessionManager {
                 content: .init(state: state, staleDate: nil),
                 pushType: nil
             )
+            #if DEBUG
+            print("[LiveActivity] Started successfully, id: \(activity?.id ?? "nil")")
+            #endif
         } catch {
-            // Live Activity not available
+            #if DEBUG
+            print("[LiveActivity] Failed to start: \(error.localizedDescription)")
+            #endif
         }
     }
 

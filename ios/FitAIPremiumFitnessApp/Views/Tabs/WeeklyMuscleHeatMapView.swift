@@ -97,6 +97,13 @@ struct WeeklyMuscleHeatMapView: View {
                         .frame(height: 220)
                         .opacity(appeared ? 1 : 0)
                         .scaleEffect(appeared ? 1 : 0.95)
+                        // Eat horizontal drags so MuscleMap's 3D pan can't bubble
+                        // out and translate the parent ScrollView/page.
+                        .highPriorityGesture(
+                            DragGesture(minimumDistance: 5)
+                                .onChanged { _ in }
+                                .onEnded { _ in }
+                        )
 
                         HeatmapLegendView(
                             colorScale: .workout,

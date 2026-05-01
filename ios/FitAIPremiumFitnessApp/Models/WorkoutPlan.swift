@@ -31,6 +31,10 @@ nonisolated struct Exercise: Identifiable, Sendable {
     let suggestedWeights: [Double]
     let suggestedReps: [Int]
 
+    var demoInfo: ExerciseDemoInfo {
+        ExerciseDatabase.shared.info(for: name)
+    }
+
     init(id: String = UUID().uuidString, name: String, sets: Int, reps: String, muscleGroup: String, suggestedWeights: [Double] = [], suggestedReps: [Int] = []) {
         self.id = id
         self.name = name
@@ -40,6 +44,32 @@ nonisolated struct Exercise: Identifiable, Sendable {
         self.suggestedWeights = suggestedWeights
         self.suggestedReps = suggestedReps
     }
+}
+
+nonisolated struct ExerciseDemoInfo: Sendable {
+    let name: String
+    let instructions: [String]
+    let tips: [String]
+    let primaryMuscles: [String]
+    let secondaryMuscles: [String]
+    let videoURL: String
+    let thumbnailURL: String
+    let frames: [String]
+
+    var hasMedia: Bool { !videoURL.isEmpty || !thumbnailURL.isEmpty || !frames.isEmpty }
+
+    init(name: String, instructions: [String], tips: [String], primaryMuscles: [String], secondaryMuscles: [String], videoURL: String, thumbnailURL: String, frames: [String] = []) {
+        self.name = name
+        self.instructions = instructions
+        self.tips = tips
+        self.primaryMuscles = primaryMuscles
+        self.secondaryMuscles = secondaryMuscles
+        self.videoURL = videoURL
+        self.thumbnailURL = thumbnailURL
+        self.frames = frames
+    }
+
+    static let empty = ExerciseDemoInfo(name: "", instructions: [], tips: [], primaryMuscles: [], secondaryMuscles: [], videoURL: "", thumbnailURL: "")
 }
 
 nonisolated struct WorkoutLog: Codable, Identifiable, Sendable {

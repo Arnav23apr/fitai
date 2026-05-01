@@ -142,7 +142,7 @@ struct StreakSheet: View {
                             if completed {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(isDark ? .black : .white)
+                                    .foregroundStyle(Color(.systemBackground))
                             } else if isToday {
                                 Circle()
                                     .fill(Color.primary.opacity(0.4))

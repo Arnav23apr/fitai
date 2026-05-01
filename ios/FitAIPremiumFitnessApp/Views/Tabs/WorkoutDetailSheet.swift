@@ -10,14 +10,21 @@ struct WorkoutDetailSheet: View {
     private let logService = ExerciseLogService.shared
 
     @State private var selectedExercise: Exercise? = nil
+    @State private var demoExercise: Exercise? = nil
     @State private var showWhyWorkout: Bool = false
     @State private var whyExplanation: String = ""
     @State private var isLoadingWhy: Bool = false
     @State private var showPointsFloat: Bool = false
     @State private var floatingPoints: Int = 0
     @State private var completionAnimating: Bool = false
-    @State private var showShareCard: Bool = false
+    @State private var shareData: IdentifiableShareData? = nil
     @State private var selectedMuscle: Muscle? = nil
+    @State private var pendingShareData: WorkoutShareCardData? = nil
+    @State private var finishCountdown: Int = 8
+    @State private var finishTimer: Timer? = nil
+    @State private var showDiscardConfirm: Bool = false
+    @State private var showRestartConfirm: Bool = false
+    @State private var showEditFinished: Bool = false
 
     private var workoutStarted: Bool { session.isActive && session.workoutName == workout.name }
     private var completedExercises: Set<String> { session.completedExerciseIds }
@@ -87,6 +94,8 @@ struct WorkoutDetailSheet: View {
 
                     if !workout.isRestDay && !isAlreadyDone {
                         actionButton
+                    } else if !workout.isRestDay && isAlreadyDone {
+                        alreadyDoneActions
                     }
 
                     pointsPreview
@@ -106,7 +115,7 @@ struct WorkoutDetailSheet: View {
                 if workoutStarted && !isAlreadyDone {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(role: .destructive) {
-                            completeWorkout()
+                            showDiscardConfirm = true
                         } label: {
                             Label("End", systemImage: "xmark.circle.fill")
                                 .font(.subheadline.weight(.semibold))
@@ -128,18 +137,74 @@ struct WorkoutDetailSheet: View {
                 )
                 .presentationDetents([.medium, .large])
             }
-            .sensoryFeedback(.success, trigger: showShareCard)
+            .sheet(item: $demoExercise) { exercise in
+                ExerciseDetailSheet(exercise: exercise)
+                    .presentationDetents([.large])
+            }
+            .sensoryFeedback(.success, trigger: shareData != nil)
+            .confirmationDialog(
+                "End workout?",
+                isPresented: $showDiscardConfirm,
+                titleVisibility: .visible
+            ) {
+                if completedExercises.count > 0 {
+                    Button("Save & Finish") { completeWorkout() }
+                }
+                Button("Discard Workout", role: .destructive) {
+                    session.endSession()
+                }
+                Button("Keep Going", role: .cancel) { }
+            } message: {
+                if completedExercises.count > 0 {
+                    Text("You've logged \(completedExercises.count) of \(workout.exercises.count) exercises. Save what you did, or discard everything?")
+                } else {
+                    Text("Discard this workout? Nothing has been logged yet.")
+                }
+            }
+            .confirmationDialog(
+                "Restart this workout?",
+                isPresented: $showRestartConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Restart", role: .destructive) { restartWorkout() }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Today's logged sets for this workout will be removed.")
+            }
+            .sheet(isPresented: $showEditFinished) {
+                EditFinishedWorkoutSheet(exercises: workout.exercises)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
         }
         .overlay(alignment: .top) {
             if showPointsFloat {
                 pointsFloatView
             }
         }
-        .fullScreenCover(isPresented: $showShareCard) {
+        .overlay(alignment: .bottom) {
+            if session.isPendingFinish {
+                WorkoutCompletionToast(
+                    secondsRemaining: finishCountdown,
+                    onUndo: {
+                        withAnimation(.snappy(duration: 0.3)) { undoFinish() }
+                    },
+                    onDone: { commitFinish() }
+                )
+                .padding(.bottom, 24)
+            }
+        }
+        .animation(.snappy(duration: 0.3), value: session.isPendingFinish)
+        .onDisappear {
+            // If user closes the sheet during the grace period, commit so we
+            // don't silently drop the workout.
+            if session.isPendingFinish { commitFinish() }
+        }
+        .fullScreenCover(item: $shareData) { data in
             WorkoutShareOverlay(
-                data: buildShareData(),
+                data: data.data,
                 onDismiss: {
-                    showShareCard = false
+                    shareData = nil
                     dismiss()
                 }
             )
@@ -485,14 +550,14 @@ struct WorkoutDetailSheet: View {
         let history = logService.history(for: exercise.name)
         let hasPR = exercisePRs.contains(exercise.id)
 
-        return Button {
-            if workoutStarted && !isAlreadyDone && !isCompleted {
-                selectedExercise = exercise
-            }
-        } label: {
-            VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    if workoutStarted && !isAlreadyDone {
+        return VStack(spacing: 0) {
+            HStack(spacing: 14) {
+                if workoutStarted && !isAlreadyDone {
+                    Button {
+                        if !isCompleted {
+                            selectedExercise = exercise
+                        }
+                    } label: {
                         ZStack {
                             Circle()
                                 .fill(isCompleted ? Color.green : Color.primary.opacity(0.08))
@@ -507,96 +572,158 @@ struct WorkoutDetailSheet: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-                    } else {
-                        Text("\(index + 1)")
-                            .font(.system(.caption, design: .rounded, weight: .bold))
+                    }
+                    .disabled(isCompleted)
+                } else {
+                    Text("\(index + 1)")
+                        .font(.system(.caption, design: .rounded, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 28, height: 28)
+                        .background(Color.primary.opacity(0.06))
+                        .clipShape(Circle())
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(exercise.name)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(isCompleted ? .secondary : .primary)
+                            .strikethrough(isCompleted, color: .secondary)
+
+                        if hasPR {
+                            HStack(spacing: 2) {
+                                Image(systemName: "trophy.fill")
+                                    .font(.system(size: 8))
+                                Text("PR!")
+                                    .font(.system(size: 9, weight: .bold))
+                            }
+                            .foregroundStyle(.yellow)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.yellow.opacity(0.15))
+                            .clipShape(.capsule)
+                        }
+                    }
+
+                    HStack(spacing: 8) {
+                        Text("\(exercise.sets) sets \u{00B7} \(exercise.reps)")
+                            .font(.caption)
                             .foregroundStyle(.tertiary)
-                            .frame(width: 28, height: 28)
-                            .background(Color.primary.opacity(0.06))
-                            .clipShape(Circle())
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack(spacing: 6) {
-                            Text(exercise.name)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(isCompleted ? .secondary : .primary)
-                                .strikethrough(isCompleted, color: .secondary)
-
-                            if hasPR {
-                                HStack(spacing: 2) {
-                                    Image(systemName: "trophy.fill")
-                                        .font(.system(size: 8))
-                                    Text("PR!")
-                                        .font(.system(size: 9, weight: .bold))
-                                }
-                                .foregroundStyle(.yellow)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(Color.yellow.opacity(0.15))
-                                .clipShape(.capsule)
-                            }
-                        }
-
-                        HStack(spacing: 8) {
-                            Text("\(exercise.sets) sets · \(exercise.reps)")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                            Text(exercise.muscleGroup)
-                                .font(.caption)
-                                .foregroundStyle(.quaternary)
-                        }
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if history.logs.count > 0 {
-                            if let last = history.lastSession {
-                                HStack(spacing: 3) {
-                                    Text("Last: \(Int(last.bestSetWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
-                                        .font(.system(size: 10, weight: .medium))
-                                        .foregroundStyle(.secondary)
-                                }
-                            }
-
-                            HStack(spacing: 3) {
-                                Image(systemName: history.volumeTrend.icon)
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(trendColor(history.volumeTrend))
-                                Text("Best: \(Int(history.personalBestWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(trendColor(history.volumeTrend))
-                            }
-
-                            if history.isPRReady {
-                                Text("PR Ready")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .foregroundStyle(.orange)
-                                    .padding(.horizontal, 4)
-                                    .padding(.vertical, 1)
-                                    .background(Color.orange.opacity(0.12))
-                                    .clipShape(.capsule)
-                            }
-                        } else {
-                            Text("No data yet")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.quaternary)
-                        }
+                        Text(exercise.muscleGroup)
+                            .font(.caption)
+                            .foregroundStyle(.quaternary)
                     }
                 }
-                .padding(14)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if workoutStarted && !isAlreadyDone && !isCompleted {
+                        selectedExercise = exercise
+                    } else {
+                        demoExercise = exercise
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    if history.logs.count > 0 {
+                        if let last = history.lastSession {
+                            HStack(spacing: 3) {
+                                Text("Last: \(Int(last.bestSetWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        HStack(spacing: 3) {
+                            Image(systemName: history.volumeTrend.icon)
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(trendColor(history.volumeTrend))
+                            Text("Best: \(Int(history.personalBestWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(trendColor(history.volumeTrend))
+                        }
+
+                        if history.isPRReady {
+                            Text("PR Ready")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(Color.orange.opacity(0.12))
+                                .clipShape(.capsule)
+                        }
+                    } else {
+                        Text("No data yet")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.quaternary)
+                    }
+                }
+
+                // Info button — always accessible
+                Button {
+                    demoExercise = exercise
+                } label: {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.blue.opacity(0.6))
+                }
             }
-            .background(
-                isCompleted ? Color.green.opacity(0.04) :
-                hasPR ? Color.yellow.opacity(0.04) : Color.primary.opacity(0.03)
-            )
-            .clipShape(.rect(cornerRadius: 14))
-            .opacity(isCompleted ? 0.7 : 1)
-            .animation(.spring(duration: 0.35), value: isCompleted)
+            .padding(14)
+
+            // Progressive overload suggestion inline
+            if let suggestion = overloadSuggestion(for: history) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.green)
+                    Text(suggestion)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.green)
+                }
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+                .padding(.top, -4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .disabled(!workoutStarted || isAlreadyDone || isCompleted)
+        .background(
+            isCompleted ? Color.green.opacity(0.04) :
+            hasPR ? Color.yellow.opacity(0.04) : Color.primary.opacity(0.03)
+        )
+        .clipShape(.rect(cornerRadius: 14))
+        .opacity(isCompleted ? 0.7 : 1)
+        .animation(.spring(duration: 0.35), value: isCompleted)
         .sensoryFeedback(.impact(flexibility: .soft), trigger: isCompleted)
+    }
+
+    private func overloadSuggestion(for history: ExerciseHistory) -> String? {
+        guard history.logs.count > 0, let last = history.lastSession else { return nil }
+        let usesMetric = appState.profile.usesMetric
+        let unit = usesMetric ? "kg" : "lbs"
+        let increment = usesMetric ? 2.5 : 5.0
+        let lastBest = last.bestSetWeight
+        guard lastBest > 0 else { return nil }
+
+        if history.isPRReady {
+            let target = history.personalBestWeight + increment
+            return "Try \(formatOverloadWeight(target))\(unit) \u{2014} you're close to a new PR!"
+        }
+
+        if history.volumeTrend == .up {
+            let target = lastBest + increment
+            return "Try \(formatOverloadWeight(target))\(unit) this session"
+        }
+
+        if history.volumeTrend == .neutral && history.logs.count >= 3 {
+            return "Try +\(formatOverloadWeight(increment))\(unit) or +1-2 reps per set"
+        }
+
+        return nil
+    }
+
+    private func formatOverloadWeight(_ w: Double) -> String {
+        w.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(w))" : String(format: "%.1f", w)
     }
 
     // MARK: - Action Button
@@ -657,7 +784,7 @@ struct WorkoutDetailSheet: View {
                 }
             } else if workoutStarted {
                 Button {
-                    session.endSession()
+                    showDiscardConfirm = true
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "xmark.circle")
@@ -670,6 +797,53 @@ struct WorkoutDetailSheet: View {
                     .padding(.vertical, 16)
                     .background(Color.red.opacity(0.1))
                     .clipShape(.rect(cornerRadius: 16))
+                }
+            }
+        }
+    }
+
+    // MARK: - Already-Done Actions
+
+    private var alreadyDoneActions: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.green)
+                Text("Completed today")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.green)
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+
+            HStack(spacing: 10) {
+                Button { showEditFinished = true } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Edit")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.primary.opacity(0.06))
+                    .clipShape(.rect(cornerRadius: 14))
+                }
+
+                Button { showRestartConfirm = true } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text("Restart")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.blue)
+                    .clipShape(.rect(cornerRadius: 14))
                 }
             }
         }
@@ -779,6 +953,33 @@ struct WorkoutDetailSheet: View {
     }
 
     private func completeWorkout() {
+        // Capture share data now while the session is intact, then enter an
+        // 8-second grace period. The toast lets the user undo before any
+        // history / cloud / Health writes happen.
+        pendingShareData = buildShareData()
+        session.beginPendingFinish()
+        finishCountdown = 8
+
+        finishTimer?.invalidate()
+        finishTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            Task { @MainActor in
+                if finishCountdown > 1 {
+                    finishCountdown -= 1
+                } else {
+                    commitFinish()
+                }
+            }
+        }
+    }
+
+    private func commitFinish() {
+        finishTimer?.invalidate()
+        finishTimer = nil
+        guard let data = pendingShareData else {
+            session.endSession()
+            return
+        }
+
         let duration = elapsedSeconds / 60
         let names = workout.exercises.filter { completedExercises.contains($0.id) }.map(\.name)
         appState.logWorkout(
@@ -793,8 +994,29 @@ struct WorkoutDetailSheet: View {
             appState.addBonusPoints(earnedPRPoints)
         }
 
-        showShareCard = true
+        // Mirror the workout to Apple Health so the user's Activity rings update.
+        HealthKitWorkoutExporter.shared.save(
+            startDate: session.startTime ?? Date().addingTimeInterval(-Double(elapsedSeconds)),
+            durationSeconds: max(elapsedSeconds, 60),
+            exerciseCount: completedExercises.count
+        )
+
         session.endSession()
+        pendingShareData = nil
+        shareData = IdentifiableShareData(data: data)
+    }
+
+    private func undoFinish() {
+        finishTimer?.invalidate()
+        finishTimer = nil
+        pendingShareData = nil
+        session.cancelPendingFinish()
+    }
+
+    private func restartWorkout() {
+        // Wipe today's log entries for this workout and re-enter active state.
+        appState.unlogTodaysWorkout(dayLabel: workout.dayLabel, exerciseNames: workout.exercises.map(\.name))
+        session.startWorkout(workout: workout)
     }
 
     private func loadWhyExplanation() {
@@ -868,6 +1090,32 @@ struct WorkoutDetailSheet: View {
             }
         }
 
+        // Build PR details for each PR exercise
+        var prDetailsList: [PRDetail] = []
+        for prName in prExerciseNames {
+            // Find today's best set for this exercise
+            let todayExLogs = todayLogs.filter { $0.exerciseName == prName }
+            let todayBestSet = todayExLogs.flatMap(\.sets).filter(\.isCompleted).max(by: { $0.weight < $1.weight })
+
+            // Find previous best from all logs before today
+            let previousLogs = allLogs.filter { $0.exerciseName == prName && $0.date < todayStart }
+            let previousBestSet = previousLogs.flatMap(\.sets).filter(\.isCompleted).max(by: { $0.weight < $1.weight })
+
+            // Use today's best, or fall back to the exercise volume data from the session
+            let newWeight = todayBestSet?.weight ?? exerciseVolumes[prName].map { _ in topWeight } ?? 0
+            let newReps = todayBestSet?.reps ?? 0
+
+            if newWeight > 0 {
+                prDetailsList.append(PRDetail(
+                    exerciseName: prName,
+                    newWeight: newWeight,
+                    newReps: newReps > 0 ? newReps : 1,
+                    previousWeight: previousBestSet?.weight ?? 0,
+                    previousReps: previousBestSet?.reps ?? 0
+                ))
+            }
+        }
+
         let durationMin = max(elapsedSeconds / 60, 1)
         let estimatedCal = Int(Double(durationMin) * 5.5 + totalVolume * 0.015)
 
@@ -890,7 +1138,8 @@ struct WorkoutDetailSheet: View {
             topSetReps: topReps,
             estimatedCalories: estimatedCal,
             exercises: completedExerciseList,
-            workoutDate: Date()
+            workoutDate: Date(),
+            prDetails: prDetailsList
         )
     }
 }
