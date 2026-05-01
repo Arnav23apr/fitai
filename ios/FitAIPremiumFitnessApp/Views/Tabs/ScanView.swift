@@ -1,5 +1,6 @@
 import SwiftUI
-import PhotosUI
+import StoreKit
+import RevenueCat
 
 private extension View {
     @ViewBuilder
@@ -24,13 +25,10 @@ struct ScanView: View {
     @State private var showPaywall: Bool = false
     @State private var showResultsSheet: Bool = false
     @State private var showTransformationSheet: Bool = false
-    @State private var showFrontSourcePicker: Bool = false
-    @State private var showBackSourcePicker: Bool = false
     @State private var showFrontCamera: Bool = false
     @State private var showBackCamera: Bool = false
-    @State private var showFrontPhotoPicker: Bool = false
-    @State private var showBackPhotoPicker: Bool = false
     @State private var showPhotoTips: Bool = false
+    @State private var showLatestResult: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -61,13 +59,11 @@ struct ScanView: View {
             .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
-                    .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showResultsSheet) {
                 ScanResultsSheet(result: viewModel.analysisResult, onDismiss: {
                     showResultsSheet = false
                 })
-                .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showTransformationSheet) {
                 TransformationSheet(
@@ -82,18 +78,29 @@ struct ScanView: View {
                         }
                     }
                 )
-                .presentationBackground(.ultraThinMaterial)
             }
             .sheet(isPresented: $showStreakSheet) {
                 StreakSheet()
                     .presentationDetents([.fraction(0.75)])
-                    .presentationBackground(.ultraThinMaterial)
             }
-            .onChange(of: viewModel.frontPickerItem) { _, _ in
-                Task { await viewModel.loadFrontImage() }
-            }
-            .onChange(of: viewModel.backPickerItem) { _, _ in
-                Task { await viewModel.loadBackImage() }
+            .sheet(isPresented: $showLatestResult) {
+                if let entry = appState.scanHistory.first {
+                    ScanResultsSheet(
+                        result: ScanResult(
+                            date: entry.date,
+                            overallScore: entry.overallScore,
+                            strongPoints: entry.strongPoints,
+                            weakPoints: entry.weakPoints,
+                            summary: entry.summary,
+                            recommendations: entry.recommendations,
+                            potentialRating: entry.potentialRating,
+                            muscleMassRating: entry.muscleMassRating,
+                            muscleScores: entry.muscleScores.toMuscleScores(),
+                            visibleMuscleGroups: entry.strongPoints + entry.weakPoints
+                        ),
+                        onDismiss: { showLatestResult = false }
+                    )
+                }
             }
         }
     }
@@ -131,34 +138,57 @@ struct ScanView: View {
     }
 
     private var latestScoreCard: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L.t("latestScore", lang))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(String(format: "%.1f", appState.profile.latestScore ?? 0.0))
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+        Button {
+            if !appState.scanHistory.isEmpty {
+                showLatestResult = true
             }
-            Spacer()
-            HStack(spacing: 4) {
-                if let date = appState.profile.lastScanDate {
-                    Text(date, format: .dateTime.year().month(.twoDigits).day(.twoDigits))
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L.t("latestScore", lang))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                } else {
-                    Text(L.t("noScanYet", lang))
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    Text(String(format: "%.1f", appState.profile.latestScore ?? 0.0))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
                 }
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                Spacer()
+                HStack(spacing: 4) {
+                    if let date = appState.profile.lastScanDate {
+                        Text(date, format: .dateTime.year().month(.twoDigits).day(.twoDigits))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(L.t("noScanYet", lang))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
             }
         }
+        .buttonStyle(.plain)
         .padding(20)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.cyan.opacity(0.06), .blue.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(colors: [.cyan.opacity(0.12), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private var readyToScanCard: some View {
@@ -189,7 +219,7 @@ struct ScanView: View {
             }
 
             Button(action: {
-                if appState.profile.isPremium {
+                if appState.profile.canScanFree {
                     Task { await performAnalysis() }
                 } else {
                     showPaywall = true
@@ -201,7 +231,7 @@ struct ScanView: View {
                             .tint(.black)
                             .scaleEffect(0.8)
                     } else {
-                        if !appState.profile.isPremium {
+                        if !appState.profile.canScanFree {
                             Image(systemName: "lock.fill")
                                 .font(.system(size: 14))
                         }
@@ -209,7 +239,7 @@ struct ScanView: View {
                             .font(.system(size: 14))
                     }
                     Text(viewModel.isAnalyzing ? L.t("analyzing", lang) : L.t("analyzeWithAI", lang))
-                    if !appState.profile.isPremium && !viewModel.isAnalyzing {
+                    if !appState.profile.canScanFree && !viewModel.isAnalyzing {
                         Text(L.t("pro", lang))
                     }
                 }
@@ -261,20 +291,36 @@ struct ScanView: View {
             .sheet(isPresented: $showPhotoTips) {
                 PhotoTipsSheet()
                     .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
+                    .presentationDragIndicator(.hidden)
             }
         }
         .padding(20)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.green.opacity(0.04), .cyan.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(colors: [.green.opacity(0.1), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private func photoSourceCard(title: String, subtitle: String?, image: UIImage?, isFront: Bool) -> some View {
         Button {
             if isFront {
-                showFrontSourcePicker = true
+                showFrontCamera = true
             } else {
-                showBackSourcePicker = true
+                showBackCamera = true
             }
         } label: {
             VStack(spacing: 0) {
@@ -332,25 +378,8 @@ struct ScanView: View {
                 }
             }
         }
-        .confirmationDialog(L.t("choosePhoto", lang), isPresented: isFront ? $showFrontSourcePicker : $showBackSourcePicker, titleVisibility: .visible) {
-            Button(L.t("takePhoto", lang)) {
-                if isFront {
-                    showFrontCamera = true
-                } else {
-                    showBackCamera = true
-                }
-            }
-            Button(L.t("chooseFromLibrary", lang)) {
-                if isFront {
-                    showFrontPhotoPicker = true
-                } else {
-                    showBackPhotoPicker = true
-                }
-            }
-        }
-        .photosPicker(isPresented: isFront ? $showFrontPhotoPicker : $showBackPhotoPicker, selection: isFront ? $viewModel.frontPickerItem : $viewModel.backPickerItem, matching: .images)
         .fullScreenCover(isPresented: isFront ? $showFrontCamera : $showBackCamera) {
-            CameraProxyView { capturedImage in
+            ScanCameraView(label: title) { capturedImage in
                 if isFront {
                     viewModel.frontImage = capturedImage
                 } else {
@@ -474,8 +503,24 @@ struct ScanView: View {
             }
         }
         .padding(20)
-        .background(Color(.secondarySystemGroupedBackground))
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [.yellow.opacity(0.04), .orange.opacity(0.02), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(colors: [.yellow.opacity(0.08), .clear], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    lineWidth: 0.5
+                )
+        )
     }
 
     private func tipRow(_ text: String) -> some View {
@@ -515,6 +560,11 @@ struct ScanResultsSheet: View {
                 if let result {
                     VStack(spacing: 20) {
                         scoreSection(result)
+
+                        if appState.scanHistory.count > 1 {
+                            ScanHistoryGraphView(entries: appState.scanHistory)
+                        }
+
                         bodyCompositionSection(result)
                         strengthsSection(result)
                         weaknessesSection(result)
@@ -559,7 +609,6 @@ struct ScanResultsSheet: View {
             .sheet(isPresented: $showRatingsCard) {
                 if let result {
                     RatingsCardSheet(result: result)
-                        .presentationBackground(.ultraThinMaterial)
                 }
             }
         }
@@ -930,29 +979,505 @@ struct TransformationSheet: View {
 struct PaywallSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var appeared: Bool = false
+    @State private var crownScale: CGFloat = 0.6
+    @State private var isYearly: Bool = true
+    @State private var store = StoreViewModel.shared
+
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private let features: [(icon: String, title: String)] = [
+        ("camera.viewfinder", "Unlimited Scans"),
+        ("figure.strengthtraining.traditional", "AI Workouts"),
+        ("chart.line.uptrend.xyaxis", "Analytics"),
+        ("trophy.fill", "Leaderboards"),
+        ("bolt.fill", "AI Coach"),
+        ("sparkles", "All Features"),
+    ]
+
+    private var captionText: String {
+        if isYearly {
+            let yearly = store.annualPriceString
+            let monthly = store.monthlyPriceString
+            return "Just \(yearly)/year (\(monthly)/mo) · Cancel anytime"
+        } else {
+            return "Just \(store.monthlyPriceString)/month · Cancel anytime"
+        }
+    }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                PaywallView(
-                    onSubscribe: {
-                        appState.profile.isPremium = true
-                        appState.saveProfile()
-                        dismiss()
-                    },
-                    onSkip: {
-                        dismiss()
-                    }
-                )
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color(.tertiaryLabel))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 24) {
+                    // MARK: Hero
+                    heroSection
+
+                    // MARK: Features grid
+                    featuresCard
+
+                    // MARK: Plan picker
+                    planPicker
+
+                    // MARK: CTA
+                    ctaButton
+
+                    // MARK: Lifetime
+                    lifetimeCard
+
+                    // MARK: Earn free
+                    freeEarnCard
+
+                    // MARK: Restore + Legal
+                    footer
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
-            .background(Color(.systemBackground))
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.t("close", appState.profile.selectedLanguage)) { dismiss() }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.hidden)
+        .onAppear {
+            withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
+            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
+                crownScale = 1.0
+            }
+        }
+        .onChange(of: store.isPremium) { _, isPremium in
+            if isPremium {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                dismiss()
+            }
+        }
+        .alert("Error", isPresented: .init(
+            get:  { store.error != nil },
+            set:  { if !$0 { store.error = nil } }
+        )) {
+            Button("OK") { store.error = nil }
+        } message: { Text(store.error ?? "") }
+    }
+
+    // MARK: - Hero
+
+    private var heroSection: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [.yellow.opacity(0.25), .orange.opacity(0.1), .clear],
+                            center: .center,
+                            startRadius: 10,
+                            endRadius: 60
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                    .scaleEffect(crownScale)
+
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 48))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.yellow, .orange],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .scaleEffect(appeared ? 1 : 0.6)
+            }
+
+            Text("FitAI Pro")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            Text("Reach your dream physique faster.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 20)
+    }
+
+    // MARK: - Features
+
+    private var featuresCard: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            ForEach(features, id: \.icon) { feature in
+                VStack(spacing: 8) {
+                    Image(systemName: feature.icon)
+                        .font(.system(size: 16))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.yellow, .orange],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 36, height: 36)
+                        .background(Color.orange.opacity(colorScheme == .dark ? 0.12 : 0.08))
+                        .clipShape(.rect(cornerRadius: 10))
+
+                    Text(feature.title)
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             }
         }
-        
+        .padding(16)
+        .background(Color(.secondarySystemGroupedBackground))
+        .clipShape(.rect(cornerRadius: 16))
+        .padding(.horizontal, 20)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Plan Picker
+
+    private var planPicker: some View {
+        HStack(spacing: 12) {
+            planCard(
+                title: "Monthly",
+                price: store.monthlyPriceString,
+                period: "/mo",
+                selected: !isYearly
+            ) { isYearly = false }
+
+            planCard(
+                title: "Yearly",
+                price: store.annualPriceString,
+                period: "/yr",
+                badge: "Save 33%",
+                selected: isYearly
+            ) { isYearly = true }
+        }
+        .padding(.horizontal, 20)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    private func planCard(title: String, price: String, period: String, badge: String? = nil, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                if let badge {
+                    Text(badge)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color(.systemBackground))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.green)
+                        .clipShape(.capsule)
+                } else {
+                    Color.clear.frame(height: 17)
+                }
+
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(selected ? .primary : .secondary)
+
+                HStack(alignment: .firstTextBaseline, spacing: 1) {
+                    Text(price)
+                        .font(.system(.title3, design: .rounded, weight: .bold))
+                        .foregroundStyle(selected ? .primary : .secondary)
+                    Text(period)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        selected
+                            ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            : LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom),
+                        lineWidth: 2
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - CTA
+
+    private var ctaButton: some View {
+        VStack(spacing: 8) {
+            Button(action: purchase) {
+                Group {
+                    if store.isPurchasing {
+                        ProgressView()
+                            .tint(Color(.systemBackground))
+                            .scaleEffect(0.9)
+                    } else {
+                        Text("Continue")
+                            .font(.headline)
+                    }
+                }
+                .foregroundStyle(Color(.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 56)
+                .background(Color.primary)
+                .clipShape(.rect(cornerRadius: 28))
+            }
+            .disabled(store.isPurchasing)
+            .padding(.horizontal, 20)
+
+            Text(captionText)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Lifetime
+
+    private var lifetimeCard: some View {
+        Button(action: purchaseLifetime) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.yellow.opacity(0.18), Color.orange.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "infinity")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
+                        )
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("Lifetime")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
+                        Text("BEST VALUE")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundStyle(Color(.systemBackground))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(Color.orange)
+                            .clipShape(.capsule)
+                    }
+                    Text("One payment. Train forever.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(store.lifetimePriceString)
+                        .font(.system(.subheadline, design: .rounded, weight: .bold))
+                        .foregroundStyle(.primary)
+                    Text("one-time")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.yellow.opacity(0.30), Color.orange.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(store.isPurchasing)
+        .padding(.horizontal, 20)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Free Earn — share-with-3-friends → 1 free scan
+
+    private var friendsJoined: Int { appState.profile.friendsReferredCount }
+    private var unlockReady: Bool { friendsJoined >= 3 }
+
+    private var shareMessage: String {
+        let code = appState.profile.referralCode
+        if code.isEmpty {
+            return "I've been using FitAI to scan my physique with AI. You should try it!"
+        }
+        return "I've been using FitAI to scan my physique with AI. Use my code \(code) when you sign up — try it!"
+    }
+
+    private var shareURL: URL {
+        let code = appState.profile.referralCode
+        let base = "https://apps.apple.com/app/id6744284188"
+        return URL(string: code.isEmpty ? base : "\(base)?ref=\(code)")!
+    }
+
+    private var freeEarnCard: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Earn a free scan")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.4)
+                Spacer()
+            }
+
+            VStack(spacing: 14) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(unlockReady ? Color.green.opacity(0.15) : Color.primary.opacity(0.06))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: unlockReady ? "checkmark" : "person.2.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(unlockReady ? .green : .secondary)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Share with 3 friends")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.primary)
+                        Text(unlockReady
+                             ? "Done — claim your free scan"
+                             : "\(friendsJoined)/3 friends joined")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if !unlockReady {
+                        ShareLink(
+                            item: shareURL,
+                            subject: Text("Check out FitAI"),
+                            message: Text(shareMessage)
+                        ) {
+                            Text("Share")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Color(.systemBackground))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 6)
+                                .background(Color.primary)
+                                .clipShape(.capsule)
+                        }
+                    }
+                }
+
+                if !unlockReady {
+                    GeometryReader { geo in
+                        let progress = min(1, CGFloat(friendsJoined) / 3)
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.primary.opacity(0.08))
+                            Capsule().fill(Color.primary.opacity(0.85))
+                                .frame(width: geo.size.width * progress)
+                                .animation(.spring(duration: 0.4), value: friendsJoined)
+                        }
+                    }
+                    .frame(height: 4)
+                }
+            }
+            .padding(16)
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(.rect(cornerRadius: 16))
+
+            if unlockReady {
+                Button {
+                    appState.profile.freeScansEarned += 1
+                    appState.profile.friendsReferredCount = 0
+                    appState.saveProfile()
+                    dismiss()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "camera.viewfinder")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text("Claim 1 Free Scan")
+                            .font(.system(.subheadline, weight: .bold))
+                    }
+                    .foregroundStyle(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.green)
+                    .clipShape(.rect(cornerRadius: 24))
+                }
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 20)
+        .animation(.spring(duration: 0.35), value: unlockReady)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Footer
+
+    private var footer: some View {
+        VStack(spacing: 12) {
+            Button {
+                Task { await store.restore() }
+            } label: {
+                Text("Restore Purchases")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 4) {
+                Button("Terms") {}
+                Text("·").foregroundStyle(.tertiary)
+                Button("Privacy") {}
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.tertiary)
+        }
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Actions
+
+    private func purchase() {
+        Task {
+            let pkg = isYearly ? store.annualPackage : store.monthlyPackage
+            guard let pkg else {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                dismiss()
+                return
+            }
+            if await store.purchase(package: pkg) {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                dismiss()
+            }
+        }
+    }
+
+    private func purchaseLifetime() {
+        Task {
+            guard let pkg = store.lifetimePackage else {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                dismiss()
+                return
+            }
+            if await store.purchase(package: pkg) {
+                appState.profile.isPremium = true
+                appState.saveProfile()
+                dismiss()
+            }
+        }
     }
 }

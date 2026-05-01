@@ -2,9 +2,6 @@ import SwiftUI
 
 struct PhotoTipsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.colorScheme) private var colorScheme
-
-    private var isDark: Bool { colorScheme == .dark }
 
     private let tips: [(icon: String, color: Color, title: String, description: String)] = [
         ("sun.max.fill", .yellow, "Good Lighting", "Stand near a window or in a well-lit room. Avoid harsh shadows or backlighting. Natural light gives the most accurate scan."),
@@ -16,25 +13,26 @@ struct PhotoTipsSheet: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color(.tertiaryLabel))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
+            Text("Photo Guidelines")
+                .font(.headline)
+                .foregroundStyle(.primary)
+                .padding(.top, 18)
+                .padding(.bottom, 16)
+
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 14) {
+                VStack(spacing: 12) {
                     ForEach(Array(tips.enumerated()), id: \.offset) { _, tip in
                         tipCard(tip)
                     }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 8)
                 .padding(.bottom, 32)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle("Photo Guidelines")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                        .fontWeight(.medium)
-                }
             }
         }
     }

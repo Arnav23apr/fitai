@@ -3,28 +3,38 @@ import Foundation
 class ScanHistoryService {
     static let shared = ScanHistoryService()
     private let key = "scanHistory"
+    private let queue = DispatchQueue(label: "com.fitai.scanHistoryService")
 
     func save(_ entry: ScanHistoryEntry) {
-        var history = loadAll()
-        history.insert(entry, at: 0)
-        if history.count > 50 {
-            history = Array(history.prefix(50))
-        }
-        if let data = try? JSONEncoder().encode(history) {
-            UserDefaults.standard.set(data, forKey: key)
+        queue.sync {
+            var history = _loadAll()
+            history.insert(entry, at: 0)
+            if history.count > 50 {
+                history = Array(history.prefix(50))
+            }
+            if let data = try? JSONEncoder().encode(history) {
+                UserDefaults.standard.set(data, forKey: key)
+            }
         }
     }
 
     func loadAll() -> [ScanHistoryEntry] {
+        queue.sync { _loadAll() }
+    }
+
+    func clear() {
+        queue.sync {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
+    }
+
+    /// Internal load without queue synchronization — must be called from within `queue.sync`.
+    private func _loadAll() -> [ScanHistoryEntry] {
         guard let data = UserDefaults.standard.data(forKey: key),
               let entries = try? JSONDecoder().decode([ScanHistoryEntry].self, from: data) else {
             return []
         }
         return entries
-    }
-
-    func clear() {
-        UserDefaults.standard.removeObject(forKey: key)
     }
 }
 
@@ -51,6 +61,19 @@ nonisolated struct ScanHistoryEntry: Codable, Sendable, Identifiable {
         self.summary = result.summary
         self.recommendations = result.recommendations
         self.muscleScores = CodableMuscleScores(from: result.muscleScores)
+    }
+
+    init(id: String, date: Date, overallScore: Double, potentialRating: Double, muscleMassRating: String, strongPoints: [String], weakPoints: [String], summary: String, recommendations: [String], muscleScores: CodableMuscleScores) {
+        self.id = id
+        self.date = date
+        self.overallScore = overallScore
+        self.potentialRating = potentialRating
+        self.muscleMassRating = muscleMassRating
+        self.strongPoints = strongPoints
+        self.weakPoints = weakPoints
+        self.summary = summary
+        self.recommendations = recommendations
+        self.muscleScores = muscleScores
     }
 }
 
