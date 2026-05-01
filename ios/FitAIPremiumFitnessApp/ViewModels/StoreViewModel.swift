@@ -48,7 +48,9 @@ class StoreViewModel {
                 return isPremium
             }
         } catch ErrorCode.purchaseCancelledError {
+            // User intentionally cancelled — no error needed
         } catch ErrorCode.paymentPendingError {
+            self.error = "Your purchase is pending approval. You'll get access once it's confirmed."
         } catch {
             self.error = error.localizedDescription
         }

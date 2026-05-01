@@ -8,7 +8,8 @@ nonisolated struct UserProfile: Codable, Sendable {
         case workoutsPerWeek, trainingExperience, trainingLocation, primaryGoal
         case holdingBack, goals, trainingConfidence
         case heightCm, weightKg, usesMetric, dateOfBirth, selectedLanguage
-        case referralCode, isPremium, spinDiscount
+        case referralCode, referredByCode, friendsReferredCount
+        case isPremium, spinDiscount
         case totalScans, totalWorkouts, currentStreak, points, tier
         case latestScore, lastScanDate, weakPoints, strongPoints
         case workoutLogs, completedDaysThisWeek, weekStartDate
@@ -33,7 +34,12 @@ nonisolated struct UserProfile: Codable, Sendable {
     var usesMetric: Bool = false
     var dateOfBirth: Date? = nil
     var selectedLanguage: String = "English"
+    /// User's own outbound referral code — generated on signup, shared with friends.
     var referralCode: String = ""
+    /// Code the user entered during onboarding (a friend's code).
+    var referredByCode: String = ""
+    /// Server-attributed count of friends who signed up using `referralCode`. Reaches 3 → free scan unlock.
+    var friendsReferredCount: Int = 0
     var isPremium: Bool = false
     var spinDiscount: Int? = nil
     var totalScans: Int = 0
@@ -50,5 +56,15 @@ nonisolated struct UserProfile: Codable, Sendable {
     var weekStartDate: Date? = nil
     var customPhotoData: Data? = nil
     var forceDarkMode: Bool = false
+    /// Bonus scans earned via referral unlock (each 3 referrals → +1). Decremented on use.
     var freeScansEarned: Int = 0
+
+    /// Whether the user can trigger a scan without hitting the paywall.
+    /// First scan ever is free; after that, only premium or earned-scan users.
+    var canScanFree: Bool {
+        if isPremium { return true }
+        if totalScans == 0 { return true }    // lifetime first-scan freebie
+        if freeScansEarned > 0 { return true } // referral-unlocked scans
+        return false
+    }
 }

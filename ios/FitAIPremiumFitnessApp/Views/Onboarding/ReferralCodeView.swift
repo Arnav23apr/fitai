@@ -73,15 +73,15 @@ struct ReferralCodeView: View {
 
             VStack(spacing: 14) {
                 Button(action: {
-                    appState.profile.referralCode = code
+                    appState.profile.referredByCode = code.trimmingCharacters(in: .whitespaces).uppercased()
                     onContinue()
                 }) {
                     Text(code.isEmpty ? L.t("continue", lang) : L.t("applyAndContinue", lang))
                         .font(.headline)
-                        .foregroundStyle(isDark ? .black : .white)
+                        .foregroundStyle(Color(.systemBackground))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(isDark ? .white : .black)
+                        .background(Color.primary)
                         .clipShape(.rect(cornerRadius: 28))
                 }
 

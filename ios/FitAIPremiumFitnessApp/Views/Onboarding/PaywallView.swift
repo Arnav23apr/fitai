@@ -1,7 +1,6 @@
 import SwiftUI
 import RevenueCat
 import RevenueCatUI
-import StoreKit
 
 // MARK: - PaywallView (wrapper — shows X after 4s, handles RC premium updates)
 
@@ -36,12 +35,8 @@ private struct CustomPaywallView: View {
     @State private var appeared:      Bool    = false
     @State private var showSkip:      Bool    = false
     @State private var isYearly:      Bool    = true
-    @State private var trialEnabled:  Bool    = false
     @State private var shimmer:       CGFloat = -1
     @State private var store = StoreViewModel.shared
-    @State private var shareCompleted: Bool = UserDefaults.standard.bool(forKey: "paywallShareDone")
-    @State private var reviewCompleted: Bool = UserDefaults.standard.bool(forKey: "paywallReviewDone")
-    @Environment(\.requestReview) private var requestReview
 
     // MARK: Body
 
@@ -55,10 +50,13 @@ private struct CustomPaywallView: View {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 0) {
                         heroSection
+                        socialProofRow
                         featuresSection
+                        comparisonTable
                         togglesRow
                         ctaButton
                         priceCaption
+                        testimonialStrip
                         lifetimeCard
                         freeEarnCard
                         legalText
@@ -188,48 +186,29 @@ private struct CustomPaywallView: View {
         .opacity(appeared ? 1 : 0)
     }
 
-    // MARK: Toggles row
+    // MARK: Plan picker (Monthly / Yearly)
 
     private var togglesRow: some View {
-        HStack(spacing: 0) {
-            // Left: 2-day free trial
-            HStack(spacing: 6) {
-                Toggle("", isOn: $trialEnabled)
-                    .labelsHidden()
-                    .tint(.green)
-                    .scaleEffect(0.85)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("2-day free")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(trialEnabled ? .white : .white.opacity(0.50))
-                    Text("trial")
-                        .font(.system(size: 11))
-                        .foregroundStyle(trialEnabled ? .white.opacity(0.70) : .white.opacity(0.35))
-                }
-            }
-
+        HStack(spacing: 8) {
             Spacer()
-
-            // Right: Monthly / Yearly
-            HStack(spacing: 8) {
-                Text("Monthly")
-                    .font(.system(size: 12, weight: isYearly ? .regular : .semibold))
-                    .foregroundStyle(isYearly ? .white.opacity(0.38) : .white)
-                Toggle("", isOn: $isYearly)
-                    .labelsHidden()
-                    .tint(.white)
-                    .scaleEffect(0.85)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("Yearly")
-                        .font(.system(size: 12, weight: isYearly ? .semibold : .regular))
-                        .foregroundStyle(isYearly ? .white : .white.opacity(0.38))
-                    if isYearly {
-                        Text("Save 33%")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.green)
-                    }
+            Text("Monthly")
+                .font(.system(size: 13, weight: isYearly ? .regular : .semibold))
+                .foregroundStyle(isYearly ? .white.opacity(0.38) : .white)
+            Toggle("", isOn: $isYearly)
+                .labelsHidden()
+                .tint(.white)
+                .scaleEffect(0.85)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Yearly")
+                    .font(.system(size: 13, weight: isYearly ? .semibold : .regular))
+                    .foregroundStyle(isYearly ? .white : .white.opacity(0.38))
+                if isYearly {
+                    Text("Save 76%")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.green)
                 }
             }
+            Spacer()
         }
         .padding(.horizontal, 28)
         .padding(.top, 24)
@@ -239,10 +218,7 @@ private struct CustomPaywallView: View {
 
     // MARK: CTA button
 
-    private var ctaLabel: String {
-        if trialEnabled { return "Start 2-Day Free Trial" }
-        return "Continue"
-    }
+    private var ctaLabel: String { "Continue" }
 
     private var ctaButton: some View {
         Button(action: purchase) {
@@ -292,12 +268,9 @@ private struct CustomPaywallView: View {
         if isYearly {
             let yearly = store.annualPriceString
             let monthly = store.monthlyPriceString
-            if trialEnabled { return "Free for 2 days, then \(yearly)/year · Cancel anytime" }
             return "Just \(yearly)/year (\(monthly)/mo) · Cancel anytime"
         } else {
-            let monthly = store.monthlyPriceString
-            if trialEnabled { return "Free for 2 days, then \(monthly)/month · Cancel anytime" }
-            return "Just \(monthly)/month · Cancel anytime"
+            return "Just \(store.monthlyPriceString)/month · Cancel anytime"
         }
     }
 
@@ -364,7 +337,18 @@ private struct CustomPaywallView: View {
         .opacity(appeared ? 1 : 0)
     }
 
-    // MARK: Free Earn Card
+    // MARK: Free Earn Card — share-with-3-friends → 1 free scan
+
+    private var friendsJoined: Int { appState.profile.friendsReferredCount }
+    private var unlockReady: Bool { friendsJoined >= 3 }
+
+    private var shareMessage: String {
+        let code = appState.profile.referralCode
+        if code.isEmpty {
+            return "I've been using FitAI to scan my physique with AI. You should try it!"
+        }
+        return "I've been using FitAI to scan my physique with AI. Use my code \(code) when you sign up — try it!"
+    }
 
     private var freeEarnCard: some View {
         VStack(spacing: 12) {
@@ -377,31 +361,32 @@ private struct CustomPaywallView: View {
                 Spacer()
             }
 
-            VStack(spacing: 10) {
-                // Step 1: Share
+            VStack(spacing: 14) {
                 HStack(spacing: 12) {
                     ZStack {
                         Circle()
-                            .fill(shareCompleted ? Color.green.opacity(0.20) : Color.white.opacity(0.06))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: shareCompleted ? "checkmark" : "square.and.arrow.up")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(shareCompleted ? .green : .white.opacity(0.60))
+                            .fill(unlockReady ? Color.green.opacity(0.20) : Color.white.opacity(0.06))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: unlockReady ? "checkmark" : "person.2.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(unlockReady ? .green : .white.opacity(0.65))
                     }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Share FitAI with 3 friends")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(shareCompleted ? .white.opacity(0.50) : .white.opacity(0.82))
-                        Text("Any share counts")
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Share with 3 friends")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.92))
+                        Text(unlockReady
+                             ? "Done — claim your free scan"
+                             : "\(friendsJoined)/3 friends joined")
                             .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.30))
+                            .foregroundStyle(.white.opacity(0.45))
                     }
                     Spacer()
-                    if !shareCompleted {
+                    if !unlockReady {
                         ShareLink(
-                            item: URL(string: "https://apps.apple.com/app/id6744284188")!,
+                            item: shareURL,
                             subject: Text("Check out FitAI"),
-                            message: Text("I've been using FitAI to track my fitness with AI. You should try it!")
+                            message: Text(shareMessage)
                         ) {
                             Text("Share")
                                 .font(.system(size: 12, weight: .semibold))
@@ -411,49 +396,11 @@ private struct CustomPaywallView: View {
                                 .background(Color.white)
                                 .clipShape(.capsule)
                         }
-                        .simultaneousGesture(TapGesture().onEnded {
-                            shareCompleted = true
-                            UserDefaults.standard.set(true, forKey: "paywallShareDone")
-                        })
                     }
                 }
 
-                Divider().background(Color.white.opacity(0.08))
-
-                // Step 2: Review
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(reviewCompleted ? Color.green.opacity(0.20) : Color.white.opacity(0.06))
-                            .frame(width: 36, height: 36)
-                        Image(systemName: reviewCompleted ? "checkmark" : "star.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(reviewCompleted ? .green : .white.opacity(0.60))
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Leave a review on the App Store")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(reviewCompleted ? .white.opacity(0.50) : .white.opacity(0.82))
-                        Text("Takes 10 seconds")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.white.opacity(0.30))
-                    }
-                    Spacer()
-                    if !reviewCompleted {
-                        Button {
-                            requestReview()
-                            reviewCompleted = true
-                            UserDefaults.standard.set(true, forKey: "paywallReviewDone")
-                        } label: {
-                            Text("Rate")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.black)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(Color.white)
-                                .clipShape(.capsule)
-                        }
-                    }
+                if !unlockReady {
+                    progressBar
                 }
             }
             .padding(16)
@@ -462,10 +409,10 @@ private struct CustomPaywallView: View {
             .overlay(RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color.white.opacity(0.10), lineWidth: 1))
 
-            // Claim button
-            if shareCompleted && reviewCompleted {
+            if unlockReady {
                 Button {
                     appState.profile.freeScansEarned += 1
+                    appState.profile.friendsReferredCount = 0  // reset for next unlock cycle
                     appState.saveProfile()
                     onSkip()
                 } label: {
@@ -486,8 +433,27 @@ private struct CustomPaywallView: View {
         }
         .padding(.horizontal, 20)
         .padding(.top, 20)
-        .animation(.spring(duration: 0.35), value: shareCompleted && reviewCompleted)
+        .animation(.spring(duration: 0.35), value: unlockReady)
         .opacity(appeared ? 1 : 0)
+    }
+
+    private var progressBar: some View {
+        GeometryReader { geo in
+            let progress = min(1, CGFloat(friendsJoined) / 3)
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.08))
+                Capsule().fill(Color.white.opacity(0.85))
+                    .frame(width: geo.size.width * progress)
+                    .animation(.spring(duration: 0.4), value: friendsJoined)
+            }
+        }
+        .frame(height: 4)
+    }
+
+    private var shareURL: URL {
+        let code = appState.profile.referralCode
+        let base = "https://apps.apple.com/app/id6744284188"
+        return URL(string: code.isEmpty ? base : "\(base)?ref=\(code)")!
     }
 
     // MARK: Legal
@@ -527,6 +493,148 @@ private struct CustomPaywallView: View {
                 appState.profile.isPremium = true; appState.saveProfile(); onSubscribe()
             }
         }
+    }
+
+    // MARK: - Social proof row (under hero)
+
+    private var socialProofRow: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 3) {
+                ForEach(0..<5, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.yellow)
+                }
+            }
+            Text("4.9 · 12K+ ratings")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white.opacity(0.55))
+        }
+        .padding(.top, 14)
+        .padding(.bottom, 4)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Free vs Pro comparison table
+
+    private struct CompareRow {
+        let label: String
+        let free: String
+        let pro: String
+        let freeIsCheck: Bool
+        let proIsCheck: Bool
+    }
+
+    private let compareRows: [CompareRow] = [
+        CompareRow(label: "Body scans",        free: "1 free",     pro: "Unlimited",   freeIsCheck: false, proIsCheck: false),
+        CompareRow(label: "AI workout plans",  free: "—",          pro: "✓",           freeIsCheck: false, proIsCheck: true),
+        CompareRow(label: "Weak-point coach",  free: "—",          pro: "✓",           freeIsCheck: false, proIsCheck: true),
+        CompareRow(label: "Leaderboards",      free: "—",          pro: "✓",           freeIsCheck: false, proIsCheck: true),
+        CompareRow(label: "Progress analytics",free: "—",          pro: "✓",           freeIsCheck: false, proIsCheck: true),
+        CompareRow(label: "1v1 battles",       free: "—",          pro: "✓",           freeIsCheck: false, proIsCheck: true)
+    ]
+
+    private var comparisonTable: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                Text("")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Free")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.45))
+                    .frame(width: 70)
+                Text("Pro")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .frame(width: 70)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+
+            Divider().background(Color.white.opacity(0.08))
+
+            ForEach(Array(compareRows.enumerated()), id: \.offset) { idx, row in
+                HStack(spacing: 0) {
+                    Text(row.label)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.85))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    compareCell(text: row.free, emphasized: false)
+                        .frame(width: 70)
+                    compareCell(text: row.pro, emphasized: true)
+                        .frame(width: 70)
+                }
+                .padding(.vertical, 9)
+                .padding(.horizontal, 14)
+
+                if idx < compareRows.count - 1 {
+                    Divider().background(Color.white.opacity(0.06))
+                }
+            }
+        }
+        .background(Color.white.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14)
+            .strokeBorder(Color.white.opacity(0.10), lineWidth: 1))
+        .padding(.horizontal, 20)
+        .padding(.top, 18)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    private func compareCell(text: String, emphasized: Bool) -> some View {
+        Text(text)
+            .font(.system(size: 12, weight: emphasized ? .heavy : .medium))
+            .foregroundStyle(emphasized ? .white : .white.opacity(0.45))
+            .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Testimonial strip (after price caption)
+
+    private struct Testimonial {
+        let stars: Int
+        let name: String
+        let quote: String
+    }
+
+    private let testimonials: [Testimonial] = [
+        Testimonial(stars: 5, name: "Mike, 28",   quote: "Down 12 lbs in 3 weeks. The scan called out exactly what I needed."),
+        Testimonial(stars: 5, name: "Jordan, 24", quote: "First time I've stuck to a plan. The AI keeps it from feeling like work."),
+        Testimonial(stars: 5, name: "Alex, 26",   quote: "Hit a 30 lb bench PR in 5 weeks. Worth every cent.")
+    ]
+
+    private var testimonialStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(Array(testimonials.enumerated()), id: \.offset) { _, t in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 2) {
+                            ForEach(0..<t.stars, id: \.self) { _ in
+                                Image(systemName: "star.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.yellow)
+                            }
+                        }
+                        Text(t.quote)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.82))
+                            .lineLimit(4)
+                            .multilineTextAlignment(.leading)
+                        Text("— \(t.name)")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.45))
+                    }
+                    .padding(14)
+                    .frame(width: 240, alignment: .leading)
+                    .background(Color.white.opacity(0.04))
+                    .clipShape(.rect(cornerRadius: 14))
+                    .overlay(RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .padding(.top, 16)
+        .opacity(appeared ? 1 : 0)
     }
 }
 
