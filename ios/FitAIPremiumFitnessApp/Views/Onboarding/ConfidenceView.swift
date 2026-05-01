@@ -52,9 +52,9 @@ struct ConfidenceView: View {
                         }) {
                             Text("\(value)")
                                 .font(.system(.callout, weight: .semibold))
-                                .foregroundStyle(value == selectedValue ? (isDark ? .black : .white) : .secondary)
+                                .foregroundStyle(value == selectedValue ? Color(.systemBackground) : .secondary)
                                 .frame(width: 34, height: 34)
-                                .background(value == selectedValue ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
+                                .background(value == selectedValue ? Color.primary : Color.primary.opacity(0.06))
                                 .clipShape(Circle())
                         }
                         .sensoryFeedback(.selection, trigger: selectedValue)
@@ -72,10 +72,10 @@ struct ConfidenceView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(isDark ? .black : .white)
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isDark ? Color.white : Color.black)
+                    .background(Color.primary)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .padding(.horizontal, 24)

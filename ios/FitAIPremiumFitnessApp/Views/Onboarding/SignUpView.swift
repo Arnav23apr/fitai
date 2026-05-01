@@ -48,7 +48,10 @@ struct SignUpView: View {
                     case .success(let auth):
                         guard let credential = auth.credential as? ASAuthorizationAppleIDCredential,
                               let tokenData = credential.identityToken,
-                              let idToken = String(data: tokenData, encoding: .utf8) else { return }
+                              let idToken = String(data: tokenData, encoding: .utf8) else {
+                            appState.authError = "Could not read Apple credential."
+                            return
+                        }
                         let nonce = currentNonce
                         Task {
                             await appState.signInWithApple(
@@ -61,8 +64,14 @@ struct SignUpView: View {
                                 onContinue()
                             }
                         }
-                    case .failure:
-                        break
+                    case .failure(let error):
+                        // ASAuthorizationError.canceled (1001) is user-initiated; stay quiet.
+                        // Anything else is worth showing — most likely an entitlement /
+                        // associated-domain / Supabase provider configuration issue.
+                        let nsError = error as NSError
+                        if nsError.code != 1001 {
+                            appState.authError = nsError.localizedDescription
+                        }
                     }
                 }
                 .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)

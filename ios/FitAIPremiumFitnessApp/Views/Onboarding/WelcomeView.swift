@@ -50,15 +50,6 @@ struct WelcomeView: View {
                             .opacity(appeared ? 1 : 0)
                             .offset(y: appeared ? 0 : 12)
 
-                        // Subtitle
-                        Text("Upload a photo. Get a plan built for\nyour body. Climb the global leaderboard.")
-                            .font(.system(size: 15, weight: .regular))
-                            .foregroundStyle(.white.opacity(0.55))
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(3)
-                            .padding(.horizontal, 36)
-                            .opacity(appeared ? 1 : 0)
-                            .offset(y: appeared ? 0 : 12)
                     }
 
                     Spacer()
@@ -90,11 +81,19 @@ struct WelcomeView: View {
                     HStack(spacing: 4) {
                         Text(L.t("byContinuingAgree", lang))
                             .font(.system(size: 11)).foregroundStyle(.white.opacity(0.22))
-                        Button(L.t("terms", lang)) {}
+                        Button(L.t("terms", lang)) {
+                            if let url = URL(string: "https://arnav23apr.github.io/fitai/terms.html") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
                             .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.38))
                         Text(L.t("and", lang))
                             .font(.system(size: 11)).foregroundStyle(.white.opacity(0.22))
-                        Button(L.t("privacyPolicy", lang)) {}
+                        Button(L.t("privacyPolicy", lang)) {
+                            if let url = URL(string: "https://arnav23apr.github.io/fitai/privacy.html") {
+                                UIApplication.shared.open(url)
+                            }
+                        }
                             .font(.system(size: 11, weight: .medium)).foregroundStyle(.white.opacity(0.38))
                     }
                     .padding(.top, 10).padding(.bottom, 16)
@@ -102,7 +101,7 @@ struct WelcomeView: View {
                 }
             }
         }
-        .preferredColorScheme(nil)
+        .preferredColorScheme(.dark)
         .onAppear {
             withAnimation(.easeOut(duration: 0.9)) { appeared = true }
         }
@@ -285,32 +284,31 @@ struct WelcomeView: View {
     }
 }
 
-// MARK: - Scan sweep line
+// MARK: - Scan sweep line (uses TimelineView to avoid recursive DispatchQueue leaks)
 
 private struct ScanSweepLine: View {
-    @State private var progress: CGFloat = 0
-    @State private var opacity: Double = 0
+    private let cycleDuration: Double = 3.95
 
     var body: some View {
-        GeometryReader { geo in
-            Rectangle()
-                .fill(LinearGradient(
-                    colors: [.clear, .white.opacity(0.52), .clear],
-                    startPoint: .leading, endPoint: .trailing))
-                .frame(height: 1)
-                .offset(y: progress * geo.size.height)
-                .opacity(opacity)
-        }
-        .onAppear { animate() }
-    }
+        TimelineView(.periodic(from: .now, by: cycleDuration)) { timeline in
+            GeometryReader { geo in
+                let elapsed = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycleDuration)
+                let progress = min(1, elapsed / 3.6)
+                let opacity: Double = {
+                    if elapsed < 0.22 { return elapsed / 0.22 * 0.85 }
+                    if elapsed < 3.3 { return 0.85 }
+                    if elapsed < 3.6 { return 0.85 * (1 - (elapsed - 3.3) / 0.3) }
+                    return 0
+                }()
 
-    private func animate() {
-        progress = 0; opacity = 0
-        withAnimation(.easeInOut(duration: 0.22)) { opacity = 0.85 }
-        withAnimation(.easeInOut(duration: 3.6)) { progress = 1 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
-            withAnimation(.easeInOut(duration: 0.3)) { opacity = 0 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { animate() }
+                Rectangle()
+                    .fill(LinearGradient(
+                        colors: [.clear, .white.opacity(0.52), .clear],
+                        startPoint: .leading, endPoint: .trailing))
+                    .frame(height: 1)
+                    .offset(y: progress * geo.size.height)
+                    .opacity(opacity)
+            }
         }
     }
 }

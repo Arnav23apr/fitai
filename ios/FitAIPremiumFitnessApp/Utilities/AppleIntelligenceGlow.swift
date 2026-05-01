@@ -6,31 +6,39 @@ struct AppleIntelligenceGlowBorder: View {
     var glowSpread: CGFloat = 28
     var useCapsule: Bool = false
 
-    @State private var gradientStops: [Gradient.Stop] = AppleIntelligenceGlowBorder.randomStops()
+    @State private var rotation: Double = 0
+
+    private let colors: [Color] = [
+        Color(red: 0.55, green: 0.36, blue: 1.0),   // purple
+        Color(red: 0.55, green: 0.62, blue: 1.0),   // blue-purple
+        Color(red: 0.96, green: 0.40, blue: 0.47),   // coral
+        Color(red: 1.00, green: 0.73, blue: 0.44),   // warm orange
+        Color(red: 0.96, green: 0.73, blue: 0.92),   // pink
+        Color(red: 0.55, green: 0.36, blue: 1.0),    // purple (wrap)
+    ]
 
     var body: some View {
         ZStack {
-            glowLayer(lineWidth: 15, blur: 15)
-            glowLayer(lineWidth: 11, blur: 12)
-            glowLayer(lineWidth: 9, blur: 4)
-            glowLayer(lineWidth: 6, blur: 0)
+            glowLayer(lineWidth: 18, blur: 20, opacity: 0.5)
+            glowLayer(lineWidth: 12, blur: 10, opacity: 0.7)
+            glowLayer(lineWidth: 5, blur: 3, opacity: 0.9)
+            glowLayer(lineWidth: 2.5, blur: 0, opacity: 1.0)
         }
         .onAppear {
-            Timer.scheduledTimer(withTimeInterval: 0.4, repeats: true) { _ in
-                withAnimation(.easeInOut(duration: 0.6)) {
-                    gradientStops = Self.randomStops()
-                }
+            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                rotation = 360
             }
         }
         .allowsHitTesting(false)
     }
 
-    private func glowLayer(lineWidth: CGFloat, blur: CGFloat) -> some View {
+    private func glowLayer(lineWidth: CGFloat, blur: CGFloat, opacity: Double) -> some View {
         let w = frame.width + glowSpread
         let h = frame.height + glowSpread
         let gradient = AngularGradient(
-            gradient: Gradient(stops: gradientStops),
-            center: .center
+            colors: colors,
+            center: .center,
+            angle: .degrees(rotation)
         )
 
         return Group {
@@ -47,16 +55,6 @@ struct AppleIntelligenceGlowBorder: View {
         }
         .position(x: frame.midX, y: frame.midY)
         .blur(radius: blur)
-    }
-
-    static func randomStops() -> [Gradient.Stop] {
-        [
-            Gradient.Stop(color: Color(red: 188/255, green: 130/255, blue: 243/255), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 245/255, green: 185/255, blue: 234/255), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 141/255, green: 159/255, blue: 255/255), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 255/255, green: 103/255, blue: 120/255), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 255/255, green: 186/255, blue: 113/255), location: Double.random(in: 0...1)),
-            Gradient.Stop(color: Color(red: 198/255, green: 134/255, blue: 255/255), location: Double.random(in: 0...1)),
-        ].sorted { $0.location < $1.location }
+        .opacity(opacity)
     }
 }

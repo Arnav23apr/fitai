@@ -44,20 +44,13 @@ struct RatingPromptView: View {
                 }) {
                     Text("Rate FitAI ⭐️")
                         .font(.headline)
-                        .foregroundStyle(isDark ? .black : .white)
+                        .foregroundStyle(Color(.systemBackground))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(isDark ? Color.white : Color.black)
+                        .background(Color.primary)
                         .clipShape(.rect(cornerRadius: 16))
                 }
                 .padding(.horizontal, 24)
-
-                Button(action: onContinue) {
-                    Text("Maybe later")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(.top, 12)
                 .padding(.bottom, 16)
             }
             .background(
@@ -72,9 +65,6 @@ struct RatingPromptView: View {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.55).delay(0.3)) {
                 starScale = 1.0
                 starOpacity = 1.0
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                requestReview()
             }
         }
     }

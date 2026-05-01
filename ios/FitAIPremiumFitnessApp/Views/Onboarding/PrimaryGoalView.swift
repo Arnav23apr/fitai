@@ -44,26 +44,26 @@ struct PrimaryGoalView: View {
                         HStack(spacing: 16) {
                             Image(systemName: option.icon)
                                 .font(.system(size: 24))
-                                .foregroundStyle(selected == option.value ? (isDark ? .black : .white) : .secondary)
+                                .foregroundStyle(selected == option.value ? Color(.systemBackground) : .secondary)
                                 .frame(width: 40)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(L.t(option.labelKey, lang))
                                     .font(.headline)
-                                    .foregroundStyle(selected == option.value ? (isDark ? .black : .white) : .primary)
+                                    .foregroundStyle(selected == option.value ? Color(.systemBackground) : .primary)
                                 Text(L.t(option.descKey, lang))
                                     .font(.caption)
-                                    .foregroundStyle(selected == option.value ? (isDark ? Color.black.opacity(0.6) : Color.white.opacity(0.6)) : Color.secondary)
+                                    .foregroundStyle(selected == option.value ? Color(.systemBackground).opacity(0.6) : Color.secondary)
                             }
                             Spacer()
                             if selected == option.value {
                                 Image(systemName: "checkmark.circle.fill")
                                     .font(.system(size: 22))
-                                    .foregroundStyle(isDark ? .black : .white)
+                                    .foregroundStyle(Color(.systemBackground))
                             }
                         }
                         .padding(.horizontal, 20)
                         .frame(height: 72)
-                        .background(selected == option.value ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.06) : Color.black.opacity(0.04)))
+                        .background(selected == option.value ? Color.primary : Color.primary.opacity(0.05))
                         .clipShape(.rect(cornerRadius: 16))
                     }
                     .sensoryFeedback(.selection, trigger: selected)
@@ -81,10 +81,10 @@ struct PrimaryGoalView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(isDark ? .black : .white)
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(selected.isEmpty ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
+                    .background(selected.isEmpty ? Color.primary.opacity(0.3) : Color.primary)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .disabled(selected.isEmpty)

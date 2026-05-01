@@ -13,12 +13,13 @@ enum OnboardingStep: Int, CaseIterable {
     case goals
     case confidence
     case resultsGraph
-    case enableNotifications
+    case planPreview
     case ratingPrompt
     case referralCode
     case signUp
-    case appleHealth
     case paywall
     case welcomePro
     case spinWheel
+    case enableNotifications
+    case appleHealth
 }

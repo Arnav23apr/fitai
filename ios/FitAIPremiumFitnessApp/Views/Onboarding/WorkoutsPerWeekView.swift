@@ -59,9 +59,9 @@ struct WorkoutsPerWeekView: View {
                         } label: {
                             Text("\(option.count)")
                                 .font(.system(.callout, weight: .semibold))
-                                .foregroundStyle(option.count == selected ? (isDark ? .black : .white) : .secondary)
+                                .foregroundStyle(option.count == selected ? Color(.systemBackground) : .secondary)
                                 .frame(width: 40, height: 40)
-                                .background(option.count == selected ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
+                                .background(option.count == selected ? Color.primary : Color.primary.opacity(0.06))
                                 .clipShape(Circle())
                         }
                         .sensoryFeedback(.selection, trigger: selected)
@@ -80,10 +80,10 @@ struct WorkoutsPerWeekView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(isDark ? .black : .white)
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isDark ? Color.white : Color.black)
+                    .background(Color.primary)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .padding(.horizontal, 24)

@@ -22,6 +22,10 @@ enum Config {
     static let EXPO_PUBLIC_REVENUECAT_TEST_API_KEY: String =
         Bundle.main.object(forInfoDictionaryKey: "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY") as? String
         ?? "test_WZhaefVVBzlJbMMNczIttHTaapu"
+
+    static let GEMINI_API_KEY: String =
+        Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String
+        ?? "REDACTED_LEAKED_KEY"
 }
 
 @main

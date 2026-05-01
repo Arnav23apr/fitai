@@ -62,10 +62,10 @@ struct EnableNotificationsView: View {
                 Button(action: requestNotifications) {
                     Text(L.t("enableNotifications", lang))
                         .font(.headline)
-                        .foregroundStyle(isDark ? .black : .white)
+                        .foregroundStyle(Color(.systemBackground))
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(isDark ? Color.white : Color.black)
+                        .background(Color.primary)
                         .clipShape(.rect(cornerRadius: 16))
                 }
 

@@ -56,10 +56,10 @@ struct GoalsView: View {
             }) {
                 Text(L.t("continue", lang))
                     .font(.headline)
-                    .foregroundStyle(isDark ? .black : .white)
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(selected.isEmpty ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
+                    .background(selected.isEmpty ? Color.primary.opacity(0.3) : Color.primary)
                     .clipShape(.rect(cornerRadius: 16))
             }
             .disabled(selected.isEmpty)
@@ -81,11 +81,11 @@ struct GoalsView: View {
                 .minimumScaleFactor(0.7)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(selected.contains(title) ? (isDark ? .black : .white) : .primary)
+                .foregroundStyle(selected.contains(title) ? Color(.systemBackground) : .primary)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 52)
                 .padding(.horizontal, 8)
-                .background(selected.contains(title) ? (isDark ? Color.white : Color.black) : (isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)))
+                .background(selected.contains(title) ? Color.primary : Color.primary.opacity(0.06))
                 .clipShape(.rect(cornerRadius: 24))
         }
         .sensoryFeedback(.selection, trigger: selected.contains(title))

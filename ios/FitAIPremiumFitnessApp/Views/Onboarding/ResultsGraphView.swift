@@ -50,10 +50,10 @@ struct ResultsGraphView: View {
             Button(action: onContinue) {
                 Text(L.t("next", lang))
                     .font(.system(.headline, design: .default, weight: .bold))
-                    .foregroundStyle(isDark ? .black : .white)
+                    .foregroundStyle(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(isDark ? Color.white : Color.black)
+                    .background(Color.primary)
                     .clipShape(.rect(cornerRadius: 28))
             }
             .padding(.horizontal, 24)
@@ -121,6 +121,8 @@ struct ResultsGraphView: View {
             let h = size.height
             let topPad: CGFloat = 10
             let bottomPad: CGFloat = 10
+
+            guard w > 0, h > 0 else { return }
 
             let gridColor = Color.gray.opacity(0.12)
             for i in 0...4 {
@@ -292,7 +294,7 @@ struct ResultsGraphView: View {
 
             let dotSpacing = dashPattern[0] + dashPattern[1]
             let totalLineLength: CGFloat = 400
-            let totalDots = Int(totalLineLength / dotSpacing)
+            let totalDots = dotSpacing > 0 ? Int(totalLineLength / dotSpacing) : 1
             let currentDot = Int(fitAIProgress * CGFloat(totalDots))
             if currentDot > lastHapticBucket {
                 lastHapticBucket = currentDot

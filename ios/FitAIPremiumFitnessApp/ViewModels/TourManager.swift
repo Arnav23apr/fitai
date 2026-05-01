@@ -15,6 +15,7 @@ class TourManager {
     private let completedKey = "tourCompleted"
     private let skippedKey = "tourSkipped"
     private var waitTask: Task<Void, Never>?
+    private var hasCheckedWelcome: Bool = false
 
     var hasCompletedTour: Bool {
         UserDefaults.standard.bool(forKey: completedKey)
@@ -37,9 +38,13 @@ class TourManager {
     }
 
     func checkAndShowWelcome() {
+        guard !hasCheckedWelcome else { return }
+        hasCheckedWelcome = true
         guard !hasCompletedTour && !hasSkippedTour else { return }
         Task {
             try? await Task.sleep(for: .milliseconds(800))
+            if showWelcome || isActive { return }
+            selectedTab = 0
             withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
                 showWelcome = true
             }
@@ -60,9 +65,10 @@ class TourManager {
     func restartTour() {
         UserDefaults.standard.set(false, forKey: completedKey)
         UserDefaults.standard.set(false, forKey: skippedKey)
-        anchorFrames = [:]
+        hasCheckedWelcome = false
         currentStepIndex = 0
         stepReady = false
+        selectedTab = 0
         withAnimation(.spring(duration: 0.4)) {
             showWelcome = true
         }
@@ -72,6 +78,7 @@ class TourManager {
         withAnimation(.spring(duration: 0.35)) {
             showWelcome = false
         }
+        hasCheckedWelcome = true
         UserDefaults.standard.set(true, forKey: skippedKey)
     }
 

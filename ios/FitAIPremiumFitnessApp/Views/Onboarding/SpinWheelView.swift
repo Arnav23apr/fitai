@@ -21,6 +21,24 @@ struct SpinWheelView: View {
 
     private let segments: [Int] = [10, 20, 85, 15, 50, 25, 40, 20]
 
+    /// Computes the discounted annual price label based on the spin result.
+    private var discountedPriceLabel: String {
+        // Use the RevenueCat annual price if available
+        if let pkg = store.annualPackage {
+            let basePrice = pkg.storeProduct.price as Decimal
+            let discountFraction = Decimal(resultDiscount) / 100
+            let discounted = basePrice * (1 - discountFraction)
+            let formatter = NumberFormatter()
+            formatter.numberStyle = .currency
+            formatter.locale = pkg.storeProduct.priceFormatter?.locale ?? .current
+            return "\(formatter.string(from: discounted as NSDecimalNumber) ?? "$\(discounted)")/year"
+        }
+        // Fallback calculation from the default $119.99
+        let base = 119.99
+        let discounted = base * (1 - Double(resultDiscount) / 100)
+        return String(format: "$%.2f/year", discounted)
+    }
+
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
@@ -160,25 +178,25 @@ struct SpinWheelView: View {
                                 HStack(spacing: 8) {
                                     if isPurchasing {
                                         ProgressView()
-                                            .tint(isDark ? .black : .white)
+                                            .tint(Color(.systemBackground))
                                             .scaleEffect(0.9)
                                     } else {
                                         Image(systemName: "flame.fill")
                                             .font(.system(size: 14))
-                                        Text("Claim 85% Off — $69.99/year")
+                                        Text("Claim \(resultDiscount)% Off — \(discountedPriceLabel)")
                                             .font(.headline)
                                     }
                                 }
-                                .foregroundStyle(isDark ? .black : .white)
+                                .foregroundStyle(Color(.systemBackground))
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 56)
-                                .background(isDark ? Color.white : Color.black)
+                                .background(Color.primary)
                                 .clipShape(.rect(cornerRadius: 16))
                             }
                             .disabled(isPurchasing)
 
                             if freeTrialEnabled {
-                                Text("Start your 3-day free trial, then $69.99/year")
+                                Text("Start your 3-day free trial, then \(discountedPriceLabel)")
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
                             }
@@ -190,10 +208,10 @@ struct SpinWheelView: View {
                     Button(action: spinWheel) {
                         Text(L.t("spinTheWheel", lang))
                             .font(.headline)
-                            .foregroundStyle(isDark ? .black : .white)
+                            .foregroundStyle(Color(.systemBackground))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(isSpinning ? (isDark ? Color.white.opacity(0.3) : Color.black.opacity(0.3)) : (isDark ? Color.white : Color.black))
+                            .background(isSpinning ? Color.primary.opacity(0.3) : Color.primary)
                             .clipShape(.rect(cornerRadius: 16))
                     }
                     .disabled(isSpinning)

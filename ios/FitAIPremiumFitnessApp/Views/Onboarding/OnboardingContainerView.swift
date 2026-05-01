@@ -2,15 +2,19 @@ import SwiftUI
 
 struct OnboardingContainerView: View {
     @Environment(AppState.self) private var appState
+    var startAtLogin: Bool = false
     @State private var currentStep: OnboardingStep = .gender
     @State private var paywallSkipped: Bool = false
     @State private var isGoingBack: Bool = false
 
+    // Steps that show progress in the onboarding header.
+    // calculatingPlan/paywall/welcomePro/spinWheel/enableNotifications/appleHealth
+    // are deliberately excluded — those are post-personalization moments.
     private let progressSteps: [OnboardingStep] = [
         .gender, .workoutsPerWeek, .trainingExperience, .trainingLocation,
         .primaryGoal, .dateOfBirth, .heightWeight, .holdingBack,
-        .goals, .confidence, .resultsGraph, .enableNotifications,
-        .ratingPrompt, .referralCode, .signUp, .appleHealth
+        .goals, .confidence, .resultsGraph, .planPreview,
+        .ratingPrompt, .referralCode, .signUp
     ]
 
     private var showsHeader: Bool {
@@ -57,16 +61,14 @@ struct OnboardingContainerView: View {
                     ConfidenceView(onContinue: { advance() })
                 case .resultsGraph:
                     ResultsGraphView(onContinue: { advance() })
-                case .enableNotifications:
-                    EnableNotificationsView(onContinue: { advance() })
+                case .planPreview:
+                    PlanPreviewView(onContinue: { advance() })
                 case .ratingPrompt:
                     RatingPromptView(onContinue: { advance() })
                 case .referralCode:
                     ReferralCodeView(onContinue: { advance() })
                 case .signUp:
                     SignUpView(onContinue: { advance() })
-                case .appleHealth:
-                    AppleHealthOnboardingView(onContinue: { advance() })
                 case .paywall:
                     PaywallView(
                         onSubscribe: {
@@ -81,10 +83,18 @@ struct OnboardingContainerView: View {
                     )
                 case .welcomePro:
                     WelcomeProView(onContinue: {
-                        appState.completeOnboarding()
+                        isGoingBack = false
+                        currentStep = .enableNotifications
                     })
                 case .spinWheel:
                     SpinWheelView(onContinue: {
+                        isGoingBack = false
+                        currentStep = .enableNotifications
+                    })
+                case .enableNotifications:
+                    EnableNotificationsView(onContinue: { advance() })
+                case .appleHealth:
+                    AppleHealthOnboardingView(onContinue: {
                         appState.completeOnboarding()
                     })
                 }
@@ -99,6 +109,11 @@ struct OnboardingContainerView: View {
             ))
         }
         .animation(.snappy(duration: 0.35), value: currentStep)
+        .onAppear {
+            if startAtLogin {
+                currentStep = .signUp
+            }
+        }
         .overlay(alignment: .top) {
             if showsHeader {
                 OnboardingHeaderView(
@@ -130,9 +145,21 @@ struct OnboardingContainerView: View {
     }
 
     private func goBack() {
+        // From .gender, go back to the splash screen
+        if currentStep == .gender {
+            isGoingBack = true
+            appState.showSplash = true
+            return
+        }
         let allSteps = OnboardingStep.allCases
         guard let idx = allSteps.firstIndex(of: currentStep), idx > 0 else { return }
         isGoingBack = true
-        currentStep = allSteps[idx - 1]
+        let prev = allSteps[idx - 1]
+        // Skip .welcome — it's handled by SwipeUpSplashView now
+        if prev == .welcome {
+            appState.showSplash = true
+            return
+        }
+        currentStep = prev
     }
 }

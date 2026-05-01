@@ -43,11 +43,9 @@ nonisolated struct TourStep: Identifiable, Sendable {
         TourStep(id: 4, anchorID: .scanAnalyzeButton, targetTab: 0, title: "Analyze with AI", body: "Get strengths, weak points, and your Fit Score."),
         TourStep(id: 5, anchorID: .planSummaryCard, targetTab: 1, title: "Your training plan", body: "Workouts tailored to your scan and goals."),
         TourStep(id: 6, anchorID: .planTodayWorkout, targetTab: 1, title: "Track progress", body: "Log sets, total volume, and hit PRs."),
-        TourStep(id: 7, anchorID: .competeRankBadge, targetTab: 2, title: "Rank up", body: "Earn XP from workouts, scans, and challenges."),
-        TourStep(id: 8, anchorID: .competeChallenges, targetTab: 2, title: "Daily motivation", body: "Complete challenges to earn XP and streaks."),
-        TourStep(id: 9, anchorID: .competeLeaderboard, targetTab: 2, title: "Leaderboard", body: "See where you stand this week."),
-        TourStep(id: 10, anchorID: .profileUserCard, targetTab: 3, title: "Your profile", body: "Edit your info, track scans, manage Pro, and settings."),
-        TourStep(id: 11, anchorID: .profileSettings, targetTab: 3, title: "Customize Fit AI", body: "Units, notifications, Apple Health, and more."),
-        TourStep(id: 12, anchorID: .profileRestartTour, targetTab: 3, title: "You're ready.", body: "Start with a scan. Everything else builds from there.", isFinal: true),
+        TourStep(id: 7, anchorID: .competeRankBadge, targetTab: 2, title: "Battle & Friends", body: "Challenge friends to 1v1 physique battles and add your gym crew."),
+        TourStep(id: 8, anchorID: .profileUserCard, targetTab: 3, title: "Your profile", body: "Edit your info, track scans, manage Pro, and settings."),
+        TourStep(id: 9, anchorID: .profileSettings, targetTab: 3, title: "Customize Fit AI", body: "Units, notifications, Apple Health, and more."),
+        TourStep(id: 10, anchorID: .profileRestartTour, targetTab: 3, title: "You're ready.", body: "Start with a scan. Everything else builds from there.", isFinal: true),
     ]
 }
