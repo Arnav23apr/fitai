@@ -43,6 +43,8 @@ class ScanViewModel {
                 throw AIError.decodingError
             }
 
+            let profileContext = ProfileContextBuilder.buildContext(from: profile)
+
             let systemPrompt = """
             You are a professional fitness physique analyzer. Analyze the user's physique photo and provide a detailed assessment. \
             Score from 1-10. Be honest but encouraging. Consider muscle development, symmetry, proportions, and overall conditioning. \
@@ -54,15 +56,20 @@ class ScanViewModel {
             For potentialRating, rate from 1-10 how much genetic/frame potential this person has to build an amazing physique. \
             Consider bone structure, frame width, muscle insertion points, and overall proportions. \
             Be generous and motivating — most people should score 7+. This is about their POTENTIAL, not current state.
+
+            PERSONALIZATION (mandatory, not optional):
+            The user profile below is authoritative. You MUST tailor every part of your assessment to it — \
+            scores must factor in their age, gender, training experience, and stated goals; \
+            recommendations must directly reference their primaryGoal, weakPoints, and trainingLocation; \
+            tone must match their trainingConfidence (lower = more reassuring, higher = more direct); \
+            advice must acknowledge their stated obstacles (holdingBack). \
+            Do NOT produce generic physique advice. If your output could be sent to any user without changes, you have failed.
+
+            USER PROFILE:
+            \(profileContext)
             """
 
-            let profileContext = ProfileContextBuilder.buildContext(from: profile)
-            var userPrompt = """
-            Analyze this physique photo. Here is my profile:
-            \(profileContext)
-            
-            Consider my age, body stats, goals, and experience level when scoring and giving recommendations.
-            """
+            var userPrompt = "Analyze this physique photo. Apply the profile from the system message in every part of your response — scoring, weak/strong points, and recommendations."
 
             let object = try await aiService.analyzeImageWithSchema(
                 imageBase64: frontBase64,

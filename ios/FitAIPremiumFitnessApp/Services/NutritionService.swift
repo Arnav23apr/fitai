@@ -4,6 +4,8 @@ class NutritionService {
     private let aiService = AIService()
 
     func generateMealPlan(profile: UserProfile) async throws -> MealPlan {
+        let profileContext = ProfileContextBuilder.buildContext(from: profile)
+
         let systemPrompt = """
         You are a sports nutritionist. Generate a daily meal plan. \
         Return JSON with: "calories" (int), "protein" (int grams), "carbs" (int grams), "fat" (int grams), \
@@ -11,17 +13,21 @@ class NutritionService {
         Use SF Symbol names: fork.knife, cup.and.saucer.fill, takeoutbag.and.cup.and.straw.fill, leaf.fill, carrot.fill. \
         Include 4-5 meals (breakfast, snack, lunch, snack, dinner). \
         Respond ONLY with JSON, no markdown.
+
+        PERSONALIZATION (mandatory, not optional):
+        The user profile below is authoritative. The meal plan MUST be derived from it. \
+        Total calories must be calculated from the user's age, gender, weightKg, heightCm, workoutsPerWeek, and primaryGoal: \
+          - Muscle building → ~250-400 kcal surplus over maintenance, protein at 1.8-2.2 g/kg bodyweight. \
+          - Fat loss → ~300-500 kcal deficit, protein at 2.0-2.4 g/kg to preserve lean mass. \
+          - Recomp / maintenance → near maintenance, protein at 1.6-2.0 g/kg. \
+        Meal timing should pair with workoutsPerWeek (training days = higher carbs around workout, rest days = leaner carbs). \
+        If your output uses a generic 2000 kcal default that ignores their stats, you have failed.
+
+        USER PROFILE:
+        \(profileContext)
         """
 
-        let profileContext = ProfileContextBuilder.buildContext(from: profile)
-        let userPrompt = """
-        Create a daily meal plan tailored to my profile:
-        \(profileContext)
-        
-        Adjust calories, macros, and meal timing based on my goals, body stats, activity level, and training schedule. \
-        If my goal is muscle building, prioritize protein. If fat loss, create a moderate deficit. \
-        Consider my training experience and workout frequency for caloric needs.
-        """
+        let userPrompt = "Generate the daily meal plan now. Use the profile in the system message to set total calories, macros, and meal composition — do not default to generic values."
 
         let messages = [
             ChatAPIMessage(role: "system", text: systemPrompt),

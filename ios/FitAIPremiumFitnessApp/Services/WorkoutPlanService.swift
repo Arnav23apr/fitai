@@ -4,6 +4,8 @@ class WorkoutPlanService {
     private let aiService = AIService()
 
     func generateAIPlan(profile: UserProfile) async throws -> [WorkoutDayData] {
+        let profileContext = ProfileContextBuilder.buildContext(from: profile)
+
         let systemPrompt = """
         You are a certified personal trainer creating a weekly workout plan. \
         Return a JSON array of 7 days (Monday-Sunday). Each day object has: \
@@ -28,19 +30,22 @@ class WorkoutPlanService {
         figure.rowing, figure.strengthtraining.functional. \
         For rest days, set isRestDay true and exercises to empty array. \
         Respond ONLY with the JSON array, no markdown or explanation.
+
+        PERSONALIZATION (mandatory, not optional):
+        The user profile below is authoritative. The plan you generate MUST be derived from it, not from generic templates. \
+        Number of training days = workoutsPerWeek (this is a hard constraint — exactly that many non-rest days). \
+        Exercise selection MUST respect trainingLocation (no barbell work for "Home / no equipment"; full barbell work for "Gym"). \
+        At least one day per week MUST be marked isWeakPointFocus=true and prioritize weakPoints muscle groups, if any are listed. \
+        Volume and intensity scale with trainingExperience and trainingConfidence. \
+        Exercise selection and split style (PPL, upper/lower, full-body, etc.) must align with primaryGoal. \
+        Bodyweight values for suggestedWeights must be derived from the user's actual weightKg, not assumed. \
+        If your output ignores any of these fields, you have failed.
+
+        USER PROFILE:
+        \(profileContext)
         """
 
-        let profileContext = ProfileContextBuilder.buildContext(from: profile)
-        let userPrompt = """
-        Create a personalized weekly workout plan based on my profile:
-        \(profileContext)
-        
-        Tailor the exercises, volume, and intensity to my experience level, goals, body stats, and training location. \
-        If I have weak points, prioritize exercises that target them. \
-        Adjust difficulty based on my training confidence and experience. \
-        Include realistic suggestedWeights (in kg) and suggestedReps for each set of each exercise, \
-        personalized to my body weight, experience, and goals. Use progressive rep schemes (e.g. 12,10,8,6).
-        """
+        let userPrompt = "Generate the weekly workout plan now. Apply every constraint from my profile in the system message — number of days, training location, weak points, experience level, body weight, and primary goal."
 
         let messages = [
             ChatAPIMessage(role: "system", text: systemPrompt),

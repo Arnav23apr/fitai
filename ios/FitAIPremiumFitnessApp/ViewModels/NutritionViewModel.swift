@@ -1,6 +1,7 @@
 import SwiftUI
 
 @Observable
+@MainActor
 class NutritionViewModel {
     var mealPlan: MealPlan? = nil
     var isLoading: Bool = false

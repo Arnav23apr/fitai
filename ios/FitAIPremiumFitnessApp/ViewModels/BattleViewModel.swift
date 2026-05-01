@@ -2,6 +2,7 @@ import SwiftUI
 import PhotosUI
 
 @Observable
+@MainActor
 class BattleViewModel {
     var playerName: String = "You"
     var opponentName: String = ""
@@ -9,6 +10,25 @@ class BattleViewModel {
     var opponentPhoto: UIImage? = nil
     var playerPickerItem: PhotosPickerItem? = nil
     var opponentPickerItem: PhotosPickerItem? = nil
+
+    /// Whether the current player photo came from the saved default.
+    var playerPhotoIsDefault: Bool = false
+
+    /// Pre-fill the player's photo from saved battle photo, falling back to
+    /// profile photo. Called by BattleSetupView on appear.
+    func prefillPlayerPhoto(battlePhotoData: Data?, profileData: Data?, name: String) {
+        if playerPhoto == nil {
+            if let data = battlePhotoData, let image = UIImage(data: data) {
+                playerPhoto = image
+                playerPhotoIsDefault = true
+            } else if let data = profileData, let image = UIImage(data: data) {
+                playerPhoto = image
+            }
+        }
+        if !name.isEmpty {
+            playerName = name
+        }
+    }
 
     var isAnalyzing: Bool = false
     var analyzeProgress: String = ""

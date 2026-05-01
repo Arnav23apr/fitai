@@ -1,6 +1,8 @@
 import Foundation
 import UIKit
 
+// MARK: - Public message types (used by CoachService and other callers)
+
 nonisolated struct MessagePart: Codable, Sendable {
     let type: String
     let text: String?
@@ -37,110 +39,446 @@ nonisolated struct ChatAPIMessage: Codable, Sendable {
     }
 }
 
-nonisolated struct ChatRequest: Codable, Sendable {
-    let messages: [ChatAPIMessage]
+// MARK: - Gemini API types
+
+private struct GeminiRequest: Encodable {
+    let contents: [GeminiContent]
+    let systemInstruction: GeminiContent?
+    let generationConfig: GeminiGenerationConfig?
 }
 
-nonisolated enum LLMContentPart: Codable, Sendable {
-    case text(String)
-    case image(String)
+private struct GeminiContent: Codable {
+    let role: String?
+    let parts: [GeminiPart]
 
-    nonisolated func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        switch self {
-        case .text(let value):
-            try container.encode("text", forKey: .type)
-            try container.encode(value, forKey: .text)
-        case .image(let value):
-            try container.encode("image", forKey: .type)
-            try container.encode(value, forKey: .image)
-        }
-    }
-
-    nonisolated init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        let type = try container.decode(String.self, forKey: .type)
-        if type == "image" {
-            self = .image(try container.decode(String.self, forKey: .image))
-        } else {
-            self = .text(try container.decode(String.self, forKey: .text))
-        }
-    }
-
-    private enum CodingKeys: String, CodingKey {
-        case type, text, image
+    init(role: String? = nil, parts: [GeminiPart]) {
+        self.role = role
+        self.parts = parts
     }
 }
 
-nonisolated struct LLMMessage: Codable, Sendable {
-    let role: String
-    let content: [LLMContentPart]
-}
-
-nonisolated struct LLMTextRequest: Codable, Sendable {
-    let messages: [LLMMessage]
-}
-
-nonisolated struct LLMTextResponse: Codable, Sendable {
-    let completion: String
-}
-
-nonisolated struct LLMContentPart2: Codable, Sendable {
-    let type: String
+private struct GeminiPart: Codable {
     let text: String?
-    let image: String?
+    let inlineData: GeminiInlineData?
 
     init(text: String) {
-        self.type = "text"
         self.text = text
-        self.image = nil
+        self.inlineData = nil
     }
 
-    init(imageDataURI: String) {
-        self.type = "image"
+    init(imageBase64: String, mimeType: String = "image/jpeg") {
         self.text = nil
-        self.image = imageDataURI
+        self.inlineData = GeminiInlineData(mimeType: mimeType, data: imageBase64)
     }
 }
 
-nonisolated struct LLMObjectMessage: Codable, Sendable {
-    let role: String
-    let content: LLMObjectContent
+private struct GeminiInlineData: Codable {
+    let mimeType: String
+    let data: String
 }
 
-nonisolated enum LLMObjectContent: Codable, Sendable {
-    case text(String)
-    case parts([LLMContentPart2])
+private struct GeminiGenerationConfig: Encodable {
+    let temperature: Double?
+    let maxOutputTokens: Int?
+    let responseMimeType: String?
+    let responseSchema: [String: AnyCodable]?
+    let responseModalities: [String]?
 
-    nonisolated func encode(to encoder: Encoder) throws {
-        switch self {
-        case .text(let str):
-            var container = encoder.singleValueContainer()
-            try container.encode(str)
-        case .parts(let parts):
-            var container = encoder.singleValueContainer()
-            try container.encode(parts)
+    init(temperature: Double? = nil, maxOutputTokens: Int? = nil, responseMimeType: String? = nil, responseSchema: [String: AnyCodable]? = nil, responseModalities: [String]? = nil) {
+        self.temperature = temperature
+        self.maxOutputTokens = maxOutputTokens
+        self.responseMimeType = responseMimeType
+        self.responseSchema = responseSchema
+        self.responseModalities = responseModalities
+    }
+}
+
+private struct GeminiResponse: Decodable {
+    let candidates: [GeminiCandidate]?
+    let error: GeminiError?
+}
+
+private struct GeminiCandidate: Decodable {
+    let content: GeminiResponseContent?
+}
+
+private struct GeminiResponseContent: Decodable {
+    let parts: [GeminiResponsePart]?
+}
+
+private struct GeminiResponsePart: Decodable {
+    let text: String?
+    let inlineData: GeminiResponseInlineData?
+}
+
+private struct GeminiResponseInlineData: Decodable {
+    let mimeType: String?
+    let data: String?
+}
+
+private struct GeminiError: Decodable {
+    let message: String?
+    let code: Int?
+}
+
+// MARK: - AIService (Gemini)
+
+class AIService {
+    private let apiKey: String
+    private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models"
+    private let model = "gemini-2.5-flash-lite"
+    private let imageModel = "gemini-3-pro-image-preview"
+
+    /// Simple per-day rate limiter to prevent runaway API costs.
+    private static let dailyLimitKey = "ai_daily_request_count"
+    private static let dailyLimitDateKey = "ai_daily_request_date"
+    private static let maxDailyRequests = 100
+
+    init() {
+        self.apiKey = Config.GEMINI_API_KEY
+    }
+
+    /// Check and increment daily request counter. Throws if limit exceeded.
+    private func checkRateLimit() throws {
+        let defaults = UserDefaults.standard
+        let today = Calendar.current.startOfDay(for: Date())
+        let storedDate = defaults.object(forKey: Self.dailyLimitDateKey) as? Date ?? .distantPast
+
+        if Calendar.current.startOfDay(for: storedDate) != today {
+            defaults.set(0, forKey: Self.dailyLimitKey)
+            defaults.set(today, forKey: Self.dailyLimitDateKey)
         }
+
+        let count = defaults.integer(forKey: Self.dailyLimitKey)
+        if count >= Self.maxDailyRequests {
+            throw AIError.serverError("Daily limit reached. Please try again tomorrow.")
+        }
+        defaults.set(count + 1, forKey: Self.dailyLimitKey)
     }
 
-    nonisolated init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        if let str = try? container.decode(String.self) {
-            self = .text(str)
+    /// Retry a throwing async closure with exponential backoff on transient errors (429, 5xx).
+    private func withRetry<T>(maxAttempts: Int = 3, _ work: () async throws -> T) async throws -> T {
+        var lastError: Error?
+        for attempt in 0..<maxAttempts {
+            do {
+                return try await work()
+            } catch let error as AIError {
+                lastError = error
+                // Only retry on rate-limit or server errors
+                if case .serverError(let msg) = error,
+                   (msg.contains("429") || msg.contains("500") || msg.contains("503")) {
+                    let delay = Double(1 << attempt) // 1s, 2s, 4s
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    continue
+                }
+                throw error
+            } catch {
+                lastError = error
+                let delay = Double(1 << attempt)
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+        }
+        throw lastError ?? AIError.networkError
+    }
+
+    // MARK: - Scan Analysis
+
+    func analyzeImageWithSchema(imageBase64: String, systemPrompt: String, userPrompt: String) async throws -> [String: Any] {
+        let schema: [String: AnyCodable] = [
+            "type": AnyCodable("object"),
+            "properties": AnyCodable([
+                "overallScore": ["type": "number"],
+                "strongPoints": ["type": "array", "items": ["type": "string"]],
+                "weakPoints": ["type": "array", "items": ["type": "string"]],
+                "summary": ["type": "string"],
+                "recommendations": ["type": "array", "items": ["type": "string"]],
+                "potentialRating": ["type": "number"],
+                "muscleMassRating": ["type": "string"],
+                "visibleMuscleGroups": ["type": "array", "items": ["type": "string"]],
+                "muscleScores": ["type": "object", "properties": [
+                    "chest": ["type": "number"],
+                    "shoulders": ["type": "number"],
+                    "back": ["type": "number"],
+                    "arms": ["type": "number"],
+                    "legs": ["type": "number"],
+                    "core": ["type": "number"]
+                ] as [String: Any]]
+            ]),
+            "required": AnyCodable([
+                "overallScore",
+                "strongPoints",
+                "weakPoints",
+                "summary",
+                "recommendations",
+                "potentialRating",
+                "muscleMassRating",
+                "visibleMuscleGroups",
+                "muscleScores"
+            ])
+        ]
+
+        let systemContent = GeminiContent(role: nil, parts: [GeminiPart(text: systemPrompt)])
+
+        let userContent = GeminiContent(role: "user", parts: [
+            GeminiPart(imageBase64: imageBase64),
+            GeminiPart(text: userPrompt)
+        ])
+
+        let genConfig = GeminiGenerationConfig(
+            temperature: 0.4,
+            maxOutputTokens: 2048,
+            responseMimeType: "application/json",
+            responseSchema: schema
+        )
+
+        let request = GeminiRequest(
+            contents: [userContent],
+            systemInstruction: systemContent,
+            generationConfig: genConfig
+        )
+
+        try checkRateLimit()
+        let responseText = try await withRetry { try await self.callGemini(request: request) }
+
+        guard let data = responseText.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw AIError.decodingError
+        }
+
+        return json
+    }
+
+    // MARK: - Chat
+
+    func chat(messages: [ChatAPIMessage]) async throws -> String {
+        var systemParts: [GeminiPart] = []
+        var contents: [GeminiContent] = []
+
+        for msg in messages {
+            var parts: [GeminiPart] = []
+            for part in msg.parts {
+                if let text = part.text {
+                    parts.append(GeminiPart(text: text))
+                } else if let image = part.image {
+                    parts.append(GeminiPart(imageBase64: image))
+                }
+            }
+
+            if msg.role == "system" {
+                systemParts.append(contentsOf: parts)
+            } else {
+                let role = msg.role == "assistant" ? "model" : "user"
+                contents.append(GeminiContent(role: role, parts: parts))
+            }
+        }
+
+        // Ensure conversation starts with a user message
+        if contents.isEmpty {
+            throw AIError.emptyResponse
+        }
+
+        let systemInstruction = systemParts.isEmpty ? nil : GeminiContent(role: nil, parts: systemParts)
+
+        let genConfig = GeminiGenerationConfig(
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+            responseMimeType: nil,
+            responseSchema: nil
+        )
+
+        let request = GeminiRequest(
+            contents: contents,
+            systemInstruction: systemInstruction,
+            generationConfig: genConfig
+        )
+
+        try checkRateLimit()
+        return try await withRetry { try await self.callGemini(request: request) }
+    }
+
+    // MARK: - Image Generation (Nano Banana Pro)
+
+    func generateImage(prompt: String, size: String = "1024x1024") async throws -> UIImage {
+        let userContent = GeminiContent(role: "user", parts: [
+            GeminiPart(text: prompt)
+        ])
+
+        let genConfig = GeminiGenerationConfig(
+            responseModalities: ["IMAGE"]
+        )
+
+        let request = GeminiRequest(
+            contents: [userContent],
+            systemInstruction: nil,
+            generationConfig: genConfig
+        )
+
+        try checkRateLimit()
+        return try await withRetry { try await self.callGeminiImage(request: request) }
+    }
+
+    // MARK: - Image Edit (Nano Banana Pro)
+
+    func editImage(prompt: String, imageBase64: String, aspectRatio: String = "3:4") async throws -> UIImage {
+        let userContent = GeminiContent(role: "user", parts: [
+            GeminiPart(imageBase64: imageBase64),
+            GeminiPart(text: prompt)
+        ])
+
+        let genConfig = GeminiGenerationConfig(
+            responseModalities: ["IMAGE"]
+        )
+
+        let request = GeminiRequest(
+            contents: [userContent],
+            systemInstruction: nil,
+            generationConfig: genConfig
+        )
+
+        try checkRateLimit()
+        return try await withRetry { try await self.callGeminiImage(request: request) }
+    }
+
+    // MARK: - Core Gemini Image Call (Nano Banana Pro)
+
+    private func callGeminiImage(request: GeminiRequest) async throws -> UIImage {
+        let url = URL(string: "\(baseURL)/\(imageModel):generateContent?key=\(apiKey)")!
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.timeoutInterval = 120
+
+        let encoder = JSONEncoder()
+        urlRequest.httpBody = try encoder.encode(request)
+
+        #if DEBUG
+        print("[AIService/NanaBanana] POST \(imageModel):generateContent")
+        #endif
+
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.networkError
+        }
+
+        #if DEBUG
+        print("[AIService/NanaBanana] Status: \(httpResponse.statusCode)")
+        #endif
+
+        guard httpResponse.statusCode == 200 else {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            if let errorData = errorText.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any],
+               let error = json["error"] as? [String: Any],
+               let message = error["message"] as? String {
+                throw AIError.serverError("Image generation: \(message)")
+            }
+            throw AIError.serverError("Image generation error (\(httpResponse.statusCode))")
+        }
+
+        let geminiResponse = try JSONDecoder().decode(GeminiResponse.self, from: data)
+
+        if let error = geminiResponse.error {
+            throw AIError.serverError("Image generation: \(error.message ?? "Unknown error")")
+        }
+
+        // Extract image from response parts
+        guard let parts = geminiResponse.candidates?.first?.content?.parts else {
+            throw AIError.emptyResponse
+        }
+
+        for part in parts {
+            if let inlineData = part.inlineData,
+               let base64String = inlineData.data,
+               let imageData = Data(base64Encoded: base64String),
+               let image = UIImage(data: imageData) {
+                return image
+            }
+        }
+
+        throw AIError.serverError("No image returned in response")
+    }
+
+    // MARK: - Core Gemini Text Call
+
+    private func callGemini(request: GeminiRequest) async throws -> String {
+        let url = URL(string: "\(baseURL)/\(model):generateContent?key=\(apiKey)")!
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        urlRequest.timeoutInterval = 120
+
+        let encoder = JSONEncoder()
+        urlRequest.httpBody = try encoder.encode(request)
+
+        #if DEBUG
+        if let bodyData = urlRequest.httpBody,
+           let bodyString = String(data: bodyData, encoding: .utf8) {
+            print("[AIService/Gemini] POST \(model):generateContent")
+            print("[AIService/Gemini] Body (truncated): \(bodyString.prefix(500))...")
+        }
+        #endif
+
+        let (data, response) = try await URLSession.shared.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AIError.networkError
+        }
+
+        #if DEBUG
+        let responseText = String(data: data, encoding: .utf8) ?? "[binary]"
+        print("[AIService/Gemini] Status: \(httpResponse.statusCode)")
+        print("[AIService/Gemini] Response (truncated): \(responseText.prefix(1000))")
+        #endif
+
+        guard httpResponse.statusCode == 200 else {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            if let errorData = errorText.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any],
+               let error = json["error"] as? [String: Any],
+               let message = error["message"] as? String {
+                throw AIError.serverError("Gemini: \(message)")
+            }
+            throw AIError.serverError("\(httpResponse.statusCode) Gemini error: \(String(errorText.prefix(200)))")
+        }
+
+        let geminiResponse = try JSONDecoder().decode(GeminiResponse.self, from: data)
+
+        if let error = geminiResponse.error {
+            throw AIError.serverError("Gemini: \(error.message ?? "Unknown error")")
+        }
+
+        guard let text = geminiResponse.candidates?.first?.content?.parts?.first?.text else {
+            throw AIError.emptyResponse
+        }
+
+        return text
+    }
+
+    // MARK: - Utility
+
+    nonisolated static func imageToBase64(_ image: UIImage, maxDimension: CGFloat = 800) -> String? {
+        let size = image.size
+        let scale: CGFloat
+        if max(size.width, size.height) > maxDimension {
+            scale = maxDimension / max(size.width, size.height)
         } else {
-            self = .parts(try container.decode([LLMContentPart2].self))
+            scale = 1.0
         }
+
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        return resized.jpegData(compressionQuality: 0.7)?.base64EncodedString()
     }
 }
 
-nonisolated struct LLMObjectRequest: Codable, Sendable {
-    let messages: [LLMObjectMessage]
-    let schema: [String: AnyCodable]
-}
-
-nonisolated struct LLMObjectResponse: Codable, Sendable {
-    let object: [String: AnyCodable]
-}
+// MARK: - AnyCodable (kept for schema encoding)
 
 nonisolated struct AnyCodable: Codable, @unchecked Sendable {
     let value: Any
@@ -188,323 +526,7 @@ nonisolated struct AnyCodable: Codable, @unchecked Sendable {
     }
 }
 
-nonisolated struct ImageGenerateRequest: Codable, Sendable {
-    let prompt: String
-    let size: String?
-}
-
-nonisolated struct ImageGenerateResponse: Codable, Sendable {
-    let image: ImageData
-    let size: String
-
-    nonisolated struct ImageData: Codable, Sendable {
-        let base64Data: String
-        let mimeType: String
-    }
-}
-
-nonisolated struct ImageEditRequest: Codable, Sendable {
-    let prompt: String
-    let images: [ImageInput]
-    let aspectRatio: String?
-
-    nonisolated struct ImageInput: Codable, Sendable {
-        let type: String
-        let image: String
-    }
-}
-
-nonisolated struct ImageEditResponse: Codable, Sendable {
-    let image: ImageData
-
-    nonisolated struct ImageData: Codable, Sendable {
-        let base64Data: String
-        let mimeType: String
-        let aspectRatio: String
-    }
-}
-
-class AIService {
-    private let chatURL: URL
-    private let llmObjectURL: URL
-    private let imageGenerateURL: URL
-    private let imageEditURL: URL
-
-    init() {
-        let base = URL(string: Config.EXPO_PUBLIC_TOOLKIT_URL) ?? URL(string: "https://toolkit.rork.com")!
-        self.chatURL = base.appending(path: "agent/chat")
-        self.llmObjectURL = base.appending(path: "llm/object")
-        self.imageGenerateURL = base.appending(path: "images/generate")
-        self.imageEditURL = base.appending(path: "images/edit")
-    }
-
-    func analyzeImageWithSchema(imageBase64: String, systemPrompt: String, userPrompt: String) async throws -> [String: Any] {
-        let schema: [String: AnyCodable] = [
-            "type": AnyCodable("object"),
-            "properties": AnyCodable([
-                "overallScore": ["type": "number"],
-                "strongPoints": ["type": "array", "items": ["type": "string"]],
-                "weakPoints": ["type": "array", "items": ["type": "string"]],
-                "summary": ["type": "string"],
-                "recommendations": ["type": "array", "items": ["type": "string"]],
-                "potentialRating": ["type": "number"],
-                "muscleMassRating": ["type": "string"],
-                "visibleMuscleGroups": ["type": "array", "items": ["type": "string"]],
-                "muscleScores": ["type": "object", "properties": [
-                    "chest": ["type": "number"],
-                    "shoulders": ["type": "number"],
-                    "back": ["type": "number"],
-                    "arms": ["type": "number"],
-                    "legs": ["type": "number"],
-                    "core": ["type": "number"]
-                ] as [String: Any]]
-            ]),
-            "required": AnyCodable([
-                "overallScore",
-                "strongPoints",
-                "weakPoints",
-                "summary",
-                "recommendations",
-                "potentialRating",
-                "muscleMassRating",
-                "visibleMuscleGroups",
-                "muscleScores"
-            ])
-        ]
-
-        // Combine system and user prompts into a single text instruction
-        let combinedPrompt = systemPrompt + "\n\n" + userPrompt
-
-        // Create a single user message with image first, then text (matching working implementation)
-        let userMsg = LLMObjectMessage(
-            role: "user",
-            content: .parts([
-                LLMContentPart2(imageDataURI: "data:image/jpeg;base64," + imageBase64),
-                LLMContentPart2(text: combinedPrompt)
-            ])
-        )
-
-        let body = LLMObjectRequest(messages: [userMsg], schema: schema)
-        let response = try await postObject(body: body)
-
-        return response.mapValues { $0.value }
-    }
-
-    func chat(messages: [ChatAPIMessage]) async throws -> String {
-        let body = ChatRequest(messages: messages)
-        return try await postChat(body: body)
-    }
-
-    func generateImage(prompt: String, size: String = "1024x1024") async throws -> UIImage {
-        var request = URLRequest(url: imageGenerateURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
-
-        let body = ImageGenerateRequest(prompt: prompt, size: size)
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIError.networkError
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw AIError.serverError("Image generation failed (\(httpResponse.statusCode)): \(extractErrorMessage(from: errorText))")
-        }
-
-        let decoded = try JSONDecoder().decode(ImageGenerateResponse.self, from: data)
-        guard let imageData = Data(base64Encoded: decoded.image.base64Data),
-              let image = UIImage(data: imageData) else {
-            throw AIError.decodingError
-        }
-        return image
-    }
-
-    func editImage(prompt: String, imageBase64: String, aspectRatio: String = "3:4") async throws -> UIImage {
-        var request = URLRequest(url: imageEditURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
-
-        let body = ImageEditRequest(
-            prompt: prompt,
-            images: [.init(type: "image", image: imageBase64)],
-            aspectRatio: aspectRatio
-        )
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIError.networkError
-        }
-
-        guard httpResponse.statusCode == 200 else {
-            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw AIError.serverError("Image editing failed (\(httpResponse.statusCode)): \(extractErrorMessage(from: errorText))")
-        }
-
-        let decoded = try JSONDecoder().decode(ImageEditResponse.self, from: data)
-        guard let imageData = Data(base64Encoded: decoded.image.base64Data),
-              let image = UIImage(data: imageData) else {
-            throw AIError.decodingError
-        }
-        return image
-    }
-
-    private func postObject(body: LLMObjectRequest) async throws -> [String: AnyCodable] {
-        var request = URLRequest(url: llmObjectURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 120
-
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = .prettyPrinted
-        request.httpBody = try encoder.encode(body)
-
-        #if DEBUG
-        if let bodyData = request.httpBody,
-           let bodyString = String(data: bodyData, encoding: .utf8) {
-            print("[AIService] POST \(llmObjectURL.absoluteString)")
-            print("[AIService] Request body (truncated): \(bodyString.prefix(500))...")
-        }
-        #endif
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIError.networkError
-        }
-
-        #if DEBUG
-        let responseText = String(data: data, encoding: .utf8) ?? "[binary data]"
-        print("[AIService] Response status: \(httpResponse.statusCode)")
-        print("[AIService] Response body: \(responseText.prefix(1000))")
-        #endif
-
-        guard httpResponse.statusCode == 200 else {
-            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
-            throw AIError.serverError("Image analysis failed (\(httpResponse.statusCode)): \(extractErrorMessage(from: errorText))")
-        }
-
-        let decoded = try JSONDecoder().decode(LLMObjectResponse.self, from: data)
-        return decoded.object
-    }
-
-    private func postChat(body: ChatRequest) async throws -> String {
-        var request = URLRequest(url: chatURL)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.timeoutInterval = 90
-
-        request.httpBody = try JSONEncoder().encode(body)
-
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw AIError.networkError
-        }
-
-        let responseText = String(data: data, encoding: .utf8) ?? ""
-
-        guard httpResponse.statusCode == 200 else {
-            throw AIError.serverError("Chat failed (\(httpResponse.statusCode)): \(extractErrorMessage(from: responseText))")
-        }
-
-        let lines = responseText.components(separatedBy: "\n")
-        var fullText = ""
-
-        for line in lines {
-            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if trimmed.isEmpty { continue }
-
-            if trimmed.hasPrefix("data: ") {
-                let jsonPart = String(trimmed.dropFirst(6))
-
-                if jsonPart == "[DONE]" { continue }
-
-                guard let jsonData = jsonPart.data(using: .utf8),
-                      let event = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
-                      let eventType = event["type"] as? String else {
-                    continue
-                }
-
-                if eventType == "text-delta", let delta = event["delta"] as? String {
-                    fullText += delta
-                } else if eventType == "error", let message = event["message"] as? String {
-                    throw AIError.serverError(message)
-                }
-            } else if trimmed.hasPrefix("0:") {
-                let jsonPart = String(trimmed.dropFirst(2))
-                if let stringData = jsonPart.data(using: .utf8),
-                   let decoded = try? JSONDecoder().decode(String.self, from: stringData) {
-                    fullText += decoded
-                }
-            } else if trimmed.hasPrefix("e:") {
-                let errorPart = String(trimmed.dropFirst(2))
-                if let errorData = errorPart.data(using: .utf8),
-                   let errorObj = try? JSONSerialization.jsonObject(with: errorData) as? [String: Any],
-                   let errorMessage = errorObj["message"] as? String ?? errorObj["error"] as? String {
-                    throw AIError.serverError(errorMessage)
-                }
-            }
-        }
-
-        if fullText.isEmpty {
-            if !responseText.isEmpty {
-                if let jsonObj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    if let error = jsonObj["error"] as? String {
-                        throw AIError.serverError(error)
-                    }
-                    if let message = jsonObj["message"] as? String {
-                        throw AIError.serverError(message)
-                    }
-                    if let text = jsonObj["text"] as? String {
-                        return text
-                    }
-                }
-                return responseText
-            }
-            throw AIError.emptyResponse
-        }
-
-        return fullText
-    }
-
-
-
-    private func extractErrorMessage(from text: String) -> String {
-        let trimmed = String(text.prefix(300))
-        if let data = trimmed.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            if let msg = json["message"] as? String { return msg }
-            if let err = json["error"] as? String { return err }
-            if let detail = json["detail"] as? String { return detail }
-        }
-        return trimmed
-    }
-
-    nonisolated static func imageToBase64(_ image: UIImage, maxDimension: CGFloat = 800) -> String? {
-        let size = image.size
-        let scale: CGFloat
-        if max(size.width, size.height) > maxDimension {
-            scale = maxDimension / max(size.width, size.height)
-        } else {
-            scale = 1.0
-        }
-
-        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        let resized = renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: newSize))
-        }
-
-        return resized.jpegData(compressionQuality: 0.7)?.base64EncodedString()
-    }
-}
+// MARK: - Errors
 
 nonisolated enum AIError: Error, Sendable, LocalizedError {
     case invalidURL
