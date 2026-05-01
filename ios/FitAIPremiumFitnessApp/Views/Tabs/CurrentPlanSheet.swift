@@ -1,9 +1,11 @@
 import SwiftUI
+import StoreKit
 
 struct CurrentPlanSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.openURL) private var openURL
 
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
@@ -85,9 +87,7 @@ struct CurrentPlanSheet: View {
             .opacity(appeared ? 1 : 0)
 
             Button {
-                if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                    UIApplication.shared.open(url)
-                }
+                openManageSubscriptions()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "gear")
@@ -109,7 +109,7 @@ struct CurrentPlanSheet: View {
 
             Spacer()
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.fraction(0.75)])
         .presentationDragIndicator(.hidden)
         .onAppear {
             withAnimation(.spring(duration: 0.6, bounce: 0.3)) {
@@ -117,6 +117,33 @@ struct CurrentPlanSheet: View {
             }
             withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
                 crownScale = 1.0
+            }
+        }
+    }
+
+    /// Opens Apple's Manage Subscriptions sheet via StoreKit 2 (in-app), with a
+    /// fallback to the App Store URL if the StoreKit API can't be presented.
+    /// The previous implementation called `UIApplication.shared.open` directly,
+    /// which crashes on devices where the system can't resolve the URL through
+    /// a sheet/scene boundary.
+    private func openManageSubscriptions() {
+        Task { @MainActor in
+            let scene = UIApplication.shared
+                .connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .first(where: { $0.activationState == .foregroundActive })
+                ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+
+            if let scene {
+                do {
+                    try await AppStore.showManageSubscriptions(in: scene)
+                    return
+                } catch {
+                    // fall through to URL fallback below
+                }
+            }
+            if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+                openURL(url)
             }
         }
     }
