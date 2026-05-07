@@ -2,6 +2,7 @@ node_modules
 .env
 .expo
 Secrets.xcconfig
+ios/FitAIPremiumFitnessApp/Secrets.swift
 
 # Local Claude Code tooling
 .claude/

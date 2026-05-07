@@ -23,9 +23,12 @@ enum Config {
         Bundle.main.object(forInfoDictionaryKey: "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY") as? String
         ?? "test_WZhaefVVBzlJbMMNczIttHTaapu"
 
-    static let GEMINI_API_KEY: String =
-        Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String
-        ?? "REDACTED_LEAKED_KEY"
+    /// Gemini API key. Loaded from local `Secrets.swift` (gitignored).
+    /// If `Secrets.swift` doesn't exist on a fresh clone, the build still
+    /// succeeds but AI features will fail at runtime with a clear error
+    /// (the empty fallback). Copy `Secrets.example.swift` to
+    /// `Secrets.swift` and paste your key.
+    static let GEMINI_API_KEY: String = Secrets.geminiAPIKey
 }
 
 @main
