@@ -42,27 +42,28 @@ struct FitAIPremiumFitnessAppApp: App {
     @State private var notificationRouter = NotificationRouter()
 
     init() {
-        // RC key resolution:
-        //   - DEBUG: prefer the test key (sandbox app in your RC project)
-        //   - RELEASE: prefer the production key, but fall back to the test
-        //     key if production isn't set yet. This is the normal state
-        //     during TestFlight beta — TestFlight runs against Apple's
-        //     sandbox StoreKit anyway, so a test_ key authenticates fine.
-        //     SWAP IN THE PRODUCTION KEY before submitting to App Store
-        //     review or real-customer transactions will fail.
+        // RC key resolution. CRITICAL: the RevenueCat SDK contains an
+        // intentional assertion-failure crash if you initialize a Release
+        // build with a `test_` prefixed key
+        // (Configuration.APIKeyValidationResult.checkForSimulatedStoreAPIKeyInRelease).
+        // It's a safety guard against shipping a misconfigured TestFlight
+        // / App Store binary. So:
+        //   - DEBUG: use the test key (sandbox app in your RC project).
+        //   - RELEASE: use the production key (`appl_...`) ONLY. If absent,
+        //     skip Purchases.configure entirely and log loudly. The app
+        //     launches; Pro features are unavailable until a production key
+        //     is supplied via Secrets.swift.
         let testKey = Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY
         let prodKey = Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
         #if DEBUG
-        let rcKey = testKey.isEmpty ? prodKey : testKey
+        let rcKey = testKey
         let label = "DEBUG (sandbox)"
         #else
-        let rcKey = prodKey.isEmpty ? testKey : prodKey
-        let label = prodKey.isEmpty ? "RELEASE (using test key fallback)" : "RELEASE (production)"
+        let rcKey = prodKey
+        let label = "RELEASE (production)"
         #endif
         if rcKey.isEmpty {
-            // Loud runtime warning so a missing key doesn't silently kill
-            // every Pro flow. Search the console for [RC] to find it.
-            print("[RC] WARNING: No \(label) RevenueCat API key set. Paywalls and entitlement checks will all fail. Paste a key into Secrets.swift.")
+            print("[RC] WARNING: No \(label) RevenueCat API key set. Pro / paywall features disabled this run. Paste a key into Secrets.swift.")
         } else {
             Purchases.configure(withAPIKey: rcKey)
             print("[RC] Configured with key for: \(label)")
