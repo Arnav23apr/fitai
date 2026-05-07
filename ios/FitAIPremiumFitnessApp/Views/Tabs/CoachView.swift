@@ -10,6 +10,7 @@ struct CoachView: View {
     // Welcome entrance phases
     @State private var welcomePhase: Int = -1
     @State private var showConfirmClear: Bool = false
+    @State private var showPaywall: Bool = false
 
     // Haptic generators
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
@@ -87,6 +88,7 @@ struct CoachView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showPaywall) { PaywallSheet() }
             .confirmationDialog("Clear conversation?", isPresented: $showConfirmClear, titleVisibility: .visible) {
                 Button("Clear Chat", role: .destructive) {
                     notification.notificationOccurred(.warning)
@@ -234,6 +236,64 @@ struct CoachView: View {
                     .offset(y: welcomePhase >= 2 ? 0 : 8)
                     .opacity(welcomePhase >= 2 ? 1.0 : 0)
             }
+
+            // Plan-modification capability banner. Surfaces an underused
+            // power-user feature: I can also mutate the user's workout
+            // templates (PlanModificationService). Tap dismisses Coach so
+            // they return to the Workouts hub where the same callout
+            // routes them to PlanModSheet.
+            Button {
+                impactLight.impactOccurred(intensity: 0.6)
+                dismiss()
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.purple.opacity(0.30), .indigo.opacity(0.10)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(
+                                LinearGradient(colors: [.purple, .indigo], startPoint: .top, endPoint: .bottom)
+                            )
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("I can edit your workout plan too")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                        Text("Tap a template's ⋯ → Modify with Coach")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.purple)
+                }
+                .padding(12)
+                .background(
+                    LinearGradient(
+                        colors: [.purple.opacity(0.07), .indigo.opacity(0.03), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(.rect(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color.purple.opacity(0.18), lineWidth: 0.6)
+                )
+            }
+            .buttonStyle(.plain)
+            .opacity(welcomePhase >= 3 ? 1.0 : 0)
+            .padding(.horizontal, 6)
 
             // Quick Questions
             VStack(alignment: .leading, spacing: 8) {
@@ -478,6 +538,10 @@ struct CoachView: View {
         VStack(spacing: 0) {
             Divider().opacity(0.15)
 
+            if !appState.profile.isPremium {
+                freeQuotaHint
+            }
+
             HStack(alignment: .bottom, spacing: 10) {
                 TextField(L.t("askYourCoach", lang), text: $viewModel.inputText, axis: .vertical)
                     .font(.body)
@@ -517,7 +581,38 @@ struct CoachView: View {
         .background(.ultraThinMaterial)
     }
 
+    private var freeQuotaHint: some View {
+        let used = appState.profile.aiChatMessagesUsed
+        let total = UserProfile.freeAIChatQuota
+        let remaining = max(total - used, 0)
+        return Button(action: { showPaywall = true }) {
+            HStack(spacing: 6) {
+                Image(systemName: remaining == 0 ? "lock.fill" : "sparkles")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(remaining == 0 ? .orange : .secondary)
+                Text(remaining == 0
+                     ? "Free messages used — unlock unlimited"
+                     : "\(remaining) of \(total) free messages left · Upgrade")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+    }
+
     private func sendAction() {
+        guard appState.profile.canSendAICoachMessage else {
+            notification.notificationOccurred(.warning)
+            showPaywall = true
+            return
+        }
+
         impactMedium.impactOccurred()
 
         // Button animation
@@ -532,6 +627,11 @@ struct CoachView: View {
         }
 
         viewModel.sendMessage(profile: appState.profile)
+
+        if !appState.profile.isPremium {
+            appState.profile.aiChatMessagesUsed += 1
+            appState.saveProfile()
+        }
     }
 
     private var canSend: Bool {

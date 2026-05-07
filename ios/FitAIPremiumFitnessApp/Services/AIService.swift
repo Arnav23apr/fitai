@@ -201,7 +201,8 @@ class AIService {
                     "back": ["type": "number"],
                     "arms": ["type": "number"],
                     "legs": ["type": "number"],
-                    "core": ["type": "number"]
+                    "core": ["type": "number"],
+                    "glutes": ["type": "number"]
                 ] as [String: Any]]
             ]),
             "required": AnyCodable([
@@ -289,6 +290,62 @@ class AIService {
         let request = GeminiRequest(
             contents: contents,
             systemInstruction: systemInstruction,
+            generationConfig: genConfig
+        )
+
+        try checkRateLimit()
+        return try await withRetry { try await self.callGemini(request: request) }
+    }
+
+    // MARK: - Image + structured JSON
+    //
+    // Same as `analyzeImageWithSchema` but caller-provides the schema and
+    // gets back the raw JSON string. Used by `WeightOCRService` for gym-
+    // photo scene understanding (custom schema per call site).
+
+    func analyzeImageWithSchemaJSON(imageBase64: String, systemPrompt: String, userPrompt: String, schema: [String: AnyCodable]) async throws -> String {
+        let systemContent = GeminiContent(role: nil, parts: [GeminiPart(text: systemPrompt)])
+        let userContent = GeminiContent(role: "user", parts: [
+            GeminiPart(imageBase64: imageBase64),
+            GeminiPart(text: userPrompt)
+        ])
+        let genConfig = GeminiGenerationConfig(
+            temperature: 0.4,
+            maxOutputTokens: 1024,
+            responseMimeType: "application/json",
+            responseSchema: schema
+        )
+        let request = GeminiRequest(
+            contents: [userContent],
+            systemInstruction: systemContent,
+            generationConfig: genConfig
+        )
+        try checkRateLimit()
+        return try await withRetry { try await self.callGemini(request: request) }
+    }
+
+    // MARK: - Structured JSON chat
+    //
+    // Same as `chat()` but forces Gemini into JSON-output mode with the
+    // caller's schema. Use this for any flow where the response needs to
+    // decode into a specific shape (template generation, plan edits, etc.) —
+    // unstructured chat() can wrap output in markdown / prose, which the
+    // PlanModificationService parser used to choke on.
+
+    func chatJSON(systemPrompt: String, userPrompt: String, schema: [String: AnyCodable]) async throws -> String {
+        let systemContent = GeminiContent(role: nil, parts: [GeminiPart(text: systemPrompt)])
+        let userContent = GeminiContent(role: "user", parts: [GeminiPart(text: userPrompt)])
+
+        let genConfig = GeminiGenerationConfig(
+            temperature: 0.6,
+            maxOutputTokens: 2048,
+            responseMimeType: "application/json",
+            responseSchema: schema
+        )
+
+        let request = GeminiRequest(
+            contents: [userContent],
+            systemInstruction: systemContent,
             generationConfig: genConfig
         )
 
