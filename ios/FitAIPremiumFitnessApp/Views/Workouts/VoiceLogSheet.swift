@@ -74,7 +74,7 @@ struct VoiceLogSheet: View {
             case .idle:
                 Text("Hold to speak")
                     .font(.title2.weight(.bold))
-                Text("Log a set, change exercises, control rest — anything.")
+                Text("Log a set, change exercises, control rest. Anything.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -213,7 +213,7 @@ struct VoiceLogSheet: View {
                     HStack(spacing: 6) {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 11))
-                        Text("Free weekly limit reached — upgrade for unlimited")
+                        Text("Free weekly limit reached. Upgrade for unlimited.")
                             .font(.caption.weight(.semibold))
                     }
                     .foregroundStyle(.yellow)
@@ -259,7 +259,7 @@ struct VoiceLogSheet: View {
 
             // Record usage on success (anything other than .unrecognized).
             if case .unrecognized = intent {
-                resultPreview = "Didn't catch that — try again."
+                resultPreview = "Didn't catch that. Try again."
                 UINotificationFeedbackGenerator().notificationOccurred(.error)
             } else {
                 _ = FreeUsageTracker.shared.record(.voice, isPremium: appState.profile.isPremium)

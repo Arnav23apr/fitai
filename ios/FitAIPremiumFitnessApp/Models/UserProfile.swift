@@ -20,7 +20,7 @@ nonisolated struct UserProfile: Codable, Sendable {
         case aiChatMessagesUsed
         case photoConsentVersion, photoConsentGrantedAt
         case photoImprovementOptIn
-        case _workoutMode = "workoutMode"
+        case workoutModeRawValue = "workoutMode"
     }
 
     /// How the user wants the Workouts tab to behave. Set on first launch
@@ -159,17 +159,22 @@ nonisolated struct UserProfile: Codable, Sendable {
     /// aggregated stats. Default OFF. Pre-checked is a GDPR dark pattern.
     var photoImprovementOptIn: Bool = false
 
-    /// Persisted workout-tab mode preference. Stored as Optional so old
-    /// profile blobs without this key still decode (synthesized Codable
-    /// requires explicit fields, but Optional tolerates missing keys).
-    /// Read via `workoutMode` computed below.
-    private var _workoutMode: WorkoutMode? = nil
+    /// Persisted workout-tab mode. Stored as a raw string and Optional so
+    /// old profile blobs without this key still decode cleanly (synthesized
+    /// Codable rejects missing non-optional keys; Optional<String> tolerates
+    /// them). Public so synthesized Codable definitely sees it without any
+    /// access-level edge cases.
+    var workoutModeRawValue: String? = nil
 
-    /// Read/write accessor over `_workoutMode` that hides the optional —
-    /// the rest of the app treats `.unset` as the "needs onboarding" state.
+    /// Read/write accessor over `workoutModeRawValue`. The rest of the app
+    /// treats `.unset` as "needs onboarding".
     var workoutMode: WorkoutMode {
-        get { _workoutMode ?? .unset }
-        set { _workoutMode = newValue }
+        get {
+            guard let raw = workoutModeRawValue,
+                  let mode = WorkoutMode(rawValue: raw) else { return .unset }
+            return mode
+        }
+        set { workoutModeRawValue = newValue.rawValue }
     }
 
     /// Current consent text/version. Bump this when material changes are

@@ -182,7 +182,7 @@ struct PlanModSheet: View {
                         // Pre-fill the input with the original prompt + this
                         // question's framing, so the user just types the
                         // answer and re-submits.
-                        prompt = "\(prompt)\n\nAnswer: \(question) — "
+                        prompt = "\(prompt)\n\nAnswer: \(question) "
                     } label: {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "circle.fill")
@@ -427,7 +427,7 @@ struct PlanModSheet: View {
             await MainActor.run {
                 switch error {
                 case .emptyResponse:
-                    errorMessage = "Coach didn't return anything. Try rephrasing — name the split, days per week, and any equipment constraints."
+                    errorMessage = "Coach didn't return anything. Try rephrasing. Name the split, days per week, and any equipment constraints."
                 case .decode:
                     errorMessage = "Coach's response wasn't readable. Please try again."
                 }

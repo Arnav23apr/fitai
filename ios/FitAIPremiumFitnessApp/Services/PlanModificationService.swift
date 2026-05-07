@@ -380,8 +380,8 @@ nonisolated struct PlanModificationService: Sendable {
         """
 
         let modeHint = routinePresent
-            ? "If the user wants to TWEAK the existing template, fill `edits`. If they want NEW templates, fill `newTemplates`. If you can't tell, fill `clarification`. Fill exactly one of these — never multiple."
-            : "Fill `newTemplates` (or `clarification` if the prompt is ambiguous). Never fill `edits` — there is no existing template."
+            ? "If the user wants to TWEAK the existing template, fill `edits`. If they want NEW templates, fill `newTemplates`. If you can't tell, fill `clarification`. Fill exactly one of these. Never fill multiple."
+            : "Fill `newTemplates`, or `clarification` if the prompt is ambiguous. Never fill `edits` since there is no existing template."
 
         var pieces: [String] = []
         if !profileBlock.isEmpty { pieces.append(profileBlock) }
@@ -400,6 +400,8 @@ nonisolated struct PlanModificationService: Sendable {
         \(clarifyBlock)
 
         \(modeHint)
+
+        STYLE: Never use em dashes (—) in any field. Use commas, periods, or parentheses instead. Hyphens (-) in compound words like "AI-generated" are fine.
         """)
         return pieces.joined(separator: "\n\n")
     }
@@ -464,6 +466,8 @@ nonisolated struct PlanModificationService: Sendable {
           - reason: optional one-clause note (e.g. "added missing direct biceps work")
 
         Output strict JSON. No prose, no markdown.
+
+        STYLE: Never use em dashes (—) in any string field (name, reason, suggestions, summary, etc.). Use commas, periods, or parentheses instead. Hyphens (-) in compound words like "AI-generated" are fine.
         """
 
         return profileBlock.isEmpty ? mainPrompt : "\(profileBlock)\n\n\(mainPrompt)"

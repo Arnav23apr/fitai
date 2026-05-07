@@ -310,13 +310,15 @@ nonisolated struct VoiceIntentParser: Sendable {
           - "skipRest"
           - "queryLast" | "queryPR" | "queryElapsed" | "queryNext" | "queryRestLeft"
           - "finish" | "cancel" | "saveTemplate"
-          - "setUnit"      (fields: metric — true=kg, false=lbs)
+          - "setUnit"      (fields: metric, true=kg false=lbs)
           - "unrecognized"
 
         position one of: "first","second","third","fourth","fifth","sixth","nextEmpty".
         tag one of: "warmup","dropSet","failure","normal".
 
         Respond with only the JSON.
+
+        STYLE: Never use em dashes (—) in any string field. Use commas, periods, or parentheses instead.
         """
         let userMsg = "Transcript: \"\(text)\""
 

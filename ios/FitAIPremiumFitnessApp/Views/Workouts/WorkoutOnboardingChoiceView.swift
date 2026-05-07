@@ -28,7 +28,7 @@ struct WorkoutOnboardingChoiceView: View {
                         mode: .userBuilt,
                         icon: "list.bullet.rectangle.portrait",
                         title: "I'll build my own",
-                        subtitle: "Skip the AI plan. Build templates from scratch — your splits, your way.",
+                        subtitle: "Skip the AI plan. Build templates from scratch, your splits, your way.",
                         tag: nil,
                         gradient: [.indigo, .purple]
                     )

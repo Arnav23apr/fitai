@@ -31,15 +31,16 @@ class WorkoutPlanService {
         figure.boxing, figure.core.training, figure.mixed.cardio, figure.cooldown, bed.double.fill, \
         figure.rowing, figure.strengthtraining.functional. \
         For rest days, set isRestDay true and exercises to empty array. \
-        Respond ONLY with the JSON array, no markdown or explanation.
+        Respond ONLY with the JSON array, no markdown or explanation. \
+        STYLE: Never use em dashes (—) in any string field (workout name, focusAreas, etc.). Use commas, periods, or parentheses. Hyphens (-) in compound words are fine.
 
         PERSONALIZATION (mandatory, not optional):
         The user profile below is authoritative. The plan you generate MUST be derived from it, not from generic templates. \
-        Number of training days = workoutsPerWeek (this is a hard constraint — exactly that many non-rest days). \
+        Number of training days = workoutsPerWeek (this is a hard constraint, exactly that many non-rest days). \
         Exercise selection MUST respect trainingLocation (no barbell work for "Home / no equipment"; full barbell work for "Gym"). \
         At least one day per week MUST be marked isWeakPointFocus=true and prioritize weakPoints muscle groups, if any are listed. \
         Volume and intensity scale with trainingExperience and trainingConfidence. \
-        Exercise selection and split style must align with primaryGoal AND gender — see GENDER-SPECIFIC FOCUS below. \
+        Exercise selection and split style must align with primaryGoal AND gender (see GENDER-SPECIFIC FOCUS below). \
         Bodyweight values for suggestedWeights must be derived from the user's actual weightKg, not assumed. \
         If your output ignores any of these fields, you have failed.
 
@@ -48,7 +49,7 @@ class WorkoutPlanService {
         Include at least 2 dedicated lower-body / glute days per week (or, if workoutsPerWeek <= 3, at least one). \
         Prioritize these movements when programming: hip thrust, glute bridge, Romanian deadlift, Bulgarian split squat, walking lunge, sumo deadlift, cable kickback, hip abduction, single-leg glute bridge, step-up. \
         Squat and deadlift variations are still core. Quad-heavy work (leg press, front squat) should appear but never outweigh posterior-chain work. \
-        Upper-body work should focus on posture and tone — rows, lat pulldowns, rear-delt flies, light pressing — not chest mass. \
+        Upper-body work should focus on posture and tone (rows, lat pulldowns, rear-delt flies, light pressing), not chest mass. \
         Do not program a male-coded PPL split (chest day, arm day) unless the user explicitly listed those goals. \
         For MALE users, prefer classic strength and hypertrophy splits (PPL, Upper/Lower, Bro split) emphasizing chest, shoulders, back width, arms, and proportional leg work.
 
@@ -58,7 +59,7 @@ class WorkoutPlanService {
         \(ProfileContextBuilder.languageInstruction(for: profile, keepExercisesEnglish: true))
         """
 
-        let userPrompt = "Generate the weekly workout plan now. Apply every constraint from my profile in the system message — number of days, training location, weak points, experience level, body weight, and primary goal."
+        let userPrompt = "Generate the weekly workout plan now. Apply every constraint from my profile in the system message: number of days, training location, weak points, experience level, body weight, and primary goal."
 
         let messages = [
             ChatAPIMessage(role: "system", text: systemPrompt),

@@ -74,7 +74,7 @@ struct PlanReviewView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Paste your current program")
                 .font(.title3.weight(.bold))
-            Text("Any format works — bullet points, paragraph, day-by-day. Coach will parse it, give honest feedback, and import it as templates you can use right away.")
+            Text("Any format works. Bullets, paragraph, day-by-day. Coach will parse it, give honest feedback, and import it as templates you can use right away.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -115,7 +115,7 @@ struct PlanReviewView: View {
     private var pasteBox: some View {
         VStack(alignment: .leading, spacing: 8) {
             TextField(
-                "e.g. Mon — Bench 4×8, Incline DB 3×10, OHP 4×8…",
+                "e.g. Mon: Bench 4×8, Incline DB 3×10, OHP 4×8…",
                 text: $rawText,
                 axis: .vertical
             )

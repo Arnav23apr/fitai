@@ -588,12 +588,14 @@ struct ProfileView: View {
     }
 
     /// Lets the user re-pick their Workouts-tab mode (AI plan / custom /
-    /// reviewed). Sets `workoutMode = .unset` so the choice screen
-    /// re-presents on next visit.
+    /// reviewed). Resets both the profile mode AND the UserDefaults
+    /// "shown" gate so the choice screen re-appears on next Workouts-tab
+    /// visit.
     private var workoutModeResetRow: some View {
         Button {
             appState.profile.workoutMode = .unset
             appState.saveProfile()
+            UserDefaults.standard.set(false, forKey: "workoutOnboarding.shown.v1")
             UISelectionFeedbackGenerator().selectionChanged()
         } label: {
             HStack(spacing: 14) {

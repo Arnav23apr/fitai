@@ -1067,7 +1067,7 @@ struct ActiveSessionView: View {
             if let ex = sessionExercises.first(where: { !$0.sets.allSatisfy(\.isCompleted) }) {
                 msg = "Up next: \(ex.name)"
             } else {
-                msg = "All done — finish workout?"
+                msg = "All done. Finish workout?"
             }
         case .restRemaining:
             if case .running(let endsAt, _) = restState {

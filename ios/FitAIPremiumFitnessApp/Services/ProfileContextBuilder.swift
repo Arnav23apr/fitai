@@ -82,7 +82,7 @@ struct ProfileContextBuilder {
               - Core / waist: definition, low body fat, hip-to-waist ratio.
               - Posterior chain and posture: upper-back, rear delts, scapular position.
               - Arms and shoulders: toned and defined, not bulky.
-            Score "legs" as a holistic lower-body assessment that explicitly INCLUDES glutes and hamstrings — comment on glute development inside the legs/strongPoints/weakPoints text.
+            Score "legs" as a holistic lower-body assessment that explicitly INCLUDES glutes and hamstrings. Comment on glute development inside the legs/strongPoints/weakPoints text.
             De-emphasize chest mass and biceps mass unless the user explicitly listed them in their goals.
             Avoid male-coded framing: do not use "V-taper", "wide shoulders", "thick chest", "frame width" as positive descriptors. Frame proportions around hip-to-waist ratio, glute-to-waist ratio, and overall lower-body shape.
             """
@@ -122,7 +122,7 @@ struct ProfileContextBuilder {
 
             LANGUAGE (mandatory):
             Respond in \(lang). Translate all user-visible text fields (workout names, focus areas, descriptions, summaries, recommendations) into \(lang).
-            EXCEPTION — KEEP IN ENGLISH for matching against our local database:
+            EXCEPTION (KEEP IN ENGLISH for matching against our local database):
               - "name" of each exercise (e.g. "Bench Press", "Lat Pulldown")
               - "muscleGroup" identifier (e.g. "Chest", "Back", "Legs")
             All other text must be in \(lang).

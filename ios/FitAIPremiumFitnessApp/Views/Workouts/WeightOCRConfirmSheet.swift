@@ -183,7 +183,7 @@ struct WeightOCRConfirmSheet: View {
                 ambiguousResolved = true
                 refreshRepsPrediction()
             } label: {
-                Text("None of these — pick another")
+                Text("None of these. Pick another")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.blue)
             }
@@ -233,7 +233,7 @@ struct WeightOCRConfirmSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "wand.and.stars")
                             .font(.system(size: 11))
-                        Text("Last time at \(formatWeight(weight)) \(unit): \(pred) reps — use this")
+                        Text("Last time at \(formatWeight(weight)) \(unit): \(pred) reps. Use this?")
                             .font(.caption.weight(.semibold))
                     }
                     .foregroundStyle(.purple)

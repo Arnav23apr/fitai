@@ -254,7 +254,7 @@ struct PlanView: View {
                 .background(ClearBackground())
             }
             .fullScreenCover(isPresented: Binding(
-                get: { workoutMode == .unset },
+                get: { shouldShowWorkoutOnboarding },
                 set: { _ in /* dismissal happens via onChoice */ }
             )) {
                 WorkoutOnboardingChoiceView { picked in
@@ -704,7 +704,7 @@ struct PlanView: View {
             Text("No templates yet")
                 .font(.headline)
                 .foregroundStyle(.primary)
-            Text("Build a reusable template — pick exercises, sets, reps, and rest. Or have Coach build one for you.")
+            Text("Build a reusable template. Pick exercises, sets, reps, and rest. Or have Coach build one for you.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -910,22 +910,39 @@ struct PlanView: View {
         }
     }
 
+    /// UserDefaults gate that supersedes the profile-encoded mode for the
+    /// "should we show the onboarding screen" question. Independent of
+    /// the UserProfile Codable round-trip so the choice screen can't
+    /// re-appear on subsequent launches even if profile decoding has any
+    /// edge case with the new field.
+    private static let onboardingShownKey = "workoutOnboarding.shown.v1"
+
+    private var shouldShowWorkoutOnboarding: Bool {
+        if UserDefaults.standard.bool(forKey: Self.onboardingShownKey) {
+            return false
+        }
+        return workoutMode == .unset
+    }
+
     /// Handles the user's choice from `WorkoutOnboardingChoiceView`.
-    /// Persists the mode to the profile and routes path 3 (paste-plan-for-
-    /// review) into the dedicated PlanReviewView immediately.
+    /// Persists both the mode (in profile) and the onboarding-shown gate
+    /// (in UserDefaults) so the cover never re-appears.
     private func handleModeChoice(_ mode: UserProfile.WorkoutMode) {
+        // Mark onboarding as shown FIRST so the cover dismisses on the
+        // very next render, regardless of how the profile save races.
+        UserDefaults.standard.set(true, forKey: Self.onboardingShownKey)
+
         if mode == .userPlanReviewed && !appState.profile.isPremium {
-            // Pro-gated path — fall back to userBuilt and surface paywall.
+            // Pro-gated path. Fall back to userBuilt and surface paywall later.
             appState.profile.workoutMode = .userBuilt
             appState.saveProfile()
-            // Optional: trigger paywall here. For now, just default in.
             return
         }
         appState.profile.workoutMode = mode
         appState.saveProfile()
         if mode == .userPlanReviewed {
             // Defer presentation past the cover dismissal for clean
-            // transitions — same trick used in finishAndExit.
+            // transitions, same trick used in finishAndExit.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
                 showPlanReview = true
             }

@@ -160,7 +160,7 @@ struct SetRow: View {
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                 } else {
-                    Text("—")
+                    Text("-")
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -249,7 +249,7 @@ struct SetRow: View {
     }
 
     private func formatPrev() -> String {
-        guard set.previousWeight > 0 || set.previousReps > 0 else { return "—" }
+        guard set.previousWeight > 0 || set.previousReps > 0 else { return "-" }
         let w = set.previousWeight
         let wStr: String = w == w.rounded() ? "\(Int(w))" : String(format: "%.1f", w)
         return "\(wStr) × \(set.previousReps)"

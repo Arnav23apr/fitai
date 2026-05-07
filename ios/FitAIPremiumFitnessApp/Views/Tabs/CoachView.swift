@@ -591,7 +591,7 @@ struct CoachView: View {
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(remaining == 0 ? .orange : .secondary)
                 Text(remaining == 0
-                     ? "Free messages used — unlock unlimited"
+                     ? "Free messages used. Unlock unlimited"
                      : "\(remaining) of \(total) free messages left · Upgrade")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)

@@ -185,6 +185,8 @@ nonisolated final class WeightOCRService: Sendable {
         OCR text hints (numbers found): \(ocrHints.map { "\($0)" }.joined(separator: ", "))
 
         No prose. JSON only.
+
+        STYLE: Never use em dashes (—) in any string field (exercise, reasoning, etc.). Use commas, periods, or parentheses instead.
         """
 
         let schema: [String: AnyCodable] = [
