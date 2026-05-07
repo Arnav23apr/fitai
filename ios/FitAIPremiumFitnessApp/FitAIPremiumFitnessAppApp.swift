@@ -42,12 +42,22 @@ struct FitAIPremiumFitnessAppApp: App {
     @State private var notificationRouter = NotificationRouter()
 
     init() {
+        // RC key resolution:
+        //   - DEBUG: prefer the test key (sandbox app in your RC project)
+        //   - RELEASE: prefer the production key, but fall back to the test
+        //     key if production isn't set yet. This is the normal state
+        //     during TestFlight beta — TestFlight runs against Apple's
+        //     sandbox StoreKit anyway, so a test_ key authenticates fine.
+        //     SWAP IN THE PRODUCTION KEY before submitting to App Store
+        //     review or real-customer transactions will fail.
+        let testKey = Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY
+        let prodKey = Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
         #if DEBUG
-        let rcKey = Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY
+        let rcKey = testKey.isEmpty ? prodKey : testKey
         let label = "DEBUG (sandbox)"
         #else
-        let rcKey = Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
-        let label = "RELEASE (production)"
+        let rcKey = prodKey.isEmpty ? testKey : prodKey
+        let label = prodKey.isEmpty ? "RELEASE (using test key fallback)" : "RELEASE (production)"
         #endif
         if rcKey.isEmpty {
             // Loud runtime warning so a missing key doesn't silently kill
@@ -55,6 +65,7 @@ struct FitAIPremiumFitnessAppApp: App {
             print("[RC] WARNING: No \(label) RevenueCat API key set. Paywalls and entitlement checks will all fail. Paste a key into Secrets.swift.")
         } else {
             Purchases.configure(withAPIKey: rcKey)
+            print("[RC] Configured with key for: \(label)")
             #if DEBUG
             Purchases.logLevel = .info
             #endif
