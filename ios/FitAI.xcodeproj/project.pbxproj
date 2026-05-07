@@ -513,7 +513,6 @@
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = test_WZhaefVVBzlJbMMNczIttHTaapu;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "FitAI uses your camera to scan your physique and to log sets by photo (weights, machines, plates).";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
@@ -559,7 +558,6 @@
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = test_WZhaefVVBzlJbMMNczIttHTaapu;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSCameraUsageDescription = "FitAI uses your camera to scan your physique and to log sets by photo (weights, machines, plates).";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";

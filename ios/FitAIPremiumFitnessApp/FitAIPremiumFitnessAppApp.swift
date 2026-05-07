@@ -16,12 +16,15 @@ enum Config {
     static let EXPO_PUBLIC_TOOLKIT_URL: String =
         Bundle.main.object(forInfoDictionaryKey: "EXPO_PUBLIC_TOOLKIT_URL") as? String ?? ""
 
-    static let EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: String =
-        Bundle.main.object(forInfoDictionaryKey: "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY") as? String ?? ""
+    /// RevenueCat production iOS key. Loaded from `Secrets.swift` (gitignored).
+    /// Required for RELEASE builds; without it, `Purchases.configure(...)`
+    /// is never called and Pro entitlements always evaluate to false.
+    static let EXPO_PUBLIC_REVENUECAT_IOS_API_KEY: String = Secrets.revenueCatProductionAPIKey
 
-    static let EXPO_PUBLIC_REVENUECAT_TEST_API_KEY: String =
-        Bundle.main.object(forInfoDictionaryKey: "EXPO_PUBLIC_REVENUECAT_TEST_API_KEY") as? String
-        ?? "test_WZhaefVVBzlJbMMNczIttHTaapu"
+    /// RevenueCat sandbox / test key. Loaded from `Secrets.swift` (gitignored).
+    /// Used in DEBUG builds for local sandbox testing with App Store
+    /// sandbox accounts.
+    static let EXPO_PUBLIC_REVENUECAT_TEST_API_KEY: String = Secrets.revenueCatTestAPIKey
 
     /// Gemini API key. Loaded from local `Secrets.swift` (gitignored).
     /// If `Secrets.swift` doesn't exist on a fresh clone, the build still
@@ -41,11 +44,20 @@ struct FitAIPremiumFitnessAppApp: App {
     init() {
         #if DEBUG
         let rcKey = Config.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY
+        let label = "DEBUG (sandbox)"
         #else
         let rcKey = Config.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY
+        let label = "RELEASE (production)"
         #endif
-        if !rcKey.isEmpty {
+        if rcKey.isEmpty {
+            // Loud runtime warning so a missing key doesn't silently kill
+            // every Pro flow. Search the console for [RC] to find it.
+            print("[RC] WARNING: No \(label) RevenueCat API key set. Paywalls and entitlement checks will all fail. Paste a key into Secrets.swift.")
+        } else {
             Purchases.configure(withAPIKey: rcKey)
+            #if DEBUG
+            Purchases.logLevel = .info
+            #endif
         }
     }
 
