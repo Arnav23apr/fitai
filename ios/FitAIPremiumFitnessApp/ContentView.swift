@@ -15,7 +15,12 @@ struct ContentView: View {
                     }
                 })
                 .transition(.opacity)
-            } else if appState.showSplash || appState.bootstrapping {
+            } else if (appState.showSplash || appState.bootstrapping) && !appState.hasCompletedOnboarding {
+                // SwipeUpSplashView is the welcome / drag-up gate for users
+                // who haven't onboarded yet. Returning users (already
+                // hasCompletedOnboarding) should never see it, even for the
+                // single frame between logo splash dismissing and Main
+                // appearing — that flash was the visible bug.
                 SwipeUpSplashView(
                     onFinished: {
                         startAtLogin = false

@@ -190,7 +190,17 @@ struct PlanView: View {
                 autoResumeIfNeeded()
             }
             .onChange(of: session.isActive) { _, newValue in
-                if newValue && selectedDay == nil {
+                // Don't auto-resume while a cover is already presenting,
+                // otherwise we double-present (showEmptyWorkoutSession from
+                // the user's tap collides with activeSessionRoutine from
+                // auto-resume) and SwiftUI dismisses one, then re-presents
+                // the other — visible to the user as the "screen pops up,
+                // then half-pops, then opens" flicker.
+                let coverAlreadyPresenting =
+                    showEmptyWorkoutSession ||
+                    activeSessionRoutine != nil ||
+                    selectedDay != nil
+                if newValue && !coverAlreadyPresenting {
                     autoResumeIfNeeded()
                 }
             }
