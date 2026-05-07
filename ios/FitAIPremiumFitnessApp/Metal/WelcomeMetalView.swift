@@ -25,9 +25,13 @@ struct DumbbellSceneView: UIViewRepresentable {
         v.rendersContinuously      = true
         v.autoenablesDefaultLighting = false
 
-        // Read trait collection directly — more reliable than SwiftUI @Environment in makeUIView
-        let isLightMode = UITraitCollection.current.userInterfaceStyle != .dark
-        let result = buildScene(transparent: transparent, darkChrome: transparent && isLightMode)
+        // Use the explicit `darkChrome` prop the caller passes. The previous
+        // version only applied dark-chrome in light mode (so dark mode fell
+        // through to the muted-gray plate set, which read as "too white"
+        // against the dark background). Honoring the caller keeps the
+        // dumbbell matte-black in both themes — silhouette on dark, pop on
+        // light — and matches the design feedback.
+        let result = buildScene(transparent: transparent, darkChrome: darkChrome)
         v.scene    = result.scene
         v.delegate = context.coordinator
 
@@ -219,7 +223,7 @@ struct DumbbellSceneView: UIViewRepresentable {
         }
 
         scene.lightingEnvironment.contents  = Self.makeEnvMap()
-        scene.lightingEnvironment.intensity = darkChrome ? 0.6 : (transparent ? 2.4 : 1.8)
+        scene.lightingEnvironment.intensity = darkChrome ? 0.18 : (transparent ? 2.4 : 1.8)
 
         // Camera — PerspectiveCamera(38) at (0, 0.3, 9)
         let cam = SCNNode(); cam.camera = SCNCamera()
@@ -228,11 +232,12 @@ struct DumbbellSceneView: UIViewRepresentable {
         cam.position           = SCNVector3(0, 0.3, 9)
         scene.rootNode.addChildNode(cam)
 
-        // Lights — boosted for darkChrome so black metal gets visible shading against white bg
-        let ambientInt:   CGFloat = darkChrome ? 200  : 500
-        let keyInt:       CGFloat = darkChrome ? 2400 : 1800
-        let rimInt:       CGFloat = darkChrome ? 900  : 750
-        let fillInt:      CGFloat = darkChrome ? 600  : 950
+        // Lights — for darkChrome we want SHADING, not white-out. Previous values blew the
+        // metal out to near-white because high-intensity directionals hit semi-metallic PBR.
+        let ambientInt:   CGFloat = darkChrome ? 90   : 500
+        let keyInt:       CGFloat = darkChrome ? 800  : 1800
+        let rimInt:       CGFloat = darkChrome ? 280  : 750
+        let fillInt:      CGFloat = darkChrome ? 220  : 950
 
         Self.addLight(scene, .ambient,     UIColor.white,                    ambientInt, .init(0,0,0))
         Self.addLight(scene, .directional, UIColor.white,                    keyInt,     .init(-0.95, -0.55, 0))
@@ -253,11 +258,13 @@ struct DumbbellSceneView: UIViewRepresentable {
         let edgeMat: SCNMaterial
 
         if darkChrome {
-            barMat    = Self.pbr(UIColor(white:0.08,alpha:1), 0.14, 0.62)
-            plateMat  = Self.pbr(UIColor(white:0.10,alpha:1), 0.12, 0.68)
-            plateDark = Self.pbr(UIColor(white:0.05,alpha:1), 0.10, 0.74)
-            gripMat   = Self.pbr(UIColor(white:0.04,alpha:1), 0.04, 0.96)
-            edgeMat   = Self.pbr(UIColor(white:0.20,alpha:1), 0.22, 0.44)
+            // Matte black-iron look — high roughness kills specular blow-out so the silhouette
+            // stays legible against pure white. Diffuse stays low; metalness slight for depth.
+            barMat    = Self.pbr(UIColor(white:0.10,alpha:1), 0.10, 0.86)
+            plateMat  = Self.pbr(UIColor(white:0.08,alpha:1), 0.08, 0.90)
+            plateDark = Self.pbr(UIColor(white:0.04,alpha:1), 0.06, 0.94)
+            gripMat   = Self.pbr(UIColor(white:0.02,alpha:1), 0.02, 0.98)
+            edgeMat   = Self.pbr(UIColor(white:0.16,alpha:1), 0.16, 0.72)
         } else if transparent {
             barMat    = Self.pbr(UIColor(white:0.68,alpha:1), 0.88, 0.12)
             plateMat  = Self.pbr(UIColor(white:0.65,alpha:1), 0.78, 0.22)

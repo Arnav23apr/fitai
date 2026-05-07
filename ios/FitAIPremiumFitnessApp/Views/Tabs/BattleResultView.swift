@@ -225,7 +225,7 @@ struct BattleResultView: View {
     private var muscleComparisonData: [(label: String, playerScore: Double, opponentScore: Double)] {
         let allMuscles: [(key: String, label: String)] = [
             ("chest", "Chest"), ("shoulders", "Shoulders"), ("back", "Back"),
-            ("arms", "Arms"), ("legs", "Legs"), ("core", "Core")
+            ("arms", "Arms"), ("legs", "Legs"), ("glutes", "Glutes"), ("core", "Core")
         ]
         let visible = Set(sharedVisibleGroups)
         return allMuscles
@@ -338,6 +338,7 @@ struct BattleResultView: View {
         case "arms": return scores.arms
         case "legs": return scores.legs
         case "core": return scores.core
+        case "glutes": return scores.glutes
         default: return 0
         }
     }

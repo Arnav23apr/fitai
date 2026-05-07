@@ -5,7 +5,11 @@ struct BattleSetupView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @State private var viewModel = BattleViewModel()
+    @State private var friendViewModel = FriendViewModel()
     @State private var showDefaultSaved: Bool = false
+    @State private var showFriendPicker: Bool = false
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -19,7 +23,7 @@ struct BattleSetupView: View {
                         vsLabel
 
                         photoCard(
-                            title: "Opponent",
+                            title: L.t("opponentTitle", lang),
                             image: viewModel.opponentPhoto,
                             pickerItem: $viewModel.opponentPickerItem
                         )
@@ -42,22 +46,22 @@ struct BattleSetupView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("1v1 Battle")
+            .navigationTitle(L.t("physiqueBattle", lang))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(.secondary)
-                }
+            .toolbar { toolbarContent }
+            .sheet(isPresented: $showFriendPicker) { friendPickerSheet }
+            .task {
+                friendViewModel.attach(appState)
+                await friendViewModel.refresh()
             }
-            .overlay {
-                if viewModel.isAnalyzing {
-                    AnalyzingOverlayView(mode: .battle)
-                        .transition(.opacity)
-                        .ignoresSafeArea()
-                }
+            .fullScreenCover(isPresented: Binding(
+                get: { viewModel.isAnalyzing },
+                set: { _ in /* dismissal is driven by the view model */ }
+            )) {
+                AnalyzingOverlayView(mode: .battle)
+                    .interactiveDismissDisabled()
+                    .presentationBackground(.black)
             }
-            .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
             .onAppear {
                 viewModel.prefillPlayerPhoto(
                     battlePhotoData: appState.loadBattlePhoto(),
@@ -85,6 +89,34 @@ struct BattleSetupView: View {
         }
     }
 
+    @ToolbarContentBuilder
+    private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button(L.t("cancel", lang)) { dismiss() }
+                .foregroundStyle(.secondary)
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                showFriendPicker = true
+            } label: {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .accessibilityLabel("Pick a friend")
+        }
+    }
+
+    private var friendPickerSheet: some View {
+        FriendBattlePickerSheet(
+            friendVM: friendViewModel,
+            onPick: { friend in
+                viewModel.opponentName = friend.displayName
+                showFriendPicker = false
+            }
+        )
+        .presentationDetents([.medium, .large])
+    }
+
     private var headerSection: some View {
         VStack(spacing: 12) {
             ZStack {
@@ -104,11 +136,11 @@ struct BattleSetupView: View {
                     .foregroundStyle(.red)
             }
 
-            Text("Physique Battle")
+            Text(L.t("physiqueBattle", lang))
                 .font(.system(.title2, design: .rounded, weight: .bold))
                 .foregroundStyle(.primary)
 
-            Text("Upload both physique photos and let AI decide who gets mogged")
+            Text(L.t("physiqueBattleDesc", lang))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -127,7 +159,7 @@ struct BattleSetupView: View {
                         .clipShape(.rect(cornerRadius: 16))
                         .overlay(alignment: .topTrailing) {
                             if viewModel.playerPhotoIsDefault {
-                                Text("Default")
+                                Text(L.t("defaultBadge", lang))
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.white)
                                     .padding(.horizontal, 6)
@@ -142,7 +174,7 @@ struct BattleSetupView: View {
                         Image(systemName: "person.crop.rectangle.badge.plus")
                             .font(.system(size: 28))
                             .foregroundStyle(.tertiary)
-                        Text("Add Photo")
+                        Text(L.t("addPhoto", lang))
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
@@ -156,7 +188,7 @@ struct BattleSetupView: View {
                 }
             }
 
-            Text("You")
+            Text(L.t("youLabel", lang))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
 
@@ -178,7 +210,7 @@ struct BattleSetupView: View {
                     HStack(spacing: 4) {
                         Image(systemName: viewModel.playerPhotoIsDefault ? "checkmark.circle.fill" : "arrow.down.circle")
                             .font(.system(size: 11, weight: .semibold))
-                        Text(viewModel.playerPhotoIsDefault ? "Remove Default" : "Set as Default")
+                        Text(viewModel.playerPhotoIsDefault ? L.t("removeDefault", lang) : L.t("setAsDefault", lang))
                             .font(.system(size: 11, weight: .semibold))
                     }
                     .foregroundStyle(viewModel.playerPhotoIsDefault ? .red : .secondary)
@@ -203,7 +235,7 @@ struct BattleSetupView: View {
                         Image(systemName: "person.crop.rectangle.badge.plus")
                             .font(.system(size: 28))
                             .foregroundStyle(.tertiary)
-                        Text("Add Photo")
+                        Text(L.t("addPhoto", lang))
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
@@ -232,11 +264,11 @@ struct BattleSetupView: View {
 
     private var nameField: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Opponent's Name")
+            Text(L.t("opponentNameLabel", lang))
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
 
-            TextField("", text: $viewModel.opponentName, prompt: Text("Enter name").foregroundStyle(.tertiary))
+            TextField("", text: $viewModel.opponentName, prompt: Text(L.t("enterName", lang)).foregroundStyle(.tertiary))
                 .font(.body)
                 .foregroundStyle(.primary)
                 .padding(14)
@@ -251,7 +283,7 @@ struct BattleSetupView: View {
 
     private var battleButton: some View {
         Button {
-            Task { await viewModel.startBattle() }
+            Task { await viewModel.startBattle(profile: appState.profile) }
         } label: {
             Group {
                 if viewModel.isAnalyzing {
@@ -265,7 +297,7 @@ struct BattleSetupView: View {
                 } else {
                     HStack(spacing: 8) {
                         Image(systemName: "bolt.fill")
-                        Text("Start Battle")
+                        Text(L.t("startBattle", lang))
                             .font(.headline.weight(.bold))
                     }
                     .foregroundStyle(.white)

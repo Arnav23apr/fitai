@@ -3,6 +3,9 @@ import SwiftUI
 struct BattleShareSheet: View {
     let battle: PhysiqueBattle
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -16,7 +19,7 @@ struct BattleShareSheet: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Share")
+                            Text(L.t("share", lang))
                                 .font(.headline.weight(.bold))
                         }
                         .foregroundStyle(.white)
@@ -31,11 +34,11 @@ struct BattleShareSheet: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Share Battle")
+            .navigationTitle(L.t("shareBattleTitle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
+                    Button(L.t("close", lang)) { dismiss() }
                         .foregroundStyle(.secondary)
                 }
             }
@@ -69,7 +72,7 @@ struct BattleShareCardView: View {
     private var sharedVisibleGroups: [(key: String, label: String)] {
         let allMuscles: [(key: String, label: String)] = [
             ("chest", "Chest"), ("shoulders", "Shoulders"), ("back", "Back"),
-            ("arms", "Arms"), ("legs", "Legs"), ("core", "Core")
+            ("arms", "Arms"), ("legs", "Legs"), ("glutes", "Glutes"), ("core", "Core")
         ]
         let pSet = Set(battle.player.visibleMuscleGroups.map { $0.lowercased() })
         let oSet = Set(battle.opponent.visibleMuscleGroups.map { $0.lowercased() })
@@ -283,6 +286,7 @@ struct BattleShareCardView: View {
         case "arms": return scores.arms
         case "legs": return scores.legs
         case "core": return scores.core
+        case "glutes": return scores.glutes
         default: return 0
         }
     }

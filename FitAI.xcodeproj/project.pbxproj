@@ -12,6 +12,7 @@
 		XXMM01AA892FE936243B52XX /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = XXMM02BB206458B4E90481XX /* MuscleMap */; };
 		XXRC01AA892FE936243B52XX /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = XXRC02BB206458B4E90481XX /* RevenueCat */; };
 		XXRCUI01892FE936243B52XX /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = XXRCUI02206458B4E90481XX /* RevenueCatUI */; };
+		XXRT01AA892FE936243B52XX /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = XXRT02BB206458B4E90481XX /* Realtime */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -101,6 +102,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				XX35EA3B892FE936243B52XX /* Auth in Frameworks */,
+				XXRT01AA892FE936243B52XX /* Realtime in Frameworks */,
 				XXMM01AA892FE936243B52XX /* MuscleMap in Frameworks */,
 				XXRC01AA892FE936243B52XX /* RevenueCat in Frameworks */,
 				XXRCUI01892FE936243B52XX /* RevenueCatUI in Frameworks */,
@@ -139,6 +141,7 @@
 				105FC5962E9EAD3200EA8BCF /* ios/FitAIPremiumFitnessAppUITests */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 				XX847D4FDDF05380C4D054XX /* ios/FitAIWorkoutActivity */,
+				963143422FA92613007A4E41 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -151,6 +154,13 @@
 				XX5CA51D83BC3A98E4C8B9XX /* FitAIWorkoutActivity.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		963143422FA92613007A4E41 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -176,6 +186,7 @@
 			name = FitAI;
 			packageProductDependencies = (
 				XX7F1BC1206458B4E90481XX /* Auth */,
+				XXRT02BB206458B4E90481XX /* Realtime */,
 				XXMM02BB206458B4E90481XX /* MuscleMap */,
 				XXRC02BB206458B4E90481XX /* RevenueCat */,
 				XXRCUI02206458B4E90481XX /* RevenueCatUI */,
@@ -507,18 +518,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = FitAI.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ios/FitAIPremiumFitnessApp/FitAIPremiumFitnessApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = test_WZhaefVVBzlJbMMNczIttHTaapu;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Fit AI needs camera access to take physique photos for analysis.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "FitAI uses your camera to scan your physique. Photos used purely for scoring are not stored. Photos used for your Future You image are deleted after 30 days.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Fit AI writes your completed workouts and body weight to Apple Health.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "FitAI uses your photo library to pick existing physique photos for analysis or 1v1 battles. Battle photos are deleted after 7 days.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP;
@@ -551,18 +562,18 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = FitAI.entitlements;
+				CODE_SIGN_ENTITLEMENTS = ios/FitAIPremiumFitnessApp/FitAIPremiumFitnessApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_EXPO_PUBLIC_REVENUECAT_TEST_API_KEY = test_WZhaefVVBzlJbMMNczIttHTaapu;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
-				INFOPLIST_KEY_NSCameraUsageDescription = "Fit AI needs camera access to take physique photos for analysis.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "FitAI uses your camera to scan your physique. Photos used purely for scoring are not stored. Photos used for your Future You image are deleted after 30 days.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "Fit AI reads your body weight and workouts to give personalized fitness insights.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "Fit AI writes your completed workouts and body weight to Apple Health.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Fit AI needs access to your photos to analyze your physique and generate transformation previews.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "FitAI uses your photo library to pick existing physique photos for analysis or 1v1 battles. Battle photos are deleted after 7 days.";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				INFOPLIST_KEY_NSSupportsLiveActivitiesFrequentUpdates = YES;
 				INFOPLIST_KEY_SUPABASE_ANON_KEY = sb_publishable_qub6PycwvOpzBgIKPfCxFA_vcic6noP;
@@ -595,7 +606,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -618,7 +629,7 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -639,7 +650,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -660,7 +671,7 @@
 			buildSettings = {
 				"CODE_SIGN_ENTITLEMENTS[sdk=*]" = "";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0.0;
@@ -681,7 +692,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				"CODE_SIGN_STYLE[sdk=*]" = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ios/FitAIWorkoutActivity/Info.plist;
@@ -692,7 +703,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = health.fitai.ios.workoutactivity;
 				PRODUCT_NAME = FitAIWorkoutActivity;
 				SDKROOT = iphoneos;
@@ -709,7 +720,7 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				"CODE_SIGN_STYLE[sdk=*]" = Automatic;
-				CURRENT_PROJECT_VERSION = 2026043003;
+				CURRENT_PROJECT_VERSION = 2026050503;
 				DEVELOPMENT_TEAM = XGGKB6LW44;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ios/FitAIWorkoutActivity/Info.plist;
@@ -720,7 +731,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = health.fitai.ios.workoutactivity;
 				PRODUCT_NAME = FitAIWorkoutActivity;
 				SDKROOT = iphoneos;
@@ -829,6 +840,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = XXRC03DD6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCatUI;
+		};
+		XXRT02BB206458B4E90481XX /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = XX20EB7F6EA71E9F2E096CXX /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

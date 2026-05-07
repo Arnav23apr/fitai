@@ -21,7 +21,20 @@ class AppState {
     var scanHistory: [ScanHistoryEntry] = []
 
     /// The Supabase user ID for the current session (used for cloud sync).
-    private var currentUserId: String?
+    /// Mirrors to the local-first services so they know which user to push
+    /// updates to. nil while signed-out — those services then operate
+    /// local-only until auth completes.
+    private var currentUserId: String? {
+        didSet {
+            BodyMeasurementService.shared.currentUserId = currentUserId
+            RoutineService.shared.currentUserId = currentUserId
+            CustomExerciseService.shared.currentUserId = currentUserId
+        }
+    }
+
+    /// Read-only accessor for the current Supabase user id, for view models that
+    /// need to filter their own server queries (FriendViewModel, etc.).
+    var currentUserIdPublic: String? { currentUserId }
 
     init() {
         scanHistory = ScanHistoryService.shared.loadAll()
@@ -40,7 +53,7 @@ class AppState {
             return
         }
         isLoggedIn = true
-        currentUserId = session.user.id.uuidString
+        currentUserId = session.user.id.uuidString.lowercased()
         if let email = session.user.email, profile.email.isEmpty {
             profile.email = email
         }
@@ -50,7 +63,7 @@ class AppState {
         // never pins the splash — running restoreFromCloud directly as the group
         // child means cancellation propagates to the URLSession request when the
         // timeout wins the race.
-        let userId = session.user.id.uuidString
+        let userId = session.user.id.uuidString.lowercased()
         await withTaskGroup(of: Void.self) { group in
             group.addTask { _ = await self.restoreFromCloud(userId: userId) }
             group.addTask { try? await Task.sleep(for: .seconds(5)) }
@@ -75,6 +88,43 @@ class AppState {
         }
         // Sync to cloud in background
         syncProfileToCloud()
+    }
+
+    /// Update the user's custom avatar image. Handles local persistence
+    /// (filesystem + UserDefaults) AND the cloud round-trip (upload to
+    /// Supabase Storage `profile_photos` bucket, store URL on profile so
+    /// other devices can fetch it via `restoreFromCloud`).
+    ///
+    /// Pass nil to clear the photo (reverts to SF Symbol avatar) — clears
+    /// both the local file and the remote URL.
+    func setCustomPhotoData(_ data: Data?) {
+        profile.customPhotoData = data
+
+        guard let data, let image = UIImage(data: data),
+              let userId = currentUserId else {
+            // Clearing photo OR offline — wipe local URL too so we don't
+            // keep showing a stale URL pointing at the old photo.
+            profile.profilePhotoURL = nil
+            saveProfile()
+            return
+        }
+
+        // Save locally first so the UI updates immediately.
+        saveProfile()
+
+        // Upload to bucket; on success, persist the URL and resync the
+        // profile so other devices pick it up.
+        Task.detached { [weak self] in
+            guard let url = await PhotoUploadService.shared
+                .uploadProfilePhoto(image: image, userId: userId) else {
+                return
+            }
+            await MainActor.run {
+                guard let self else { return }
+                self.profile.profilePhotoURL = url
+                self.saveProfile()
+            }
+        }
     }
 
     nonisolated private static var profilePhotoURL: URL {
@@ -122,6 +172,10 @@ class AppState {
     func completeOnboarding() {
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        // Clear the deleted mark so future logins restore normally
+        if let userId = currentUserId {
+            clearDeletedMark(userId: userId)
+        }
         ensureReferralCode()
         // If the user entered someone's code during onboarding, ask the server
         // to attribute it (increment that referrer's friendsReferredCount).
@@ -157,6 +211,25 @@ class AppState {
     }
 
     /// Push profile to Supabase in background. Fire-and-forget.
+    /// Last time we pushed `last_seen_at` to the server. Used to debounce
+    /// heartbeat writes — bumping on every foreground would write 4-5×
+    /// per second of jitter when iOS rapidly toggles foreground/inactive.
+    private var lastPresenceBumpAt: Date? = nil
+
+    /// Push `last_seen_at = now()` for the current user, debounced to one
+    /// write per minute. Called on app foreground + after sign-in so
+    /// friends see this user as "online" within their 5-min presence
+    /// window. Best-effort; no UI surface on failure.
+    func bumpPresence() async {
+        guard let userId = currentUserId else { return }
+        if let last = lastPresenceBumpAt,
+           Date().timeIntervalSince(last) < 60 {
+            return
+        }
+        lastPresenceBumpAt = Date()
+        await SupabaseSyncService.shared.bumpLastSeen(userId: userId)
+    }
+
     private func syncProfileToCloud() {
         guard let userId = currentUserId else { return }
         let profileCopy = profile
@@ -170,19 +243,91 @@ class AppState {
         }
     }
 
+    /// Decode the remote `notification_prefs` jsonb blob into a local
+    /// `NotificationSettings`, persist via NotificationService, and
+    /// reschedule the actual UNUserNotificationCenter requests. Called
+    /// from `restoreFromCloud` so reminder times follow the user.
+    private func applyRemoteNotificationPrefs(_ prefs: [String: JSONCodable]) {
+        var s = NotificationService.shared.loadSettings()
+        if let v = prefs["trainingRemindersEnabled"]?.value as? Bool { s.trainingRemindersEnabled = v }
+        if let v = prefs["reminderHour"]?.value as? Int               { s.reminderHour = v }
+        if let v = prefs["reminderMinute"]?.value as? Int             { s.reminderMinute = v }
+        if let v = prefs["workoutDays"]?.value as? [Any]              { s.workoutDays = Set(v.compactMap { $0 as? Int }) }
+        if let v = prefs["missedWorkoutNudgeEnabled"]?.value as? Bool { s.missedWorkoutNudgeEnabled = v }
+        if let v = prefs["monthlyRescanEnabled"]?.value as? Bool      { s.monthlyRescanEnabled = v }
+        if let v = prefs["streakAlertsEnabled"]?.value as? Bool       { s.streakAlertsEnabled = v }
+        if let v = prefs["hydrationReminderEnabled"]?.value as? Bool  { s.hydrationReminderEnabled = v }
+        if let v = prefs["challengeReminderEnabled"]?.value as? Bool  { s.challengeReminderEnabled = v }
+        if let v = prefs["prMilestoneReminderEnabled"]?.value as? Bool { s.prMilestoneReminderEnabled = v }
+        NotificationService.shared.saveSettings(s)
+        NotificationService.shared.reconcileAll(profile: profile, scanHistory: scanHistory)
+    }
+
     /// Called after login to restore user data from Supabase.
-    /// Returns true if the user is a returning user (has completed onboarding before).
+    /// Returns true if the user is a returning user (has completed onboarding
+    /// before). Returns false ONLY for genuinely-new users (no remote row);
+    /// transient fetch failures preserve the local profile rather than
+    /// resetting the user — this is the Bug A fix where Apple sign-in
+    /// would "reset" the account on every login because a single failed
+    /// fetch was treated identically to a brand-new signup.
+    @discardableResult
     private func restoreFromCloud(userId: String) async -> Bool {
-        guard let remote = await SupabaseSyncService.shared.fetchProfile(userId: userId) else {
+        // If this user previously deleted their account on this device,
+        // refuse to restore — treat them as a new user regardless of
+        // whether Supabase still has their data (DELETE may have failed)
+        if isAccountDeleted(userId: userId) {
             return false
+        }
+
+        let status = await SupabaseSyncService.shared.fetchProfileWithStatus(userId: userId)
+        let remote: RemoteUserProfile
+        switch status {
+        case .found(let p):
+            remote = p
+        case .notFound:
+            // Genuinely new user — let onboarding flow take over.
+            return false
+        case .failed(let reason):
+            // Transient fetch failure — DO NOT reset to "new user" state.
+            // Preserve any local profile/onboarding state and let the user
+            // continue. Next sync attempt (saveProfile, scan, workout) will
+            // surface the real error if it's persistent.
+            #if DEBUG
+            print("[AppState] restoreFromCloud failed (\(reason)) — preserving local state")
+            #endif
+            // If we have a local profile that already completed onboarding,
+            // treat as returning so we don't drop the user back into
+            // onboarding.
+            return hasCompletedOnboarding
         }
 
         // Returning user — restore profile
         var restored = remote.toUserProfile()
-        // Keep the photo from local if available
+        // Keep the photo from local if available; otherwise fetch from the
+        // remote URL so a fresh device gets the user's avatar back.
         restored.customPhotoData = profile.customPhotoData
 
         profile = restored
+
+        // Avatar hydration: if we have a remote URL but no local image
+        // bytes (fresh sign-in on a new device), download the avatar so
+        // the UI can render it locally and so subsequent saves don't
+        // accidentally clear `customPhotoData`.
+        if profile.customPhotoData == nil,
+           let urlString = remote.profilePhotoURL,
+           let url = URL(string: urlString),
+           let (data, response) = try? await URLSession.shared.data(from: url),
+           let http = response as? HTTPURLResponse, http.statusCode == 200 {
+            profile.customPhotoData = data
+            try? data.write(to: AppState.profilePhotoURL, options: .completeFileProtection)
+        }
+
+        // Notification prefs hydration: if remote has a `notification_prefs`
+        // jsonb blob, decode it and apply locally so reminder times follow
+        // the user across devices.
+        if let prefs = remote.notificationPrefs {
+            applyRemoteNotificationPrefs(prefs)
+        }
 
         // Restore onboarding state
         if remote.hasCompletedOnboarding {
@@ -215,6 +360,44 @@ class AppState {
             }
         }
 
+        // Fetch per-set exercise logs (Bug B fix — these used to live only
+        // in UserDefaults and disappeared on logout. Now they round-trip
+        // through Supabase so workout history retains sets/volume.)
+        let remoteExerciseLogs = await SupabaseSyncService.shared.fetchExerciseLogs(userId: userId)
+        let restoredExerciseLogs = remoteExerciseLogs.compactMap { $0.toExerciseLog() }
+        if !restoredExerciseLogs.isEmpty {
+            ExerciseLogService.shared.replaceAll(restoredExerciseLogs)
+        }
+
+        // Fetch body measurements
+        let remoteMeasurements = await SupabaseSyncService.shared.fetchBodyMeasurements(userId: userId)
+        let restoredMeasurements = remoteMeasurements.compactMap { $0.toBodyMeasurement() }
+        if !restoredMeasurements.isEmpty {
+            await MainActor.run {
+                BodyMeasurementService.shared.replaceAll(restoredMeasurements)
+            }
+        }
+
+        // Fetch custom routines
+        let remoteRoutines = await SupabaseSyncService.shared.fetchRoutines(userId: userId)
+        if !remoteRoutines.isEmpty {
+            await MainActor.run {
+                RoutineService.shared.replaceAll(remoteRoutines)
+            }
+        }
+
+        // Fetch user-defined custom exercises
+        let remoteCustomExercises = await SupabaseSyncService.shared.fetchCustomExercises(userId: userId)
+        if !remoteCustomExercises.isEmpty {
+            await MainActor.run {
+                CustomExerciseService.shared.replaceAll(remoteCustomExercises)
+            }
+        }
+
+        // Mark this user as online so friends' presence dots light up
+        // immediately on the next refresh.
+        await bumpPresence()
+
         return remote.hasCompletedOnboarding
     }
 
@@ -232,6 +415,7 @@ class AppState {
         profile.totalScans += 1
         profile.weakPoints = result.weakPoints
         profile.strongPoints = result.strongPoints
+        updateTier()
         saveProfile()
 
         let entry = ScanHistoryEntry(from: result)
@@ -249,6 +433,37 @@ class AppState {
                 await SupabaseSyncService.shared.insertScan(userId: userId, entry: entryCopy)
             }
         }
+
+        // Generate / refresh the "Future you" goal projection. Edge function
+        // enforces a 90-day cooldown server-side, so calling on every scan
+        // is a no-op when one's already current. Front photo is the source.
+        if let userId = currentUserIdPublic, let frontPhoto = result.frontPhoto {
+            Task.detached { [weak self] in
+                guard let sourceURL = await PhotoUploadService.shared
+                    .uploadGoalProjectionSource(image: frontPhoto, userId: userId) else {
+                    return
+                }
+                let outcome = await GoalProjectionService.shared.generate(sourceImageURL: sourceURL)
+                if case .success(let projectionURL) = outcome {
+                    await MainActor.run {
+                        self?.profile.goalProjectionURL = projectionURL
+                        self?.profile.goalProjectionGeneratedAt = Date()
+                        self?.saveProfile()
+                    }
+                }
+            }
+        }
+
+        // Post to friends' activity feed (only for logged-in users with public/friends_only privacy).
+        if currentUserId != nil {
+            let score = result.overallScore
+            Task.detached {
+                await SocialService.shared.postActivity(
+                    kind: "scan_completed",
+                    payload: ["score": score]
+                )
+            }
+        }
     }
 
     // MARK: - Auth
@@ -262,7 +477,7 @@ class AppState {
         do {
             let session = try await SupabaseAuthService.shared.signInWithEmail(email: email, password: password)
             isLoggedIn = true
-            currentUserId = session.user.id.uuidString
+            currentUserId = session.user.id.uuidString.lowercased()
             if let userEmail = session.user.email {
                 profile.email = userEmail
             }
@@ -273,8 +488,12 @@ class AppState {
             } else if profile.name.isEmpty {
                 profile.name = "Athlete"
             }
-            saveProfile()
-            await restoreFromCloud(userId: session.user.id.uuidString)
+            // Check if returning user — restore from cloud FIRST, don't save to cloud
+            let isReturning = await restoreFromCloud(userId: session.user.id.uuidString)
+            if !isReturning {
+                // New or deleted user — save locally only, onboarding will sync to cloud
+                saveProfileLocally()
+            }
         } catch {
             authError = error.localizedDescription
         }
@@ -288,15 +507,15 @@ class AppState {
         do {
             let session = try await SupabaseAuthService.shared.signUpWithEmail(email: email, password: password)
             isLoggedIn = true
-            currentUserId = session.user.id.uuidString
+            currentUserId = session.user.id.uuidString.lowercased()
             if let userEmail = session.user.email {
                 profile.email = userEmail
             }
             if profile.name.isEmpty {
                 profile.name = "Athlete"
             }
-            saveProfile()
-            await restoreFromCloud(userId: session.user.id.uuidString)
+            // New signup — save locally only, onboarding will sync to cloud
+            saveProfileLocally()
         } catch let error as AuthError where error == .emailConfirmationRequired {
             emailConfirmationNeeded = true
         } catch {
@@ -311,7 +530,7 @@ class AppState {
         do {
             let session = try await SupabaseAuthService.shared.signInWithApple(idToken: idToken, nonce: nonce)
             isLoggedIn = true
-            currentUserId = session.user.id.uuidString
+            currentUserId = session.user.id.uuidString.lowercased()
             if let userEmail = email ?? session.user.email {
                 profile.email = userEmail
             }
@@ -320,8 +539,11 @@ class AppState {
             let appleName = [fullName?.givenName, fullName?.familyName].compactMap { $0 }.joined(separator: " ")
             let resolvedName = supabaseName ?? (appleName.isEmpty ? nil : appleName)
             profile.name = resolvedName ?? "Athlete"
-            saveProfile()
-            await restoreFromCloud(userId: session.user.id.uuidString)
+            // Check if returning user — restore from cloud FIRST, don't save to cloud
+            let isReturning = await restoreFromCloud(userId: session.user.id.uuidString)
+            if !isReturning {
+                saveProfileLocally()
+            }
         } catch {
             authError = error.localizedDescription
         }
@@ -334,7 +556,7 @@ class AppState {
         do {
             let session = try await SupabaseAuthService.shared.signInWithGoogle()
             isLoggedIn = true
-            currentUserId = session.user.id.uuidString
+            currentUserId = session.user.id.uuidString.lowercased()
             if let email = session.user.email {
                 profile.email = email
             }
@@ -346,8 +568,11 @@ class AppState {
             } else {
                 profile.name = "Athlete"
             }
-            saveProfile()
-            await restoreFromCloud(userId: session.user.id.uuidString)
+            // Check if returning user — restore from cloud FIRST, don't save to cloud
+            let isReturning = await restoreFromCloud(userId: session.user.id.uuidString)
+            if !isReturning {
+                saveProfileLocally()
+            }
         } catch {
             if (error as NSError).code == 1 {
                 // user cancelled
@@ -356,6 +581,14 @@ class AppState {
             }
         }
         isAuthenticating = false
+    }
+
+    /// Save profile to UserDefaults only (no cloud sync).
+    /// Used during sign-in to avoid creating a Supabase profile before onboarding completes.
+    private func saveProfileLocally() {
+        if let data = try? JSONEncoder().encode(profile) {
+            UserDefaults.standard.set(data, forKey: "userProfile")
+        }
     }
 
     // MARK: - Logout
@@ -369,8 +602,14 @@ class AppState {
         // reading from it mid-render.
         showSplash = true
 
+        // Kill any workout Live Activity tied to this account before we
+        // wipe local state — otherwise the lock screen shows the previous
+        // user's session for hours after sign-out.
+        WorkoutSessionManager.endAllActivities()
+
         // Step 2: On the next runloop tick, sign out and clear all local state.
         Task { @MainActor [weak self] in
+            await PushNotificationService.shared.clearTokensForCurrentUser()
             try? await SupabaseAuthService.shared.signOut()
             guard let self else { return }
             self.isLoggedIn = false
@@ -381,16 +620,41 @@ class AppState {
             UserDefaults.standard.removeObject(forKey: "cachedAIPlan")
             UserDefaults.standard.removeObject(forKey: "cachedMealPlan")
             ScanHistoryService.shared.clear()
+            ExerciseLogService.shared.clear()
+            BodyMeasurementService.shared.clearLocal()
+            RoutineService.shared.clearLocal()
+            CustomExerciseService.shared.clearLocal()
+            CoachViewModel.clearStorage()
+            // Clear in-flight workout session so the next user signing in
+            // on this device doesn't inherit a "Resume workout" pill.
+            WorkoutSessionManager.clearPersistedSessionForLogout()
+            // Reset widget shared defaults so the home-screen widget
+            // doesn't keep flashing the prior user's data.
+            UserDefaults.standard.removeObject(forKey: "widget_workoutName")
+            UserDefaults.standard.removeObject(forKey: "widget_exerciseCount")
+            UserDefaults.standard.removeObject(forKey: "widget_streak")
+            UserDefaults.standard.removeObject(forKey: "widget_latestScore")
+            WidgetCenter.shared.reloadAllTimelines()
+            // Per-device flags that shouldn't bleed between users.
+            UserDefaults.standard.removeObject(forKey: "healthConnected")
+            UserDefaults.standard.removeObject(forKey: "notificationSettings")
+            // Battle/profile photos belong to the user who signed in.
+            try? FileManager.default.removeItem(at: AppState.battlePhotoURL)
+            try? FileManager.default.removeItem(at: AppState.profilePhotoURL)
             self.profile = UserProfile()
             self.scanHistory = []
         }
     }
 
     func deleteAccount() async {
-        // Delete user data from Supabase, then clear local state
+        // Mark this user ID as deleted BEFORE anything else — this ensures
+        // restoreFromCloud will refuse to restore even if Supabase DELETE fails
         if let userId = currentUserId {
+            markAccountDeleted(userId: userId)
             await SupabaseSyncService.shared.deleteProfile(userId: userId)
         }
+        WorkoutSessionManager.endAllActivities()
+        await PushNotificationService.shared.clearTokensForCurrentUser()
         try? await SupabaseAuthService.shared.signOut()
         showSplash = true
         isLoggedIn = false
@@ -401,8 +665,49 @@ class AppState {
         UserDefaults.standard.removeObject(forKey: "cachedAIPlan")
         UserDefaults.standard.removeObject(forKey: "cachedMealPlan")
         ScanHistoryService.shared.clear()
+        ExerciseLogService.shared.clear()
+        BodyMeasurementService.shared.clearLocal()
+        RoutineService.shared.clearLocal()
+        CustomExerciseService.shared.clearLocal()
+        WorkoutSessionManager.clearPersistedSessionForLogout()
+        UserDefaults.standard.removeObject(forKey: "widget_workoutName")
+        UserDefaults.standard.removeObject(forKey: "widget_exerciseCount")
+        UserDefaults.standard.removeObject(forKey: "widget_streak")
+        UserDefaults.standard.removeObject(forKey: "widget_latestScore")
+        WidgetCenter.shared.reloadAllTimelines()
+        UserDefaults.standard.removeObject(forKey: "healthConnected")
+        UserDefaults.standard.removeObject(forKey: "notificationSettings")
+        // Remove profile and battle photos
+        try? FileManager.default.removeItem(at: AppState.profilePhotoURL)
+        try? FileManager.default.removeItem(at: AppState.battlePhotoURL)
         profile = UserProfile()
         scanHistory = []
+    }
+
+    // MARK: - Deleted Account Tracking
+
+    /// Track deleted user IDs locally so restoreFromCloud refuses to restore
+    /// data for a user that previously deleted their account on this device.
+    /// This guards against Supabase DELETE failing silently due to RLS issues.
+    private func markAccountDeleted(userId: String) {
+        var deleted = UserDefaults.standard.stringArray(forKey: "deletedAccountIds") ?? []
+        if !deleted.contains(userId) {
+            deleted.append(userId)
+            UserDefaults.standard.set(deleted, forKey: "deletedAccountIds")
+        }
+    }
+
+    private func isAccountDeleted(userId: String) -> Bool {
+        let deleted = UserDefaults.standard.stringArray(forKey: "deletedAccountIds") ?? []
+        return deleted.contains(userId)
+    }
+
+    /// Called after a user successfully completes onboarding on a previously-deleted account.
+    /// Removes them from the deleted list so future logins restore normally.
+    private func clearDeletedMark(userId: String) {
+        var deleted = UserDefaults.standard.stringArray(forKey: "deletedAccountIds") ?? []
+        deleted.removeAll { $0 == userId }
+        UserDefaults.standard.set(deleted, forKey: "deletedAccountIds")
     }
 
     // MARK: - Widget
@@ -455,7 +760,7 @@ class AppState {
 
         NotificationService.shared.cancelTodaysWorkoutReminder()
 
-        if profile.currentStreak > 0 && profile.currentStreak % 7 == 0 {
+        if profile.isPremium && profile.currentStreak > 0 && profile.currentStreak % 7 == 0 {
             NotificationService.shared.sendStreakMilestone(streak: profile.currentStreak)
         }
 
@@ -466,6 +771,31 @@ class AppState {
             let logCopy = log
             Task.detached {
                 await SupabaseSyncService.shared.insertWorkoutLog(userId: userId, log: logCopy)
+            }
+        }
+
+        // Post to friends' activity feed.
+        if currentUserId != nil {
+            let workoutName = dayName
+            let exerciseCount = exercisesCompleted
+            let totalCount = totalExercises
+            let streak = profile.currentStreak
+            Task.detached {
+                await SocialService.shared.postActivity(
+                    kind: "workout_completed",
+                    payload: [
+                        "workout_name": workoutName,
+                        "exercises_completed": exerciseCount,
+                        "total_exercises": totalCount
+                    ]
+                )
+                // Streak milestones at 7 / 30 / 90 days
+                if streak > 0 && (streak == 7 || streak == 30 || streak == 90 || streak % 100 == 0) {
+                    await SocialService.shared.postActivity(
+                        kind: "streak_milestone",
+                        payload: ["streak": streak]
+                    )
+                }
             }
         }
     }
@@ -560,17 +890,7 @@ class AppState {
     }
 
     private func updateTier() {
-        let pts = profile.points
-        if pts >= 10000 {
-            profile.tier = "Diamond"
-        } else if pts >= 5000 {
-            profile.tier = "Platinum"
-        } else if pts >= 2000 {
-            profile.tier = "Gold"
-        } else if pts >= 500 {
-            profile.tier = "Silver"
-        } else {
-            profile.tier = "Bronze"
-        }
+        let rank = PhysiqueRank.rank(score: profile.latestScore, gender: profile.gender)
+        profile.tier = rank.rawValue
     }
 }

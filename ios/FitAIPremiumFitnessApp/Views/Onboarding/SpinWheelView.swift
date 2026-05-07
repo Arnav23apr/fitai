@@ -15,8 +15,9 @@ struct SpinWheelView: View {
     @State private var resultDiscount: Int = 0
     @State private var confettiParticles: [ConfettiParticle] = []
     @State private var showConfetti: Bool = false
-    @State private var freeTrialEnabled: Bool = false
+    @State private var freeTrialEnabled: Bool = true
     @State private var isPurchasing: Bool = false
+    @State private var landingGlow: Bool = false
     @State private var store = StoreViewModel.shared
 
     private let segments: [Int] = [10, 20, 85, 15, 50, 25, 40, 20]
@@ -44,15 +45,18 @@ struct SpinWheelView: View {
             VStack(spacing: 0) {
                 VStack(spacing: 8) {
                     if hasSpun {
-                        Text("🥳 You won \(resultDiscount)%! 🥳")
+                        Text("Your offer is ready")
                             .font(.system(.title, design: .default, weight: .bold))
                             .foregroundStyle(.primary)
                             .transition(.scale.combined(with: .opacity))
+                        Text("\(resultDiscount)% off + 7-day free trial")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
                     } else {
-                        Text(L.t("spinToWin", lang))
+                        Text("Your welcome offer")
                             .font(.system(.title, design: .default, weight: .bold))
                             .foregroundStyle(.primary)
-                        Text(L.t("getExclusiveDiscount", lang))
+                        Text("Spin once to reveal your launch pricing")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -131,6 +135,24 @@ struct SpinWheelView: View {
                     )
                     .rotationEffect(.degrees(rotation))
                     .shadow(color: isDark ? .white.opacity(0.05) : .black.opacity(0.08), radius: 20)
+                    .overlay(
+                        // Landing glow — pulses out from the wheel when the
+                        // result lands. Subtle but rewarding without confetti
+                        // overload.
+                        Circle()
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.yellow.opacity(0.7), .orange.opacity(0.5), .clear],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: landingGlow ? 18 : 0
+                            )
+                            .blur(radius: landingGlow ? 12 : 0)
+                            .opacity(landingGlow ? 1 : 0)
+                            .scaleEffect(landingGlow ? 1.18 : 1.0)
+                            .animation(.easeOut(duration: 1.4), value: landingGlow)
+                    )
 
                     Circle()
                         .fill(
@@ -163,7 +185,7 @@ struct SpinWheelView: View {
                             Image(systemName: "calendar.badge.clock")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.secondary)
-                            Text("3-day free trial")
+                            Text("7-day free trial")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.primary)
                             Spacer()
@@ -181,9 +203,9 @@ struct SpinWheelView: View {
                                             .tint(Color(.systemBackground))
                                             .scaleEffect(0.9)
                                     } else {
-                                        Image(systemName: "flame.fill")
+                                        Image(systemName: "sparkles")
                                             .font(.system(size: 14))
-                                        Text("Claim \(resultDiscount)% Off — \(discountedPriceLabel)")
+                                        Text("Claim my offer — \(discountedPriceLabel)")
                                             .font(.headline)
                                     }
                                 }
@@ -195,11 +217,13 @@ struct SpinWheelView: View {
                             }
                             .disabled(isPurchasing)
 
-                            if freeTrialEnabled {
-                                Text("Start your 3-day free trial, then \(discountedPriceLabel)")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
+                            Text(freeTrialEnabled
+                                 ? "Cancel anytime in Settings. \(discountedPriceLabel) after the 7-day trial."
+                                 : "Cancel anytime in Settings. \(discountedPriceLabel) billed today.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
                         }
                         .padding(.horizontal, 24)
                     }
@@ -261,13 +285,38 @@ struct SpinWheelView: View {
             rotation += totalRotation
         }
 
+        // Detent haptics — fire one tick per wheel segment as the rotation
+        // slows. Spaced exponentially so they thin out near the end, mimicking
+        // a real ratchet wheel decelerating under friction.
+        Task {
+            let detents = 24
+            let totalDuration: Double = 4.5
+            for i in 0..<detents {
+                let t = Double(i) / Double(detents)
+                // Ease-out spacing: gaps grow as i increases.
+                let progress = 1 - pow(1 - t, 2.4)
+                let delay = totalDuration * progress
+                try? await Task.sleep(for: .seconds(delay - (i == 0 ? 0 : (totalDuration * (1 - pow(1 - Double(i - 1) / Double(detents), 2.4))))))
+                let style: UIImpactFeedbackGenerator.FeedbackStyle = i > detents - 4 ? .heavy : (i > detents / 2 ? .medium : .light)
+                await MainActor.run {
+                    UIImpactFeedbackGenerator(style: style).impactOccurred()
+                }
+            }
+        }
+
         Task {
             try? await Task.sleep(for: .seconds(4.7))
+            await MainActor.run {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                landingGlow = true
+            }
             triggerConfetti()
             withAnimation(.snappy) {
                 hasSpun = true
                 isSpinning = false
             }
+            try? await Task.sleep(for: .seconds(1.6))
+            await MainActor.run { landingGlow = false }
         }
     }
 

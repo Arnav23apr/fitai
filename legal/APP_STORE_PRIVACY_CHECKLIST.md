@@ -35,28 +35,56 @@ Privacy Policy URL.
 ## 2. Privacy Nutrition Labels (required, separate from Privacy Policy)
 
 App Store Connect → App Privacy section. You must declare every category
-of data the app collects and what it's used for. Based on FitAI's actual
-data flows, here's what to declare:
+of data the app collects and what it's used for. **Apple cross-references
+this with actual network traffic in iOS 17.2+** — mismatches between
+what you declare and what the app actually transmits are the #1 reason
+for delayed reviews. Be honest.
 
 ### Data linked to user (per Apple's terminology)
 
 | Apple category | Specific data | Used for | Linked to user | Tracking |
 |---|---|---|---|---|
-| Contact info | Email | App functionality, account | Yes | No |
-| Health & fitness | Body weight, height, age, training data, AI scan scores | App functionality | Yes | No |
-| User content | Photos (body scans) | App functionality | Yes | No |
-| Identifiers | User ID (Supabase UUID) | App functionality | Yes | No |
-| Usage data | Product interaction (anonymous events) | Analytics | Yes | No |
-| Diagnostics | Crash data, performance | App functionality | Yes | No |
-| Purchases | Purchase history | App functionality | Yes | No |
+| Contact info | Email | App functionality, account | Yes | **No** |
+| Health & fitness | Body weight, height, age, training data, AI scan scores | App functionality | Yes | **No** |
+| User content | Photos (body scans, battle photos, goal projection sources) | App functionality | Yes | **No** |
+| Identifiers | User ID (Supabase UUID) | App functionality, Analytics | Yes | **No** |
+| Usage data | Product interaction (anonymous events) | Analytics, Product personalization | Yes | **No** |
+| Diagnostics | Crash data, performance | App functionality | Yes | **No** |
+| Purchases | Purchase history | App functionality | Yes | **No** |
+
+### Critical settings under "Photos"
+
+Under the **Photos** category specifically:
+- ✅ **Linked to user**: Yes
+- ❌ **Used for tracking**: leave **UNCHECKED**
+- ✅ **Purposes**: ONLY tick **App Functionality**
+- ❌ **Do NOT tick**: "Other Purposes", "Third-Party Advertising",
+  "Developer's Advertising or Marketing" — any of these triggers a
+  manual reviewer look and can stall release by 1–2 weeks.
+
+### "Data Used to Track You" section
+
+Photos must NOT appear here. Tracking under Apple's definition means
+linking the data to third-party data for advertising. We don't do this.
+Set the entire app to "Data is Not Used to Track You."
 
 ### Data NOT collected (be explicit)
-- Browsing history, location, contacts, financial info, sensitive info
-  outside health-fitness, search history.
+- Browsing history, location (we strip EXIF GPS before upload), contacts,
+  financial info, search history.
 
-### Tracking
-- We do **not** track users across other companies' apps and websites.
-  Set this to **No**.
+### Domains contacted disclosure
+
+iOS 17.2+ requires you to declare third-party domains the app contacts.
+Add to `Info.plist` `NSPrivacyTrackingDomains` (array, can be empty
+since we don't track) and ensure your app's outbound connections to
+the following are disclosed in the privacy policy:
+- `*.supabase.co` / your Supabase project URL
+- `generativelanguage.googleapis.com` (Google Gemini)
+- `api.revenuecat.com`
+
+If the App Privacy Report (iOS Settings → Privacy → App Privacy Report)
+shows a connection that isn't in the Privacy Policy, fix the policy
+**before** users notice.
 
 ## 3. Privacy Manifest (`PrivacyInfo.xcprivacy`) — iOS 17+ requirement
 
@@ -78,17 +106,28 @@ that access certain APIs:
 If a third-party SDK doesn't provide one, App Store submission will warn
 about it (currently a warning; will become a hard block).
 
-## 4. In-app Info.plist usage strings (already done — verify)
+## 4. In-app Info.plist usage strings (verify before submission)
 
-Already present in `project.pbxproj`:
-- ✅ `NSHealthShareUsageDescription`
-- ✅ `NSHealthUpdateUsageDescription`
+Generic strings get rejected under 5.1.1 in 2025. Each must name the
+purpose AND retention.
 
-Verify the App also has (and add if missing):
-- `NSCameraUsageDescription` — for scan photo capture
-- `NSPhotoLibraryUsageDescription` — for picking existing photos
-- `NSUserTrackingUsageDescription` — only if you ever add ATT tracking
-  (you don't currently)
+Required strings:
+- `NSCameraUsageDescription`:
+  > **"FitAI uses your camera to scan your physique. Photos used purely
+  > for scoring are not stored. Photos used for your 'Future You' image
+  > are deleted after 30 days."**
+- `NSPhotoLibraryUsageDescription`:
+  > **"FitAI uses your photo library to pick existing physique photos
+  > for analysis or 1v1 battles. Battle photos are deleted after 7 days."**
+- `NSHealthShareUsageDescription` (existing): leave as-is, already specific
+- `NSHealthUpdateUsageDescription` (existing): leave as-is
+
+Do NOT add (we don't use these):
+- `NSUserTrackingUsageDescription` (no ATT tracking)
+- `NSLocationWhenInUseUsageDescription` (we strip EXIF GPS, don't ask
+  for location)
+- `NSContactsUsageDescription`
+- `NSMicrophoneUsageDescription`
 
 ## 5. Subscription metadata in App Store Connect
 
@@ -200,8 +239,8 @@ both files:
 | `{{OPERATOR_ADDRESS}}` | George's registered place of business — usually his home address for sole traders | "Strada Exemplu 1, 010101 Bucharest, Romania" |
 | `{{COUNTRY}}` | George's country of tax residency | "Romania" |
 | `{{TAX_ID_LINE}}` | Optional. Leave empty (`""`) if George operates as a pure individual; otherwise put `" (registered as PFA, fiscal code XXXXXXXX)"` or similar — only relevant if he registers as a sole-trader entity (PFA in Romania, freelance VAT ID in EU, etc.) | `""` or `" (PFA, CUI 12345678)"` |
-| `{{PRIVACY_CONTACT_EMAIL}}` | Email for privacy/data requests | `privacy@fitai.health` |
-| `{{LEGAL_CONTACT_EMAIL}}` | Email for legal/ToS questions (can be the same) | `legal@fitai.health` |
+| `{{PRIVACY_CONTACT_EMAIL}}` | Email for privacy/data requests | `team@fitai.health` |
+| `{{LEGAL_CONTACT_EMAIL}}` | Email for legal/ToS questions (can be the same) | `team@fitai.health` |
 | `{{SUPABASE_REGION}}` | The region your Supabase project is hosted in | "EU (Frankfurt)" or "US East" |
 | `{{GOVERNING_LAW_JURISDICTION}}` | Country whose laws govern the agreement — normally where George is tax resident | "Romania" |
 | `{{COURT_JURISDICTION}}` | Where disputes are litigated | "the courts of Bucharest, Romania" |

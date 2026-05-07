@@ -131,3 +131,4 @@ fragment float4 particle_frag(ParticleOut in    [[stage_in]],
     float core = smoothstep(0.10, 0.0, d) * 0.5;
     return float4(in.color + core, a + core * in.alpha);
 }
+

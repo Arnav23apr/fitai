@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PlateCalculatorPopover: View {
+    @Environment(AppState.self) private var appState
     let target: Double
     let unit: PlateCalculator.Unit
 
@@ -9,13 +10,14 @@ struct PlateCalculatorPopover: View {
         PlateCalculator.compute(target: target, bar: bar, unit: unit)
     }
     private var unitLabel: String { unit == .kg ? "kg" : "lb" }
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 Image(systemName: "chart.bar.fill")
                     .foregroundStyle(.blue)
-                Text("Plate Loading")
+                Text(L.t("plateLoading", lang))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Text(formatted(target) + " " + unitLabel)
@@ -24,7 +26,7 @@ struct PlateCalculatorPopover: View {
             }
 
             HStack {
-                Text("Bar")
+                Text(L.t("barLabel", lang))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -38,7 +40,7 @@ struct PlateCalculatorPopover: View {
 
             if !result.perSide.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Each side")
+                    Text(L.t("eachSide", lang))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                         .padding(.bottom, 2)
@@ -60,7 +62,7 @@ struct PlateCalculatorPopover: View {
                     }
                 }
             } else if target <= bar {
-                Text("Just the bar")
+                Text(L.t("justTheBar", lang))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 6)
@@ -70,7 +72,9 @@ struct PlateCalculatorPopover: View {
                 HStack(spacing: 6) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
-                    Text("Can't reach exactly with standard plates — short by \(formatted(result.leftover)) \(unitLabel).")
+                    Text(String(format: L.t("cantReachExactlyFmt", lang),
+                                formatted(result.leftover) as NSString,
+                                unitLabel as NSString))
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }

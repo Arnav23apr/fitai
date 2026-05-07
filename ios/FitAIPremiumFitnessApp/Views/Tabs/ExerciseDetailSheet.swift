@@ -11,6 +11,8 @@ struct ExerciseDetailSheet: View {
     private var demo: ExerciseDemoInfo { exercise.demoInfo }
     private var history: ExerciseHistory { logService.history(for: exercise.name) }
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
@@ -45,7 +47,7 @@ struct ExerciseDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
             }
@@ -62,7 +64,7 @@ struct ExerciseDetailSheet: View {
             HStack(spacing: 10) {
                 Image(systemName: "play.circle.fill")
                     .font(.system(size: 18, weight: .semibold))
-                Text("How to perform")
+                Text(L.t("howToPerform", lang))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -88,14 +90,40 @@ struct ExerciseDetailSheet: View {
     // MARK: - Header
 
     private var exerciseHeader: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(Color.blue.opacity(0.1))
-                    .frame(width: 72, height: 72)
+                    .fill(
+                        RadialGradient(
+                            colors: [muscleAccent.opacity(0.30), muscleAccent.opacity(0.06)],
+                            center: UnitPoint(x: 0.35, y: 0.30),
+                            startRadius: 4,
+                            endRadius: 60
+                        )
+                    )
+                    .frame(width: 96, height: 96)
+
+                Circle()
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [muscleAccent.opacity(0.40), muscleAccent.opacity(0.08)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+                    .frame(width: 96, height: 96)
+
                 Image(systemName: muscleIcon)
-                    .font(.system(size: 30))
-                    .foregroundStyle(.blue)
+                    .font(.system(size: 38, weight: .regular))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [muscleAccent, muscleAccent.opacity(0.75)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: muscleAccent.opacity(0.35), radius: 8, y: 3)
             }
 
             VStack(spacing: 4) {
@@ -111,17 +139,28 @@ struct ExerciseDetailSheet: View {
             if !exercise.muscleGroup.isEmpty {
                 Text(exercise.muscleGroup)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(muscleAccent)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
-                    .background(Color.blue.opacity(0.1))
+                    .background(muscleAccent.opacity(0.12))
                     .clipShape(.capsule)
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(20)
-        .background(Color.primary.opacity(0.03))
-        .clipShape(.rect(cornerRadius: 18))
+        .padding(.vertical, 24)
+        .padding(.horizontal, 20)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color.primary.opacity(0.03))
+                LinearGradient(
+                    colors: [muscleAccent.opacity(0.06), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .clipShape(.rect(cornerRadius: 20))
+            }
+        )
     }
 
     // MARK: - Muscles
@@ -133,7 +172,7 @@ struct ExerciseDetailSheet: View {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 10))
                         .foregroundStyle(.orange)
-                    Text("Primary")
+                    Text(L.t("primaryLabel", lang))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -156,7 +195,7 @@ struct ExerciseDetailSheet: View {
                     Image(systemName: "circle.fill")
                         .font(.system(size: 6))
                         .foregroundStyle(.secondary)
-                    Text("Secondary")
+                    Text(L.t("secondaryLabel", lang))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
@@ -188,7 +227,7 @@ struct ExerciseDetailSheet: View {
                 Image(systemName: "list.number")
                     .font(.system(size: 13))
                     .foregroundStyle(.blue)
-                Text("How To Perform")
+                Text(L.t("howToPerform", lang))
                     .font(.subheadline.weight(.semibold))
             }
 
@@ -228,7 +267,7 @@ struct ExerciseDetailSheet: View {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.yellow)
-                Text("Pro Tips")
+                Text(L.t("proTipsLabel", lang))
                     .font(.subheadline.weight(.semibold))
             }
 
@@ -264,7 +303,7 @@ struct ExerciseDetailSheet: View {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 13))
                     .foregroundStyle(.purple)
-                Text("Your History")
+                Text(L.t("yourHistory", lang))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 HStack(spacing: 3) {
@@ -277,11 +316,11 @@ struct ExerciseDetailSheet: View {
             }
 
             HStack(spacing: 0) {
-                statBox(label: "Best", value: "\(Int(history.personalBestWeight))", unit: appState.profile.usesMetric ? "kg" : "lbs", color: .purple)
+                statBox(label: L.t("bestShort", lang), value: "\(Int(history.personalBestWeight))", unit: appState.profile.usesMetric ? "kg" : "lbs", color: .purple)
                 Spacer()
-                statBox(label: "Best Reps", value: "\(history.personalBestReps)", unit: "reps", color: .blue)
+                statBox(label: L.t("bestRepsLabel", lang), value: "\(history.personalBestReps)", unit: L.t("repsUnit", lang), color: .blue)
                 Spacer()
-                statBox(label: "Sessions", value: "\(history.logs.count)", unit: nil, color: .green)
+                statBox(label: L.t("sessionsLabel", lang), value: "\(history.logs.count)", unit: nil, color: .green)
             }
 
             if history.isPRReady {
@@ -289,7 +328,7 @@ struct ExerciseDetailSheet: View {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 11))
                         .foregroundStyle(.orange)
-                    Text("You're close to a new PR! Push a little harder today.")
+                    Text(L.t("closeToPRMsg", lang))
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }
@@ -338,7 +377,7 @@ struct ExerciseDetailSheet: View {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(.green)
-                        Text("Progressive Overload")
+                        Text(L.t("progressiveOverload", lang))
                             .font(.subheadline.weight(.semibold))
                     }
 
@@ -361,21 +400,46 @@ struct ExerciseDetailSheet: View {
     // MARK: - Helpers
 
     private var muscleIcon: String {
+        let name = exercise.name.lowercased()
         let group = exercise.muscleGroup.lowercased()
+
+        if name.contains("squat") || name.contains("lunge") { return "figure.strengthtraining.functional" }
+        if name.contains("deadlift") { return "figure.strengthtraining.traditional" }
+        if name.contains("row") || name.contains("pulldown") { return "figure.rowing" }
+        if name.contains("pull-up") || name.contains("pullup") || name.contains("chin") { return "figure.climbing" }
+        if name.contains("press") || name.contains("bench") { return "figure.strengthtraining.traditional" }
+        if name.contains("curl") { return "dumbbell.fill" }
+        if name.contains("plank") || name.contains("crunch") || name.contains("sit-up") { return "figure.core.training" }
+        if name.contains("run") || name.contains("sprint") || name.contains("jog") { return "figure.run" }
+        if name.contains("jump") || name.contains("box jump") { return "figure.jumprope" }
+        if name.contains("kick") || name.contains("punch") || name.contains("box") { return "figure.boxing" }
+        if name.contains("yoga") || name.contains("stretch") { return "figure.yoga" }
+
         if group.contains("chest") { return "figure.strengthtraining.traditional" }
         if group.contains("back") || group.contains("lat") { return "figure.rowing" }
         if group.contains("shoulder") || group.contains("delt") { return "figure.boxing" }
-        if group.contains("bicep") || group.contains("tricep") || group.contains("arm") { return "figure.mixed.cardio" }
-        if group.contains("quad") || group.contains("hamstring") || group.contains("glute") || group.contains("leg") || group.contains("calv") { return "figure.run" }
+        if group.contains("bicep") || group.contains("tricep") || group.contains("arm") { return "dumbbell.fill" }
+        if group.contains("quad") || group.contains("hamstring") || group.contains("glute") || group.contains("leg") || group.contains("calv") { return "figure.strengthtraining.functional" }
         if group.contains("core") || group.contains("abs") || group.contains("oblique") { return "figure.core.training" }
         return "dumbbell.fill"
     }
 
+    private var muscleAccent: Color {
+        let group = exercise.muscleGroup.lowercased()
+        if group.contains("chest") { return Color(red: 1.00, green: 0.32, blue: 0.40) }
+        if group.contains("back") || group.contains("lat") { return Color(red: 0.20, green: 0.55, blue: 1.00) }
+        if group.contains("shoulder") || group.contains("delt") { return Color(red: 0.35, green: 0.45, blue: 1.00) }
+        if group.contains("bicep") || group.contains("tricep") || group.contains("arm") { return Color(red: 0.85, green: 0.40, blue: 0.95) }
+        if group.contains("quad") || group.contains("hamstring") || group.contains("glute") || group.contains("leg") || group.contains("calv") { return Color(red: 0.20, green: 0.75, blue: 0.50) }
+        if group.contains("core") || group.contains("abs") || group.contains("oblique") { return Color(red: 1.00, green: 0.62, blue: 0.10) }
+        return .blue
+    }
+
     private var trendLabel: String {
         switch history.volumeTrend {
-        case .up: return "Improving"
-        case .down: return "Declining"
-        case .neutral: return "Steady"
+        case .up: return L.t("trendImproving", lang)
+        case .down: return L.t("trendDeclining", lang)
+        case .neutral: return L.t("trendSteady", lang)
         }
     }
 

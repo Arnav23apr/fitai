@@ -1,19 +1,36 @@
 import SwiftUI
 
+/// Welcome splash that mirrors the marketing site (`ios/docs/index.html`).
+///
+/// Pre-swipe: a hint to drag the dumbbell up into a scan-frame target. The
+/// dumbbell uses the same procedural geometry as the website (built in
+/// `DumbbellSceneView`) so first-touch parity with the landing page.
+///
+/// Post-swipe ("placed"): floating plate field + particle dust fade in
+/// behind the dumbbell, the stacked `Scan. / Plan. / Compete.` headline
+/// reveals (with `Plan.` dimmed and overlapped by the dumbbell), the
+/// AI-Powered Fitness pill + subtitle + CTA come up. Identical composition
+/// to the website hero.
 struct SwipeUpSplashView: View {
     var onFinished: () -> Void
     var onLogin: (() -> Void)?
 
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(AppState.self) private var appState
 
     @State private var appeared:           Bool    = false
-    @State private var dragY:              CGFloat = 0
     @State private var isDragging:         Bool    = false
     @State private var placed:             Bool    = false
     @State private var contentVisible:     Bool    = false
-    @State private var nearThreshold:      Bool    = false   // for escalating haptics
+    @State private var nearThreshold:      Bool    = false
     @State private var showLanguagePicker: Bool    = false
+
+    // Particle simulation state — bound to ParticleDumbbellView. Drag updates
+    // `dragProgress`; threshold release schedules a multi-stage morph
+    // sequence (Scan. → Plan. → Compete. → dumbbell-high) via
+    // `sequenceWorkItems`, each tap-cancellable.
+    @State private var particleStage: ParticleStage = .assembling
+    @State private var dragProgress:  CGFloat       = 0
+    @State private var sequenceWorkItems: [DispatchWorkItem] = []
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -23,65 +40,101 @@ struct SwipeUpSplashView: View {
     private let selection    = UISelectionFeedbackGenerator()
     private let notification = UINotificationFeedbackGenerator()
 
-    private let dbSize: CGFloat = 360
-
     var body: some View {
         GeometryReader { geo in
-            let sw         = geo.size.width
-            let sh         = geo.size.height
+            let sw = geo.size.width
+            let sh = geo.size.height
             let safeBottom = geo.safeAreaInsets.bottom
+            let safeTop = geo.safeAreaInsets.top
 
-            let frameCenterY: CGFloat = sh * 0.38
-            let frameSize:    CGFloat = 260
-            let dbRestY:      CGFloat = sh - safeBottom - 8 - dbSize / 2
-            let travelDist            = dbRestY - frameCenterY
-            let progress: CGFloat     = travelDist > 0
-                ? max(0, min(1.2, -dragY / travelDist)) : 0
-            let dbCenterY: CGFloat    = placed ? frameCenterY : (dbRestY + dragY)
+            let frameCenterY: CGFloat = sh * 0.42
+            let frameSize: CGFloat = 200
 
-            ZStack(alignment: .top) {
-                Color(.systemBackground).ignoresSafeArea()
+            ZStack {
+                // ── Z0: black canvas ─────────────────────────────────────────
+                Color.black.ignoresSafeArea()
 
-                // ── Z1: Dumbbell — inverted color vs background ───────────────
-                DumbbellSceneView(transparent: true, darkChrome: colorScheme == .light)
-                    .frame(width: dbSize, height: dbSize)
-                    .shadow(color: Color.primary.opacity(0.12), radius: 32, y: 14)
-                    .allowsHitTesting(false)
-                    .opacity(appeared ? 1 : 0)
-                    .position(x: sw / 2, y: dbCenterY)
-                    .zIndex(1)
-
-                // ── Z2: Scan frame ────────────────────────────────────────────
+                // ── Z2: scan frame target ────────────────────────────────────
                 scanFrameView(size: frameSize)
                     .position(x: sw / 2, y: frameCenterY)
-                    .opacity(contentVisible ? 1 : 0)
+                    .opacity(contentVisible ? 0.55 : (appeared ? 0.16 : 0))
                     .zIndex(2)
 
+                // ── Z3: dimmed "Plan." word (sits BEHIND the dumbbell) ───────
+                // Web uses class="dim" on this — we render it as a separate
+                // view at low z-index so the dumbbell visually overlaps it.
                 if contentVisible {
-                    SplashSweepLine()
-                        .frame(width: frameSize, height: frameSize)
+                    Text("Plan.")
+                        .font(.system(size: 100, weight: .black))
+                        .tracking(-3)
+                        .foregroundStyle(.white.opacity(0.62))
                         .position(x: sw / 2, y: frameCenterY)
-                        .zIndex(2)
+                        .zIndex(3)
+                        .transition(.opacity)
                 }
 
-                // ── Z3: Headline text ─────────────────────────────────────────
-                headlineText
-                    .position(x: sw / 2, y: frameCenterY + frameSize / 2 + 76)
-                    .opacity(contentVisible ? 1 : 0)
-                    .offset(y: contentVisible ? 0 : 18)
-                    .zIndex(3)
+                // ── Z4: particle-forge dumbbell (full splash) ───────────────
+                // Single full-screen MTKView, particle-only — handles all
+                // states (assemble, idle, burst, morph through Scan/Plan/
+                // Compete, final reform). See `ParticleDumbbellView`.
+                ParticleDumbbellView(stage: $particleStage,
+                                       dragProgress: $dragProgress)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .opacity(appeared ? 1 : 0)
+                    .zIndex(4)
 
-                // ── Z4: Top bar — FitAI wordmark (left) + language picker (right) ──
+                // ── Z5: "Scan." (above) and "Compete." (below) headline ──────
+                if contentVisible {
+                    Text("Scan.")
+                        .font(.system(size: 72, weight: .black))
+                        .tracking(-3)
+                        .foregroundStyle(.white)
+                        .position(x: sw / 2, y: frameCenterY - frameSize / 2 - 40)
+                        .zIndex(5)
+                        .transition(.opacity.combined(with: .offset(y: 12)))
+
+                    Text("Compete.")
+                        .font(.system(size: 72, weight: .black))
+                        .tracking(-3)
+                        .foregroundStyle(.white)
+                        .position(x: sw / 2, y: frameCenterY + frameSize / 2 + 40)
+                        .zIndex(5)
+                        .transition(.opacity.combined(with: .offset(y: -12)))
+                }
+
+                // ── Z6: AI-Powered Fitness pill (above Scan.) ────────────────
+                if contentVisible {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(.white.opacity(0.85))
+                            .frame(width: 5, height: 5)
+                        Text("AI-Powered Fitness")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .tracking(0.2)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.white.opacity(0.06), in: Capsule())
+                    .overlay(Capsule().strokeBorder(.white.opacity(0.13), lineWidth: 1))
+                    .position(x: sw / 2, y: frameCenterY - frameSize / 2 - 100)
+                    .zIndex(6)
+                    .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                }
+
+                // ── Z7: top bar (FitAI logo left, language right) ────────────
                 HStack(alignment: .center) {
                     HStack(spacing: 7) {
                         Image(systemName: "dumbbell.fill")
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Color.primary.opacity(0.72))
+                            .foregroundStyle(.white.opacity(0.72))
                         Text("FitAI")
                             .font(.system(size: 20, weight: .black))
-                            .foregroundStyle(Color.primary)
+                            .foregroundStyle(.white)
                             .tracking(-0.4)
                     }
+                    .opacity(contentVisible ? 1 : (appeared ? 0.45 : 0))
 
                     Spacer()
 
@@ -91,73 +144,63 @@ struct SwipeUpSplashView: View {
                                 .font(.system(size: 13, weight: .medium))
                             Text(currentFlag).font(.system(size: 16))
                         }
-                        .foregroundStyle(Color.primary.opacity(0.72))
+                        .foregroundStyle(.white.opacity(0.72))
                         .padding(.horizontal, 12).padding(.vertical, 7)
-                        .background(Color.primary.opacity(0.06), in: Capsule())
-                        .overlay(Capsule().strokeBorder(Color.primary.opacity(0.13), lineWidth: 1))
+                        .background(.white.opacity(0.06), in: Capsule())
+                        .overlay(Capsule().strokeBorder(.white.opacity(0.13), lineWidth: 1))
                     }
+                    .opacity(contentVisible ? 1 : 0)
                     .allowsHitTesting(contentVisible)
                 }
                 .padding(.horizontal, 22)
-                .padding(.top, 8)
-                .frame(maxWidth: .infinity, alignment: .top)
-                .opacity(contentVisible ? 1 : 0)
-                .zIndex(4)
+                .padding(.top, safeTop > 0 ? 8 : 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .zIndex(7)
 
-                // ── Z5: Get Started + Login buttons ─────────────────────────
-                VStack(spacing: 14) {
+                // ── Z8: subtitle + CTA + footer ──────────────────────────────
+                VStack(spacing: 16) {
                     Spacer()
+
+                    if contentVisible {
+                        Text("Upload a photo. Get a plan built for your\nbody. Climb the global leaderboard.")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundStyle(.white.opacity(0.62))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                            .padding(.horizontal, 32)
+                            .transition(.opacity)
+                    }
+
                     Button {
                         impactHeavy.impactOccurred()
                         onFinished()
                     } label: {
                         Text("Get Started")
                             .font(.system(.headline, weight: .bold))
-                            .foregroundStyle(Color(.systemBackground))
+                            .foregroundStyle(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(Color.primary)
+                            .background(.white)
                             .clipShape(.rect(cornerRadius: 28))
                     }
+                    .padding(.horizontal, 24)
 
                     Button {
                         onLogin?() ?? onFinished()
                     } label: {
                         Text("Already have an account? **Log In**")
                             .font(.subheadline)
-                            .foregroundStyle(Color.primary.opacity(0.50))
+                            .foregroundStyle(.white.opacity(0.50))
                     }
 
-                    HStack(spacing: 4) {
-                        Text(L.t("byContinuingAgree", lang))
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.primary.opacity(0.32))
-                        Text(L.t("terms", lang))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.primary.opacity(0.55))
-                        Text(L.t("and", lang))
-                            .font(.system(size: 11))
-                            .foregroundStyle(Color.primary.opacity(0.32))
-                        Text(L.t("privacyPolicy", lang))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.primary.opacity(0.55))
-                    }
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, safeBottom + 14)
+                    Text("Free 3-day trial · No credit card")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white.opacity(0.32))
+                        .padding(.bottom, safeBottom + 14)
                 }
-                .padding(.horizontal, 24)
                 .opacity(contentVisible ? 1 : 0)
                 .offset(y: contentVisible ? 0 : 22)
-                .zIndex(5)
-
-                // ── Z6: Swipe hint ────────────────────────────────────────────
-                if !placed {
-                    SwipeHintView()
-                        .position(x: sw / 2, y: dbRestY - dbSize / 2 - 32)
-                        .opacity(appeared && !isDragging ? 1 : 0)
-                        .animation(.easeInOut(duration: 0.2), value: isDragging)
-                        .zIndex(6)
-                }
+                .zIndex(8)
             }
             .overlay {
                 if !placed {
@@ -168,25 +211,23 @@ struct SwipeUpSplashView: View {
                             DragGesture(minimumDistance: 6)
                                 .onChanged { value in
                                     let dy = min(0, value.translation.height)
+                                    // 220pt of drag = full burst.
+                                    let p = max(0, min(1.0, -dy / 220))
 
                                     if !isDragging {
                                         isDragging = true
                                         impactMed.impactOccurred()
+                                        particleStage = .bursting
                                     }
+                                    dragProgress = p
 
-                                    dragY = dy   // direct 1:1, no animation
-
-                                    let p = travelDist > 0 ? -dy / travelDist : 0
-
-                                    // Tick every ~50 pt
                                     if Int(abs(dy)) % 50 < 3 && abs(dy) > 30 {
                                         selection.selectionChanged()
                                     }
 
-                                    // Escalate: medium tick when 60% of the way
-                                    if p > 0.60 && !nearThreshold {
+                                    if p > 0.55 && !nearThreshold {
                                         nearThreshold = true
-                                        impactMed.impactOccurred()
+                                        impactHeavy.impactOccurred()
                                     } else if p < 0.40 && nearThreshold {
                                         nearThreshold = false
                                     }
@@ -195,13 +236,14 @@ struct SwipeUpSplashView: View {
                                     isDragging = false
                                     nearThreshold = false
                                     let velocity = value.predictedEndTranslation.height
-                                    if progress > 0.52 || velocity < -700 {
+                                    if dragProgress > 0.50 || velocity < -700 {
                                         triggerPlace()
                                     } else {
-                                        // Light feedback — snapped back
                                         impactLight.impactOccurred()
-                                        withAnimation(.spring(response: 0.42, dampingFraction: 0.74)) {
-                                            dragY = 0
+                                        particleStage = .idle
+                                        withAnimation(.spring(response: 0.5,
+                                                                dampingFraction: 0.78)) {
+                                            dragProgress = 0
                                         }
                                     }
                                 }
@@ -209,8 +251,31 @@ struct SwipeUpSplashView: View {
                         .zIndex(10)
                 }
             }
-            .onChange(of: dragY) { _, _ in }
+            .overlay {
+                // Tap-to-skip during the morph sequence (after triggerPlace
+                // but before content reveal). Single tap cancels remaining
+                // stages and jumps to idleFinal + reveals content.
+                if placed && !contentVisible {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .ignoresSafeArea()
+                        .onTapGesture { skipSequence() }
+                        .zIndex(12)
+                }
+            }
+            .overlay {
+                if !placed {
+                    SwipeHintView()
+                        .position(x: sw / 2,
+                                   y: sh - safeBottom - 320)
+                        .opacity(appeared && !isDragging ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.2), value: isDragging)
+                        .allowsHitTesting(false)
+                        .zIndex(11)
+                }
+            }
         }
+        .preferredColorScheme(.dark)
         .onAppear {
             impactMed.prepare()
             impactHeavy.prepare()
@@ -295,46 +360,97 @@ struct SwipeUpSplashView: View {
 
     // MARK: - Snap to frame
 
+    /// Schedule the morph sequence after the user crosses the swipe-up
+    /// threshold. Each stage transition is a DispatchWorkItem so a tap can
+    /// cancel the rest of the chain via `skipSequence()`.
+    ///
+    /// Sequence: morphScan → holdScan → morphPlan → holdPlan →
+    /// morphCompete → holdCompete → morphFinal → idleFinal (content reveal).
+    /// Total ~3.6s. Subtle haptic on each word lock-in.
     private func triggerPlace() {
         impactHeavy.impactOccurred()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-            self.notification.notificationOccurred(.success)
-        }
+        withAnimation(.easeOut(duration: 0.25)) { dragProgress = 0 }
         withAnimation(.spring(response: 0.38, dampingFraction: 0.82)) {
             placed = true
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.40) {
+
+        // Durations match ParticleStage.morphDuration in the renderer.
+        // Holds at 0.90s give the eye time to absorb each word; tap-to-skip
+        // is still wired up if the user wants to bypass the cycle.
+        let morphDur:  TimeInterval = 0.75
+        let holdDur:   TimeInterval = 0.90
+        let finalDur:  TimeInterval = 0.95
+
+        var elapsed: TimeInterval = 0
+        sequenceWorkItems.removeAll()
+
+        schedule(after: elapsed) {
+            particleStage = .morphScan
+        }
+        elapsed += morphDur
+        schedule(after: elapsed) {
+            particleStage = .holdScan
+            selection.selectionChanged()
+        }
+        elapsed += holdDur
+        schedule(after: elapsed) {
+            particleStage = .morphPlan
+        }
+        elapsed += morphDur
+        schedule(after: elapsed) {
+            particleStage = .holdPlan
+            selection.selectionChanged()
+        }
+        elapsed += holdDur
+        schedule(after: elapsed) {
+            particleStage = .morphCompete
+        }
+        elapsed += morphDur
+        schedule(after: elapsed) {
+            particleStage = .holdCompete
+            selection.selectionChanged()
+        }
+        elapsed += holdDur
+        schedule(after: elapsed) {
+            particleStage = .morphFinal
+            impactMed.impactOccurred()
+        }
+        elapsed += finalDur
+        schedule(after: elapsed) {
+            particleStage = .idleFinal
+            notification.notificationOccurred(.success)
             withAnimation(.easeOut(duration: 0.55)) {
                 contentVisible = true
             }
         }
     }
 
-    // MARK: - Scan frame
-
-    private var headlineText: some View {
-        VStack(alignment: .center, spacing: -4) {
-            Text("Scan.")
-                .font(.system(size: 52, weight: .bold))
-                .foregroundStyle(Color.primary)
-                .tracking(-2.5)
-            Text("Plan.")
-                .font(.system(size: 52, weight: .thin))
-                .foregroundStyle(Color.primary.opacity(0.32))
-                .tracking(-2.5)
-            Text("Compete.")
-                .font(.system(size: 52, weight: .bold))
-                .foregroundStyle(Color.primary)
-                .tracking(-2.5)
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.62)
+    private func schedule(after delay: TimeInterval, _ action: @escaping () -> Void) {
+        let work = DispatchWorkItem(block: action)
+        sequenceWorkItems.append(work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
+    /// Cancel any pending morph stages and jump straight to the final
+    /// dumbbell + content reveal. Hooked up to a tap during the sequence.
+    private func skipSequence() {
+        guard placed && !contentVisible else { return }
+        sequenceWorkItems.forEach { $0.cancel() }
+        sequenceWorkItems.removeAll()
+        impactLight.impactOccurred()
+        particleStage = .idleFinal
+        notification.notificationOccurred(.success)
+        withAnimation(.easeOut(duration: 0.4)) {
+            contentVisible = true
+        }
+    }
+
+    // MARK: - Scan frame (corner brackets)
+
     private func scanFrameView(size: CGFloat) -> some View {
-        let len: CGFloat   = 30
+        let len: CGFloat = 30
         let thick: CGFloat = 1.8
-        let color = Color.primary.opacity(0.45)
+        let color = Color.white.opacity(0.42)
         return ZStack {
             cornerBracket(len: len, thick: thick, color: color, flipH: false, flipV: false)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -370,53 +486,24 @@ private struct SwipeHintView: View {
     @State private var opacity: Double  = 1
 
     var body: some View {
-        VStack(spacing: 5) {
+        VStack(spacing: 8) {
             Image(systemName: "chevron.up")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.primary.opacity(0.38))
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white.opacity(0.78))
                 .offset(y: bounce)
-            Text("Swipe up")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(Color.primary.opacity(0.28))
-                .tracking(0.2)
+            Text("Drag up")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.white.opacity(0.72))
+                .tracking(0.6)
+                .textCase(.uppercase)
         }
         .opacity(opacity)
         .onAppear {
-            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
-                bounce = -6
+            withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+                bounce = -8
             }
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true).delay(0.4)) {
-                opacity = 0.45
-            }
-        }
-    }
-}
-
-// MARK: - Sweep line (uses phased animation to avoid recursive DispatchQueue leaks)
-
-private struct SplashSweepLine: View {
-    @State private var phase: Int = 0
-    private let cycleDuration: Double = 3.1  // total cycle length
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: cycleDuration)) { timeline in
-            GeometryReader { geo in
-                let elapsed = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: cycleDuration)
-                let progress = min(1, elapsed / 2.8)
-                let opacity: Double = {
-                    if elapsed < 0.18 { return elapsed / 0.18 * 0.9 }
-                    if elapsed < 2.5 { return 0.9 }
-                    if elapsed < 2.75 { return 0.9 * (1 - (elapsed - 2.5) / 0.25) }
-                    return 0
-                }()
-
-                Rectangle()
-                    .fill(LinearGradient(
-                        colors: [.clear, Color.primary.opacity(0.45), .clear],
-                        startPoint: .leading, endPoint: .trailing))
-                    .frame(height: 1)
-                    .offset(y: progress * geo.size.height)
-                    .opacity(opacity)
+                opacity = 0.78
             }
         }
     }

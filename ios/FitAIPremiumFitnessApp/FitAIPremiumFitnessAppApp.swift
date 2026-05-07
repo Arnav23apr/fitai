@@ -30,6 +30,7 @@ enum Config {
 
 @main
 struct FitAIPremiumFitnessAppApp: App {
+    @UIApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
     @State private var appState = AppState()
     @State private var tourManager = TourManager()
     @State private var notificationRouter = NotificationRouter()
@@ -50,7 +51,10 @@ struct FitAIPremiumFitnessAppApp: App {
             ContentView()
                 .environment(appState)
                 .environment(tourManager)
-                .preferredColorScheme(appState.profile.forceDarkMode ? .dark : nil)
+                // Locked to dark globally — premium AAA aesthetic, no
+                // light-mode UI in the app. Was previously gated on
+                // `profile.forceDarkMode`; now always dark.
+                .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     supabaseAuth.handle(url)
                 }
@@ -61,6 +65,10 @@ struct FitAIPremiumFitnessAppApp: App {
                         profile: appState.profile,
                         scanHistory: appState.scanHistory
                     )
+                    // Request APNs once per session — idempotent, kicks off
+                    // the AppDelegate didRegister... callback which uploads
+                    // the device token to push_tokens.
+                    await PushNotificationService.shared.requestAuthorizationAndRegister()
                     await StoreViewModel.shared.fetchOfferings()
                     syncPremiumStatus()
                 }
@@ -68,6 +76,9 @@ struct FitAIPremiumFitnessAppApp: App {
                     Task {
                         await StoreViewModel.shared.fetchOfferings()
                         syncPremiumStatus()
+                        // Bump presence heartbeat — friends will see us as
+                        // online for the next 5 min after every foreground.
+                        await appState.bumpPresence()
                     }
                 }
         }

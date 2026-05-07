@@ -1,5 +1,6 @@
 import Foundation
 import UserNotifications
+import Auth
 
 class NotificationService {
     static let shared = NotificationService()
@@ -18,6 +19,25 @@ class NotificationService {
         if let data = try? JSONEncoder().encode(settings) {
             UserDefaults.standard.set(data, forKey: settingsKey)
         }
+        // Mirror to user_profiles.notification_prefs so reminder times
+        // follow the user across devices. Best-effort — no error UI.
+        Task.detached { [settings] in
+            guard let userId = await SupabaseAuthService.shared.currentSession()?
+                .user.id.uuidString.lowercased() else { return }
+            let prefs: [String: Any] = [
+                "trainingRemindersEnabled":   settings.trainingRemindersEnabled,
+                "reminderHour":               settings.reminderHour,
+                "reminderMinute":             settings.reminderMinute,
+                "workoutDays":                Array(settings.workoutDays),
+                "missedWorkoutNudgeEnabled":  settings.missedWorkoutNudgeEnabled,
+                "monthlyRescanEnabled":       settings.monthlyRescanEnabled,
+                "streakAlertsEnabled":        settings.streakAlertsEnabled,
+                "hydrationReminderEnabled":   settings.hydrationReminderEnabled,
+                "challengeReminderEnabled":   settings.challengeReminderEnabled,
+                "prMilestoneReminderEnabled": settings.prMilestoneReminderEnabled,
+            ]
+            await SupabaseSyncService.shared.setNotificationPrefs(userId: userId, prefs: prefs)
+        }
     }
 
     func reconcileAll(profile: UserProfile, scanHistory: [ScanHistoryEntry]) {
@@ -32,22 +52,29 @@ class NotificationService {
 
         removeAllScheduled()
 
+        // Free users get scheduled workout reminders only — the other
+        // categories (streak alerts, missed-workout nudges, rescan reminders,
+        // hydration, challenge reminders) are part of the paid experience.
+        // Locking everything would feel punishing; locking nothing leaves no
+        // upgrade incentive — reminders is the right floor.
+        let allowAllCategories = profile.isPremium
+
         if settings.trainingRemindersEnabled {
             scheduleWorkoutReminders(settings: settings, profile: profile)
         }
-        if settings.missedWorkoutNudgeEnabled {
+        if allowAllCategories && settings.missedWorkoutNudgeEnabled {
             scheduleMissedWorkoutNudge(settings: settings, profile: profile)
         }
-        if settings.monthlyRescanEnabled {
+        if allowAllCategories && settings.monthlyRescanEnabled {
             scheduleRescanReminder(profile: profile, scanHistory: scanHistory)
         }
-        if settings.streakAlertsEnabled {
+        if allowAllCategories && settings.streakAlertsEnabled {
             scheduleStreakReminder(profile: profile)
         }
-        if settings.hydrationReminderEnabled {
+        if allowAllCategories && settings.hydrationReminderEnabled {
             scheduleHydrationReminder(settings: settings)
         }
-        if settings.challengeReminderEnabled {
+        if allowAllCategories && settings.challengeReminderEnabled {
             scheduleChallengeReminder(profile: profile)
         }
     }

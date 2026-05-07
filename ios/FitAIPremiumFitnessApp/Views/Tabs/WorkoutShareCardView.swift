@@ -356,7 +356,11 @@ struct WorkoutShareOverlay: View {
     let data: WorkoutShareCardData
     let onDismiss: () -> Void
 
-    @State private var cardAppeared: Bool = false
+    // Default true so the card is visible immediately on present. Was
+    // false-then-flipped-via-onAppear, but in some fullScreenCover
+    // presentation flows on iOS 17+ the onAppear fires after a runloop
+    // tick and the entire card stays at opacity 0 → blank screen.
+    @State private var cardAppeared: Bool = true
     @State private var selectedCard: Int = 0
 
     // Workout card customization
@@ -468,11 +472,6 @@ struct WorkoutShareOverlay: View {
                 .opacity(cardAppeared ? 1 : 0)
             }
             .padding(.bottom, 20)
-        }
-        .onAppear {
-            withAnimation(.spring(duration: 0.5, bounce: 0.2)) {
-                cardAppeared = true
-            }
         }
     }
 

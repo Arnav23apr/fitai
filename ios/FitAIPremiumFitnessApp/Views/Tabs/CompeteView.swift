@@ -2,15 +2,23 @@ import SwiftUI
 
 struct CompeteView: View {
     @Environment(AppState.self) private var appState
+    @Environment(TourManager.self) private var tourManager
 
     private var lang: String { appState.profile.selectedLanguage }
     @State private var showBattleSetup: Bool = false
+    /// Set when a push notification deep-links into a specific challenge.
+    /// CompeteView watches tourManager.pendingChallengeId, resolves the
+    /// matching PopulatedChallenge, and presents ChallengeDetailSheet.
+    @State private var pushOpenedChallenge: PopulatedChallenge? = nil
     @State private var selectedLeaderboardTab: LeaderboardTab = .thisWeek
     @State private var appeared: Bool = false
     @State private var streakFireTrigger: Int = 0
     @State private var challengesExpanded: Bool = false
     @State private var showFriends: Bool = false
     @State private var friendVM = FriendViewModel()
+    /// Set when the user taps a friend bubble — drives a presentation of
+    /// FriendProfileSheet with that friend's profile + head-to-head record.
+    @State private var profileFriend: SocialProfileSummary? = nil
     @State private var showRankProgression: Bool = false
     @State private var realLeaderboard: [LeaderboardProfile] = []
     @State private var isLoadingLeaderboard: Bool = false
@@ -74,20 +82,24 @@ struct CompeteView: View {
         }
     }
 
-    private let activityFeed: [ActivityFeedItem] = []
-
     var body: some View {
         NavigationStack {
             ScrollViewReader { scrollProxy in
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    battleCard
+                    liveTicker
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 24)
-                        .tourAnchor(.competeRankBadge)
+                        .padding(.bottom, 14)
 
-                    friendsSection
-                        .padding(.bottom, 20)
+                    VStack(spacing: 0) {
+                        battleCard
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 24)
+
+                        friendsSection
+                            .padding(.bottom, 20)
+                    }
+                    .tourAnchor(.competeRankBadge)
 
                     comingSoonCard
                         .padding(.horizontal, 20)
@@ -105,11 +117,38 @@ struct CompeteView: View {
             }
             .sheet(isPresented: $showFriends) {
                 FriendsView()
+                    .presentationDragIndicator(.visible)
             }
-            .onAppear {
-                if !appState.profile.username.isEmpty {
-                    friendVM.setUsername(appState.profile.username)
+            .sheet(item: $profileFriend) { friend in
+                FriendProfileSheet(viewModel: friendVM, friend: friend)
+            }
+            .sheet(item: $pushOpenedChallenge) { challenge in
+                ChallengeDetailSheet(viewModel: friendVM, challenge: challenge)
+            }
+            .onChange(of: tourManager.pendingChallengeId) { _, newId in
+                guard let newId else { return }
+                Task {
+                    // Refresh first in case the deep-linked challenge isn't
+                    // in the cached list yet (push fired before next refresh).
+                    await friendVM.refresh()
+                    if let match = friendVM.challenges.first(where: { $0.row.id == newId }) {
+                        pushOpenedChallenge = match
+                    }
+                    // Always clear so the same id won't re-trigger on a
+                    // subsequent unrelated tab change.
+                    tourManager.pendingChallengeId = nil
                 }
+            }
+            .task {
+                friendVM.attach(appState)
+                await friendVM.refresh()
+                // Open the Realtime channel for friend_requests / challenges /
+                // notifications / friendships. Channel auto-closes when the
+                // tab disappears (see .onDisappear).
+                await friendVM.startRealtime()
+            }
+            .onDisappear {
+                Task { await friendVM.stopRealtime() }
             }
         }
     }
@@ -146,7 +185,6 @@ struct CompeteView: View {
                 .opacity(appeared ? 1 : 0)
                 .scaleEffect(appeared ? 1 : 0.5)
                 .sensoryFeedback(.impact(weight: .light), trigger: showRankProgression)
-                .tourAnchor(.competeRankBadge)
 
             VStack(spacing: 6) {
                 Text(currentTier.name.uppercased())
@@ -194,12 +232,12 @@ struct CompeteView: View {
                         Text("\(appState.profile.currentStreak)")
                             .font(.system(.subheadline, design: .rounded, weight: .bold))
                             .foregroundStyle(.primary)
-                        Text("streak")
+                        Text(L.t("streakLabel", lang))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
                 } else {
-                    statPill(value: "0", label: "streak", icon: "flame.fill", color: .orange)
+                    statPill(value: "0", label: L.t("streakLabel", lang), icon: "flame.fill", color: .orange)
                 }
 
                 statPill(value: "\(appState.profile.totalWorkouts)", label: "wins", icon: "trophy.fill", color: .green)
@@ -261,7 +299,7 @@ struct CompeteView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("ENDS")
+                Text(L.t("endsLabel", lang))
                     .font(.system(.caption2, design: .rounded, weight: .bold))
                     .foregroundStyle(.tertiary)
                 Text("\(seasonInfo.daysRemaining)d")
@@ -417,7 +455,7 @@ struct CompeteView: View {
                             Text(L.t("physiqueBattle", lang))
                                 .font(.headline.weight(.bold))
                                 .foregroundStyle(.primary)
-                            Text("Upload photos • AI judges • Get mogged 💀")
+                            Text(L.t("uploadPhotosCaption", lang))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -790,7 +828,7 @@ struct CompeteView: View {
                         .font(.caption2)
                         .foregroundStyle(tierColorFor(entry.tier).opacity(0.7))
                     if entry.xpToday > 0 {
-                        Text("• +\(entry.xpToday) today")
+                        Text("• " + L.t("todayPlusFmt", lang).replacingOccurrences(of: "%@", with: "\(entry.xpToday)"))
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
@@ -862,7 +900,7 @@ struct CompeteView: View {
                                 )
                             )
                     }
-                    Text("(You)")
+                    Text(L.t("youParen", lang))
                         .font(.caption2)
                         .foregroundStyle(.green.opacity(0.6))
                 }
@@ -978,10 +1016,10 @@ struct CompeteView: View {
                 Image(systemName: "person.2.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(.tertiary)
-                Text("No activity yet")
+                Text(L.t("noActivityYet", lang))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
-                Text("Complete workouts and compete with friends to see activity here.")
+                Text(L.t("noActivityDesc", lang))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .multilineTextAlignment(.center)
@@ -995,16 +1033,23 @@ struct CompeteView: View {
 
     private var friendsSection: some View {
         VStack(spacing: 14) {
-            HStack {
-                Text("Friends & 1v1")
+            HStack(spacing: 6) {
+                Text("\(L.t("friendsAnd1v1", lang)) 👀")
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
+                // Lights up only when at least one friend's `last_seen_at`
+                // is within the past 5 min — real presence, not "you have
+                // friends" decoration.
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 7, height: 7)
+                    .opacity(friendVM.friends.contains(where: { $0.isOnline }) ? 1 : 0)
                 Spacer()
                 Button {
                     showFriends = true
                 } label: {
                     HStack(spacing: 4) {
-                        Text("See All")
+                        Text(L.t("seeAll", lang))
                             .font(.caption.weight(.medium))
                         Image(systemName: "chevron.right")
                             .font(.system(size: 10, weight: .semibold))
@@ -1028,10 +1073,10 @@ struct CompeteView: View {
                                 .foregroundStyle(.blue)
                         }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Add Friends")
+                            Text(L.t("addFriendsTitle", lang))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
-                            Text("Find friends and challenge them")
+                            Text(L.t("addFriendsDesc", lang))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -1068,16 +1113,31 @@ struct CompeteView: View {
                         }
 
                         ForEach(friendVM.friends) { friend in
-                            friendBubble(friend)
+                            Button {
+                                profileFriend = friend
+                            } label: {
+                                friendBubble(friend)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
                 .contentMargins(.horizontal, 20)
 
+                if let rival = rivalOfTheWeek {
+                    rivalOfTheWeekCard(rival)
+                        .padding(.horizontal, 20)
+                }
+
                 if !friendVM.activeChallenges.isEmpty {
                     VStack(spacing: 8) {
                         ForEach(friendVM.activeChallenges.prefix(2)) { challenge in
-                            activeChallengeRow(challenge)
+                            Button {
+                                pushOpenedChallenge = challenge
+                            } label: {
+                                activeChallengeRow(challenge)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 20)
@@ -1086,21 +1146,120 @@ struct CompeteView: View {
         }
     }
 
-    private func friendBubble(_ friend: Friend) -> some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .bottomTrailing) {
+    /// Friend whose latest_score is closest to mine — surfaced as
+    /// "Rival of the Week" suggestion. Server fires a weekly push for the
+    /// same pick; the in-app card is computed locally so it's always live.
+    private var rivalOfTheWeek: SocialProfileSummary? {
+        guard let myScore = appState.profile.latestScore, myScore > 0 else { return nil }
+        return friendVM.friends
+            .filter { ($0.latestScore ?? 0) > 0 }
+            .min(by: { abs(($0.latestScore ?? 0) - myScore) < abs(($1.latestScore ?? 0) - myScore) })
+    }
+
+    private func rivalOfTheWeekCard(_ rival: SocialProfileSummary) -> some View {
+        Button {
+            profileFriend = rival
+        } label: {
+            HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(friendTierColor(friend.tier).opacity(0.12))
-                        .frame(width: 56, height: 56)
-                    Text(friend.avatarEmoji)
-                        .font(.system(size: 24))
+                        .fill(Color.orange.opacity(0.18))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "scope")
+                        .font(.system(size: 18, weight: .heavy))
+                        .foregroundStyle(.orange)
                 }
-                if friend.currentStreak > 0 {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("RIVAL OF THE WEEK")
+                        .font(.system(size: 10, weight: .heavy))
+                        .tracking(1.5)
+                        .foregroundStyle(.orange)
+                    Text("@\(rival.username) · \(rival.latestScore.map { String(format: "%.1f", $0) } ?? "—")")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Closest score to yours. Challenge them.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .heavy))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .background(Color.primary.opacity(0.04))
+            .clipShape(.rect(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Live ticker
+
+    /// Auto-rotating one-line "what's happening" ribbon at the top of the
+    /// Compete tab. Builds messages from friends + recent activity so the
+    /// tab feels populated even when nothing's actively happening — Strava's
+    /// pattern, scaled down. If there's truly nothing to show, the view
+    /// hides itself.
+    private var liveTicker: some View {
+        TickerView(messages: tickerMessages)
+    }
+
+    private var tickerMessages: [String] {
+        var msgs: [String] = []
+        let active = friendVM.friends.filter { ($0.currentStreak ?? 0) > 0 }
+        if !active.isEmpty {
+            msgs.append("🟢 \(active.count) friend\(active.count == 1 ? "" : "s") active this week")
+        }
+        for friend in friendVM.friends.prefix(2) {
+            if let streak = friend.currentStreak, streak >= 3 {
+                msgs.append("🔥 @\(friend.username) on a \(streak)-day streak")
+            }
+        }
+        for ch in friendVM.challenges.prefix(2) {
+            switch ch.row.status {
+            case "pending":
+                msgs.append("🥊 @\(ch.otherUser.username) wants to battle")
+            case "active":
+                msgs.append("⚔️ Live battle with @\(ch.otherUser.username)")
+            case "completed":
+                msgs.append("🏁 Battle vs @\(ch.otherUser.username) finished")
+            default: break
+            }
+        }
+        if msgs.isEmpty && friendVM.friends.isEmpty {
+            msgs.append("👋 Add friends to start battles")
+        }
+        return msgs
+    }
+
+    private func friendBubble(_ friend: SocialProfileSummary) -> some View {
+        VStack(spacing: 8) {
+            ZStack(alignment: .bottomTrailing) {
+                FriendAvatarView(
+                    photoURL: friend.profilePhotoURL,
+                    symbolName: friend.avatarSystemName,
+                    size: 56,
+                    symbolSize: 22,
+                    fallbackBackground: Color.orange.opacity(0.18),
+                    symbolColor: .primary.opacity(0.7)
+                )
+                // Real presence dot — green if friend's `last_seen_at`
+                // was within the last 5 min, otherwise hidden.
+                if friend.isOnline {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 12, height: 12)
+                        .overlay(
+                            Circle().strokeBorder(Color(.systemBackground), lineWidth: 2)
+                        )
+                        .offset(x: -2, y: -2)
+                }
+
+                if let streak = friend.currentStreak, streak > 0 {
                     HStack(spacing: 1) {
                         Image(systemName: "flame.fill")
                             .font(.system(size: 7))
-                        Text("\(friend.currentStreak)")
+                        Text("\(streak)")
                             .font(.system(size: 8, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(.white)
@@ -1108,7 +1267,7 @@ struct CompeteView: View {
                     .padding(.vertical, 2)
                     .background(Color.orange)
                     .clipShape(Capsule())
-                    .offset(x: 4, y: 2)
+                    .offset(x: 4, y: 12)
                 }
             }
             Text(friend.displayName.components(separatedBy: " ").first ?? friend.displayName)
@@ -1119,7 +1278,7 @@ struct CompeteView: View {
         .frame(width: 72)
     }
 
-    private func activeChallengeRow(_ challenge: Challenge1v1) -> some View {
+    private func activeChallengeRow(_ challenge: PopulatedChallenge) -> some View {
         HStack(spacing: 12) {
             ZStack {
                 Circle()
@@ -1131,22 +1290,22 @@ struct CompeteView: View {
             }
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("vs \(challenge.opponentName)")
+                Text("vs @\(challenge.otherUser.username)")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.primary)
-                Text(challenge.category)
+                Text(challenge.row.category.replacingOccurrences(of: "_", with: " ").capitalized)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
 
             Spacer()
 
-            Text(challengeStatusText(challenge.status))
+            Text(challengeStatusText(challenge.row.status))
                 .font(.system(.caption2, design: .rounded, weight: .bold))
-                .foregroundStyle(challengeStatusColor(challenge.status))
+                .foregroundStyle(challengeStatusColor(challenge.row.status))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
-                .background(challengeStatusColor(challenge.status).opacity(0.1))
+                .background(challengeStatusColor(challenge.row.status).opacity(0.1))
                 .clipShape(Capsule())
         }
         .padding(12)
@@ -1154,24 +1313,26 @@ struct CompeteView: View {
         .clipShape(.rect(cornerRadius: 12))
     }
 
-    private func challengeStatusText(_ status: ChallengeStatus) -> String {
+    private func challengeStatusText(_ status: String) -> String {
         switch status {
-        case .pending: return "Pending"
-        case .accepted: return "Accepted"
-        case .inProgress: return "Live"
-        case .completed: return "Done"
-        case .declined: return "Declined"
-        case .expired: return "Expired"
+        case "pending": return "Pending"
+        case "accepted": return "Accepted"
+        case "in_progress": return "Live"
+        case "completed": return "Done"
+        case "declined": return "Declined"
+        case "expired": return "Expired"
+        default: return status.capitalized
         }
     }
 
-    private func challengeStatusColor(_ status: ChallengeStatus) -> Color {
+    private func challengeStatusColor(_ status: String) -> Color {
         switch status {
-        case .pending: return .orange
-        case .accepted: return .blue
-        case .inProgress: return .purple
-        case .completed: return .green
-        case .declined, .expired: return .gray
+        case "pending": return .orange
+        case "accepted": return .blue
+        case "in_progress": return .purple
+        case "completed": return .green
+        case "declined", "expired": return .gray
+        default: return .gray
         }
     }
 

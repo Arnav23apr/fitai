@@ -1,7 +1,8 @@
 # Privacy Policy
 
-**Effective date:** {{EFFECTIVE_DATE}}
-**Last updated:** {{LAST_UPDATED_DATE}}
+**Effective date:** May 5, 2026
+**Last updated:** May 5, 2026
+**Photo consent version:** 1
 
 > ⚠️ **Important:** This document is a starting template tailored to FitAI's
 > actual data practices. It is **not legal advice**. Have a qualified attorney
@@ -15,7 +16,7 @@
 > naming the entity as the data controller, and users must be notified of the
 > change in-app and at the URL where this Policy is hosted.
 
-This Privacy Policy describes how **{{OPERATOR_NAME}}** ("FitAI", "we",
+This Privacy Policy describes how **George Nourescu** ("FitAI", "we",
 "us") collects, uses, and shares your personal information when you use the
 FitAI iOS application (the "App") and related services.
 
@@ -23,14 +24,14 @@ FitAI iOS application (the "App") and related services.
 
 ## 1. Who we are
 
-FitAI is operated by **{{OPERATOR_NAME}}**, an individual freelancer /
+FitAI is operated by **George Nourescu**, an individual freelancer /
 sole trader trading under the brand "FitAI", with a registered place of
-business at {{OPERATOR_ADDRESS}}, {{COUNTRY}}{{TAX_ID_LINE}}.
+business at Strada Țepeș Vodă 7, Unit #370, Pitești 110036, Arges, Romania.
 
 For privacy questions or to exercise your rights, contact us at
-**{{PRIVACY_CONTACT_EMAIL}}**.
+**team@fitai.health**.
 
-If you are in the European Economic Area, {{OPERATOR_NAME}} (acting as a
+If you are in the European Economic Area, George Nourescu (acting as a
 natural person under their own name) is the **data controller** for your
 personal data. We will update this section if and when the operating entity
 changes (e.g. incorporation of a limited company).
@@ -60,10 +61,31 @@ Information you provide during onboarding or in the profile screen, including:
 - Optional avatar and bio
 
 ### 2.3 Body scan photos and analysis results
-- Photos you take or upload for AI physique analysis ("scans")
-- The AI-generated assessment of each scan, including overall score, strong
-  points, weak points, and per-muscle-group scores
-- Scan history (date, score, photo reference)
+
+When you take a body scan or upload a photo for analysis, **the image is sent
+over TLS 1.3 to Google Gemini for inference, then to our servers (Supabase,
+US-East) only when used to generate your "Future You" projection or a 1v1
+battle.**
+
+- **Body-scan photos used purely for the score** are processed in memory and
+  **not stored persistently**. They are sent to Gemini, the assessment is
+  returned, and the photo is discarded when the scan completes.
+- **"Future You" goal-projection source photos** are stored in our
+  `goal_projections` bucket and **deleted within 30 days**.
+- **1v1 battle photos** are stored in our `challenge_photos` bucket and
+  **deleted within 7 days** of the battle ending (or 30 days, whichever
+  is sooner).
+- AI-generated assessment data (overall score, strong/weak points,
+  per-muscle scores) is retained until you delete your account.
+- Photos are encrypted at rest (AES-256) and accessed only via short-lived
+  signed URLs (max 7 days for challenges, 1 hour for projections).
+- **EXIF metadata** (location, device serial, camera info) is stripped on
+  your device before upload.
+
+**We do not sell your photos. We do not use your photos to train any AI
+model.** Photos are shared only with Google Gemini under their API terms,
+which prohibit training on customer data. Google does not retain photos
+beyond the short window they require for abuse detection.
 
 ### 2.4 Workout and activity data
 - Workouts you log (exercises, sets, reps, weights, duration)
@@ -108,15 +130,21 @@ We use the data above for the following purposes:
 
 | Purpose | Categories used | Legal basis (GDPR) |
 |---|---|---|
-| Provide AI scan analysis | Photos, profile data | Contract |
-| Generate personalized workout plans, meal plans, coach responses | Profile data, scan results, workout logs | Contract |
-| Sync your data across reinstalls and devices | All account data | Contract |
-| Process subscriptions and manage entitlements | Account, subscription data | Contract |
-| Operate the referral program | Referral codes, attribution data | Contract / Legitimate interests |
-| Detect abuse, fraud, and policy violations | All categories | Legitimate interests |
-| Improve product quality (aggregate analytics) | Anonymous usage events | Legitimate interests |
-| Send service announcements (rare) | Email | Legitimate interests |
-| Comply with legal obligations | All categories as needed | Legal obligation |
+| Provide AI scan analysis (body photos) | Photos, profile data | **Art. 6(1)(b) Contract** + **Art. 9(2)(a) Explicit consent** for special-category data |
+| Generate "Future You" goal-projection image | Front body photo, profile data | **Art. 9(2)(a) Explicit consent** |
+| 1v1 battle photo comparisons | Photos submitted for that battle | **Art. 9(2)(a) Explicit consent** |
+| Generate personalized workout plans, meal plans, coach responses | Profile data, scan results, workout logs | Art. 6(1)(b) Contract |
+| Sync your data across reinstalls and devices | All account data | Art. 6(1)(b) Contract |
+| Process subscriptions and manage entitlements | Account, subscription data | Art. 6(1)(b) Contract |
+| Operate the referral program | Referral codes, attribution data | Art. 6(1)(b) Contract / 6(1)(f) Legitimate interests |
+| Detect abuse, fraud, and policy violations | All categories | Art. 6(1)(f) Legitimate interests |
+| Improve product quality (aggregate analytics) | Anonymous usage events | Art. 6(1)(f) Legitimate interests |
+| Send service announcements (rare) | Email | Art. 6(1)(f) Legitimate interests |
+| Comply with legal obligations | All categories as needed | Art. 6(1)(c) Legal obligation |
+
+**Withdrawing consent.** You can withdraw photo-related consent at any
+time from **Profile → Privacy** without affecting prior processing.
+Withdrawal blocks all future scans and battle photo uploads.
 
 We **do not** sell your personal data, and we **do not** use it to train
 foundation AI models that benefit third parties.
@@ -164,7 +192,7 @@ update this list and notify users in-app.
 
 ## 6. International data transfers
 
-Our backend (Supabase) is hosted in **{{SUPABASE_REGION}}**. AI requests are
+Our backend (Supabase) is hosted in **US East (N. Virginia, us-east-1)**. AI requests are
 processed by Google in regions disclosed by Google. If you are in the EEA, UK,
 or Switzerland, your data may be transferred to the United States or other
 regions. Where required, we rely on the **European Commission's Standard
@@ -177,7 +205,10 @@ Contractual Clauses** or equivalent safeguards.
 | Data | Retention period |
 |---|---|
 | Account profile | Until you delete your account |
-| Scan photos and history | Until you delete a scan or delete your account |
+| Body-scan photos used for scoring | **Not stored** — processed in memory and discarded |
+| "Future You" source photos | **30 days max**, then auto-deleted from storage and backups |
+| 1v1 battle photos | **7 days post-battle** (max 30), then auto-deleted |
+| Scan analysis results (scores, weak points, etc.) | Until you delete your account |
 | Workout logs | Until you delete your account |
 | Subscription receipts | 7 years (tax / accounting requirement) |
 | Referral attribution rows | Until either user deletes their account |
@@ -202,7 +233,7 @@ Depending on where you live, you have some or all of the following rights:
 - **Withdraw consent** — where processing is based on consent
 - **Lodge a complaint** with your local data protection authority
 
-To exercise any right, email **{{PRIVACY_CONTACT_EMAIL}}**. We respond within
+To exercise any right, email **team@fitai.health**. We respond within
 30 days (60 in complex cases).
 
 ### California (CCPA / CPRA)
@@ -212,9 +243,15 @@ sale or sharing of personal data. **We do not sell or share personal data as
 those terms are defined under the CCPA.**
 
 ### Children
-FitAI is **not directed to children under 13** (or under 16 in the EU). We do
-not knowingly collect data from children under those thresholds. If you
-believe a child has created an account, contact us and we will delete it.
+**FitAI is for users aged 16 and over.** We block account creation under
+this age via verified date-of-birth at sign-up (not a self-declared
+checkbox). The 16+ floor reflects GDPR Art. 8 consent rules and the
+special-category nature of body-photo data; some EU member states permit
+13+ with parental consent for non-special categories, but we apply 16+
+uniformly because all FitAI core flows involve photos.
+
+If you believe an under-16 user has bypassed the gate, email us at
+team@fitai.health and we will delete the account within 7 days.
 
 ---
 
@@ -255,11 +292,11 @@ recent revision.
 
 For privacy questions, requests, or complaints, contact:
 
-**{{OPERATOR_NAME}}**
+**George Nourescu**
 Trading as "FitAI"
-{{OPERATOR_ADDRESS}}
-{{COUNTRY}}
-Email: **{{PRIVACY_CONTACT_EMAIL}}**
+Strada Țepeș Vodă 7, Unit #370, Pitești 110036, Arges
+Romania
+Email: **team@fitai.health**
 
 ---
 

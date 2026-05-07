@@ -25,6 +25,7 @@ class NutritionService {
 
         USER PROFILE:
         \(profileContext)
+        \(ProfileContextBuilder.languageInstruction(for: profile))
         """
 
         let userPrompt = "Generate the daily meal plan now. Use the profile in the system message to set total calories, macros, and meal composition — do not default to generic values."

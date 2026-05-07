@@ -84,6 +84,8 @@ nonisolated struct CodableMuscleScores: Codable, Sendable {
     let arms: Double
     let legs: Double
     let core: Double
+    /// Optional in storage so older saved entries (without glutes) still decode.
+    let glutes: Double?
 
     init(from scores: MuscleScores) {
         self.chest = scores.chest
@@ -92,9 +94,10 @@ nonisolated struct CodableMuscleScores: Codable, Sendable {
         self.arms = scores.arms
         self.legs = scores.legs
         self.core = scores.core
+        self.glutes = scores.glutes
     }
 
     func toMuscleScores() -> MuscleScores {
-        MuscleScores(chest: chest, shoulders: shoulders, back: back, arms: arms, legs: legs, core: core)
+        MuscleScores(chest: chest, shoulders: shoulders, back: back, arms: arms, legs: legs, core: core, glutes: glutes ?? 0)
     }
 }

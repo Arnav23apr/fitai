@@ -23,12 +23,12 @@ final class FitAIPremiumFitnessAppUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testLaunchesToForegroundAndShowsAWindow() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.windows.firstMatch.waitForExistence(timeout: 10))
     }
 
     @MainActor

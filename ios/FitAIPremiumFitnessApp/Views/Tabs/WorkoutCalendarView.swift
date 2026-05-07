@@ -10,6 +10,8 @@ struct WorkoutCalendarView: View {
     private let calendar = Calendar.current
     private let weekdaySymbols = Calendar.current.shortWeekdaySymbols
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private var logs: [WorkoutLog] {
         appState.profile.workoutLogs
     }
@@ -61,11 +63,11 @@ struct WorkoutCalendarView: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Calendar")
+            .navigationTitle(L.t("calendarTitle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
             }

@@ -29,6 +29,10 @@ class ExerciseLogService {
         replaceAll(all)
     }
 
+    func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
     func loadAll() -> [ExerciseLog] {
         guard let data = UserDefaults.standard.data(forKey: key),
               let logs = try? JSONDecoder().decode([ExerciseLog].self, from: data) else {

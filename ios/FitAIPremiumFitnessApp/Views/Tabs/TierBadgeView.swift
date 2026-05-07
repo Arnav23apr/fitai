@@ -8,35 +8,13 @@ struct TierBadgeView: View {
     @State private var glowPhase: Bool = false
     @State private var rotationAngle: Double = 0
 
-    private var tierColor: Color {
-        switch tier {
-        case "Silver": return Color(red: 0.75, green: 0.75, blue: 0.80)
-        case "Gold": return Color(red: 1.0, green: 0.84, blue: 0.0)
-        case "Platinum": return Color(red: 0.6, green: 0.8, blue: 0.95)
-        case "Diamond": return Color(red: 0.7, green: 0.85, blue: 1.0)
-        default: return Color(red: 0.80, green: 0.50, blue: 0.20)
-        }
+    private var rank: PhysiqueRank {
+        PhysiqueRank.from(tier: tier)
     }
 
-    private var tierSecondaryColor: Color {
-        switch tier {
-        case "Silver": return Color(red: 0.6, green: 0.6, blue: 0.65)
-        case "Gold": return Color(red: 0.85, green: 0.65, blue: 0.0)
-        case "Platinum": return Color(red: 0.4, green: 0.6, blue: 0.85)
-        case "Diamond": return Color(red: 0.4, green: 0.7, blue: 1.0)
-        default: return Color(red: 0.65, green: 0.35, blue: 0.10)
-        }
-    }
-
-    private var tierIcon: String {
-        switch tier {
-        case "Diamond": return "diamond.fill"
-        case "Platinum": return "crown.fill"
-        case "Gold": return "star.fill"
-        case "Silver": return "shield.fill"
-        default: return "shield.fill"
-        }
-    }
+    private var tierColor: Color { rank.color }
+    private var tierSecondaryColor: Color { rank.secondaryColor }
+    private var tierIcon: String { rank.icon }
 
     var body: some View {
         ZStack {

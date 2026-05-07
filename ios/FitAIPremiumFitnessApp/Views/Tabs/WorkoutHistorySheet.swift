@@ -6,6 +6,8 @@ struct WorkoutHistorySheet: View {
 
     @State private var selectedLog: WorkoutLog? = nil
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private var logs: [WorkoutLog] {
         appState.profile.workoutLogs.sorted { $0.date > $1.date }
     }
@@ -46,11 +48,11 @@ struct WorkoutHistorySheet: View {
                 }
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Workout History")
+            .navigationTitle(L.t("workoutHistoryTitle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
             }

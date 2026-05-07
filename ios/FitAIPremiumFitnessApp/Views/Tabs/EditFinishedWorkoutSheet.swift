@@ -14,6 +14,7 @@ struct EditFinishedWorkoutSheet: View {
     @State private var draftStrings: [String: String] = [:]  // setId -> weight string
 
     private var weightUnit: String { appState.profile.usesMetric ? "kg" : "lbs" }
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -34,14 +35,14 @@ struct EditFinishedWorkoutSheet: View {
                 }
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Edit Workout")
+            .navigationTitle(L.t("editWorkoutTitle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.t("cancel", lang)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
+                    Button(L.t("save", lang)) { save() }
                         .fontWeight(.semibold)
                         .disabled(editedLogs.isEmpty)
                 }

@@ -10,12 +10,23 @@ struct DateOfBirthView: View {
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
 
+    /// Hard 16+ floor. EU-DPA enforcement on Replika hinged on weak age
+    /// gating, and our photo-consent flow processes special-category data
+    /// — under 16 cannot validly consent under GDPR Art. 8 in most member
+    /// states. A real DOB picker (not a "I am 16+" checkbox) is the
+    /// difference between defensible and indefensible at the regulator.
     private let dateRange: ClosedRange<Date> = {
         let calendar = Calendar.current
         let min = calendar.date(byAdding: .year, value: -80, to: Date()) ?? Date()
-        let max = calendar.date(byAdding: .year, value: -13, to: Date()) ?? Date()
+        let max = calendar.date(byAdding: .year, value: -16, to: Date()) ?? Date()
         return min...max
     }()
+
+    private var ageInYears: Int {
+        Calendar.current.dateComponents([.year], from: selectedDate, to: Date()).year ?? 0
+    }
+
+    private var isAgeValid: Bool { ageInYears >= 16 }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,20 +69,39 @@ struct DateOfBirthView: View {
             Spacer()
             Spacer()
 
-            Button(action: {
-                appState.profile.dateOfBirth = selectedDate
-                onContinue()
-            }) {
-                Text(L.t("continue", lang))
-                    .font(.headline)
-                    .foregroundStyle(Color(.systemBackground))
+            VStack(spacing: 10) {
+                if !isAgeValid {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                        Text("FitAI is for users 16 and over.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Color.primary)
-                    .clipShape(.rect(cornerRadius: 16))
+                    .padding(.vertical, 8)
+                    .background(Color.orange.opacity(0.10))
+                    .clipShape(.rect(cornerRadius: 10))
+                    .padding(.horizontal, 24)
+                }
+                Button(action: {
+                    guard isAgeValid else { return }
+                    appState.profile.dateOfBirth = selectedDate
+                    onContinue()
+                }) {
+                    Text(L.t("continue", lang))
+                        .font(.headline)
+                        .foregroundStyle(Color(.systemBackground))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(isAgeValid ? Color.primary : Color.primary.opacity(0.25))
+                        .clipShape(.rect(cornerRadius: 16))
+                }
+                .disabled(!isAgeValid)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 16)
             }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
             .opacity(appeared ? 1 : 0)
         }
         .onAppear {

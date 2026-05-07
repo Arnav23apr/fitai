@@ -1,7 +1,7 @@
 # Terms of Service
 
-**Effective date:** {{EFFECTIVE_DATE}}
-**Last updated:** {{LAST_UPDATED_DATE}}
+**Effective date:** May 4, 2026
+**Last updated:** May 4, 2026
 
 > ⚠️ **Important:** This document is a starting template tailored to the actual
 > functionality of FitAI. It is **not legal advice**. Before publishing, have
@@ -16,7 +16,7 @@
 > of the change in-app at least 14 days before the new version takes effect.
 
 These Terms of Service ("Terms") form a binding agreement between you and
-**{{OPERATOR_NAME}}**, an individual freelancer / sole trader trading under
+**George Nourescu**, an individual freelancer / sole trader trading under
 the brand "FitAI" ("FitAI", "we", "us"), governing your use of the FitAI
 iOS application and related services (the "Service").
 
@@ -44,7 +44,7 @@ output.
 
 - You are responsible for safeguarding your account credentials.
 - You are responsible for all activity that happens under your account.
-- Notify us at **{{PRIVACY_CONTACT_EMAIL}}** if you suspect unauthorized access.
+- Notify us at **team@fitai.health** if you suspect unauthorized access.
 - We may suspend or terminate accounts that violate these Terms.
 
 You may delete your account at any time from within the App. Deletion removes
@@ -173,7 +173,7 @@ already credited to your account at that time will remain redeemable.
 ## 9. Intellectual property
 
 The Service, including all software, designs, brand assets, AI prompts, and
-generated workout plans, is the property of {{OPERATOR_NAME}} and is
+generated workout plans, is the property of George Nourescu and is
 protected by copyright, trademark, and other laws.
 
 We grant you a limited, non-exclusive, non-transferable, revocable license
@@ -245,7 +245,7 @@ MAXIMUM EXTENT PERMITTED BY LAW.
 
 ## 14. Limitation of liability
 
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, **{{OPERATOR_NAME}}** AND ITS
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, **George Nourescu** AND ITS
 OFFICERS, EMPLOYEES, AND AGENTS WILL NOT BE LIABLE FOR ANY INDIRECT,
 INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF
 PROFITS, DATA, USE, GOODWILL, INJURY OR ILLNESS RESULTING FROM EXERCISE OR
@@ -264,7 +264,7 @@ THE MAXIMUM EXTENT PERMITTED BY LAW.
 
 ## 15. Indemnification
 
-You agree to indemnify and hold harmless {{OPERATOR_NAME}} from and
+You agree to indemnify and hold harmless George Nourescu from and
 against any claims, damages, liabilities, costs, or expenses (including
 reasonable attorneys' fees) arising out of (a) your violation of these Terms,
 (b) your misuse of the Service, or (c) your violation of any third-party
@@ -286,11 +286,11 @@ to other users or to us. Upon termination:
 
 ## 17. Governing law and dispute resolution
 
-These Terms are governed by the laws of **{{GOVERNING_LAW_JURISDICTION}}**,
+These Terms are governed by the laws of **Romania**,
 without regard to its conflict-of-laws rules.
 
 Any dispute arising from or relating to these Terms or the Service will be
-resolved exclusively in the courts of **{{COURT_JURISDICTION}}**, and you
+resolved exclusively in the courts of **Pitești, Arges County, Romania**, and you
 consent to their personal jurisdiction.
 
 If you are a consumer in the European Union, nothing in this section
@@ -305,7 +305,7 @@ If you obtained the App from the Apple App Store, the following terms apply
 in addition to the rest of these Terms. They are required by Apple's
 Developer Agreement.
 
-- These Terms are between you and {{OPERATOR_NAME}}, **not Apple**.
+- These Terms are between you and George Nourescu, **not Apple**.
   Apple is not responsible for the App or its content.
 - Apple has no obligation to provide maintenance or support for the App.
 - In the event the App fails to conform to any applicable warranty, you may
@@ -335,11 +335,11 @@ of the updated Terms.
 
 Questions about these Terms?
 
-**{{OPERATOR_NAME}}**
+**George Nourescu**
 Trading as "FitAI" (sole trader / freelancer)
-{{OPERATOR_ADDRESS}}
-{{COUNTRY}}
-Email: **{{LEGAL_CONTACT_EMAIL}}**
+Strada Țepeș Vodă 7, Unit #370, Pitești 110036, Arges
+Romania
+Email: **team@fitai.health**
 
 ---
 

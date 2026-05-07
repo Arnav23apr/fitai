@@ -3,6 +3,9 @@ import SwiftUI
 struct RatingsCardSheet: View {
     let result: ScanResult
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -13,11 +16,11 @@ struct RatingsCardSheet: View {
                     .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("Ratings")
+            .navigationTitle(L.t("ratings", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .foregroundStyle(.white)
                 }
             }

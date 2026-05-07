@@ -15,6 +15,40 @@ class CoachViewModel {
 
     private let aiService = AIService()
 
+    /// UserDefaults key for persisting chat history across app launches.
+    /// Cleared on logout via `AppState.clearCoachChatHistory()` so it
+    /// doesn't bleed between accounts on a shared device.
+    private static let historyKey = "coachChatHistory.v1"
+    private static let maxStored = 200  // cap so the blob doesn't bloat
+
+    init() {
+        loadFromDisk()
+    }
+
+    private func loadFromDisk() {
+        guard let data = UserDefaults.standard.data(forKey: Self.historyKey),
+              let saved = try? JSONDecoder().decode([ChatMessage].self, from: data) else {
+            return
+        }
+        messages = saved
+        // Mark all as fully revealed so they render instantly without
+        // re-running the typewriter effect on every cold launch.
+        for m in saved where m.role == .assistant {
+            revealedLength[m.id] = m.content.count
+        }
+    }
+
+    private func persistToDisk() {
+        let trimmed = messages.suffix(Self.maxStored)
+        if let data = try? JSONEncoder().encode(Array(trimmed)) {
+            UserDefaults.standard.set(data, forKey: Self.historyKey)
+        }
+    }
+
+    static func clearStorage() {
+        UserDefaults.standard.removeObject(forKey: historyKey)
+    }
+
     var isRevealing: Bool {
         revealedLength.contains { entry in
             guard let msg = messages.first(where: { $0.id == entry.key }) else { return false }
@@ -168,6 +202,8 @@ class CoachViewModel {
 
         USER PROFILE:
         \(profileContext)
+        \(ProfileContextBuilder.genderEmphasis(for: profile))
+        \(ProfileContextBuilder.languageInstruction(for: profile))
         """
     }
 
@@ -179,6 +215,7 @@ class CoachViewModel {
 
         let userMessage = ChatMessage(role: .user, content: text)
         messages.append(userMessage)
+        persistToDisk()
         inputText = ""
         isLoading = true
         errorMessage = nil
@@ -196,6 +233,7 @@ class CoachViewModel {
                 let response = try await aiService.chat(messages: apiMessages)
                 let assistantMessage = ChatMessage(role: .assistant, content: response)
                 messages.append(assistantMessage)
+                persistToDisk()
                 isLoading = false
                 startTypewriter(for: assistantMessage)
             } catch {
@@ -220,5 +258,6 @@ class CoachViewModel {
         wordBoundaries.removeAll()
         messages.removeAll()
         errorMessage = nil
+        Self.clearStorage()
     }
 }

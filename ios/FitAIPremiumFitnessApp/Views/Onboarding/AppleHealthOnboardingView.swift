@@ -157,22 +157,9 @@ struct AppleHealthOnboardingView: View {
                 .frame(width: 118, height: 118)
                 .scaleEffect(pulseScale * 1.05)
 
-            // Icon background — matches native Health app shape
-            RoundedRectangle(cornerRadius: 22)
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 1.0, green: 0.22, blue: 0.27),
-                                 Color(red: 0.85, green: 0.10, blue: 0.18)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            AppleHealthIconMark()
                 .frame(width: 80, height: 80)
-                .shadow(color: .red.opacity(0.50), radius: 18, y: 6)
-
-            Image(systemName: "heart.fill")
-                .font(.system(size: 36, weight: .medium))
-                .foregroundStyle(.white)
+                .shadow(color: Color.pink.opacity(0.30), radius: 18, y: 6)
         }
     }
 

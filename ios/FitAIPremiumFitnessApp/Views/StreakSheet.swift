@@ -82,10 +82,7 @@ struct StreakSheet: View {
                     .fill(Color(.separator))
                     .frame(width: 1, height: 32)
                 statItem(value: "\(appState.profile.points)", label: "Points", color: .yellow)
-                Rectangle()
-                    .fill(Color(.separator))
-                    .frame(width: 1, height: 32)
-                statItem(value: appState.profile.tier, label: "Tier", color: .cyan)
+                // Tier stat hidden — ranks aren't shipping in v1.
             }
             .padding(16)
             .background(Color(.secondarySystemGroupedBackground))

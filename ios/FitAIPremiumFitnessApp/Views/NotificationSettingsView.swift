@@ -29,12 +29,12 @@ struct NotificationSettingsView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 32)
             }
-            .background(Color(.systemBackground))
-            .navigationTitle("Notifications")
+            .scrollContentBackground(.hidden)
+            .navigationTitle(L.t("notifications", lang))
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.semibold)
                 }
             }

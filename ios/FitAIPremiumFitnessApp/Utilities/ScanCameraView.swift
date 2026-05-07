@@ -45,11 +45,13 @@ struct ScanCameraView: View {
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
 
-                // Corner brackets — inset from camera edges
+                // Corner brackets — inset from camera edges with clearance
+                // for the top bar buttons (X, ?, flash) and the bottom gallery
+                // strip. Numbers tuned so the L-corners never overlap controls.
                 cornerBrackets
-                    .padding(.horizontal, 20)
-                    .padding(.top, geo.safeAreaInsets.top + 60)
-                    .padding(.bottom, 260)
+                    .padding(.horizontal, 28)
+                    .padding(.top, geo.safeAreaInsets.top + 100)
+                    .padding(.bottom, 280)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
 

@@ -41,14 +41,24 @@ struct WorkoutLiveActivity: Widget {
                                 }
                             }
                             Spacer()
-                            if context.state.isResting && context.state.restSecondsRemaining > 0 {
+                            if let endsAt = context.state.restEndsAt, endsAt > .now {
                                 HStack(spacing: 3) {
                                     Image(systemName: "timer")
                                         .font(.system(size: 10))
                                         .foregroundStyle(.orange)
-                                    Text("Rest \(formatSeconds(context.state.restSecondsRemaining))")
+                                    Text("Rest")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(.orange)
+                                    // OS-rendered countdown — keeps ticking
+                                    // even when the app is suspended / phone
+                                    // locked. The previous Int-based render
+                                    // froze in lock screen because nobody was
+                                    // pushing per-second updates from the app.
+                                    Text(timerInterval: Date()...endsAt, countsDown: true)
                                         .font(.system(size: 11, weight: .bold, design: .monospaced))
                                         .foregroundStyle(.orange)
+                                        .monospacedDigit()
+                                        .frame(width: 38, alignment: .leading)
                                 }
                             }
                         }
@@ -122,14 +132,20 @@ struct WorkoutLiveActivity: Widget {
                     .foregroundStyle(.secondary)
             }
 
-            if context.state.isResting && context.state.restSecondsRemaining > 0 {
+            if let endsAt = context.state.restEndsAt, endsAt > .now {
                 HStack(spacing: 6) {
                     Image(systemName: "timer")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.orange)
-                    Text("Rest: \(formatSeconds(context.state.restSecondsRemaining))")
+                    Text("Rest:")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.orange)
+                    // OS keeps this countdown live without the app being
+                    // awake — that's the entire fix for the locked-phone bug.
+                    Text(timerInterval: Date()...endsAt, countsDown: true)
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundStyle(.orange)
+                        .monospacedDigit()
                     Spacer()
                 }
                 .padding(.horizontal, 12)

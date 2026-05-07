@@ -10,6 +10,7 @@ struct ShareCardView: View {
             ("back", "Back", result.muscleScores.back),
             ("arms", "Arms", result.muscleScores.arms),
             ("legs", "Legs", result.muscleScores.legs),
+            ("glutes", "Glutes", result.muscleScores.glutes),
             ("core", "Core", result.muscleScores.core),
         ]
         return scores.filter { $0.score > 0 }.map { ($0.label, $0.score) }

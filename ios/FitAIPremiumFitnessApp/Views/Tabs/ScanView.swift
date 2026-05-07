@@ -18,6 +18,7 @@ private extension View {
 struct ScanView: View {
     @Environment(AppState.self) private var appState
     @Environment(TourManager.self) private var tourManager
+    @Environment(\.requestReview) private var requestReview
     @State private var viewModel = ScanViewModel()
     @State private var showStreakSheet: Bool = false
 
@@ -29,6 +30,10 @@ struct ScanView: View {
     @State private var showBackCamera: Bool = false
     @State private var showPhotoTips: Bool = false
     @State private var showLatestResult: Bool = false
+    @State private var showPhotoConsent: Bool = false
+    /// Set when the user taps a photo card before granting consent. The
+    /// consent sheet's onResult opens this camera once the user accepts.
+    @State private var pendingCameraIsFront: Bool? = nil
 
     var body: some View {
         NavigationStack {
@@ -49,16 +54,25 @@ struct ScanView: View {
             }
             .background(Color(.systemBackground))
             .toolbar(.hidden, for: .navigationBar)
-            .overlay {
-                if viewModel.isAnalyzing {
-                    AnalyzingOverlayView()
-                        .transition(.opacity)
-                        .ignoresSafeArea()
-                }
+            .fullScreenCover(isPresented: Binding(
+                get: { viewModel.isAnalyzing },
+                set: { _ in /* dismissal is driven by the view model */ }
+            )) {
+                AnalyzingOverlayView()
+                    .interactiveDismissDisabled()
+                    .presentationBackground(.black)
             }
-            .animation(.easeInOut(duration: 0.3), value: viewModel.isAnalyzing)
             .sheet(isPresented: $showPaywall) {
                 PaywallSheet()
+            }
+            .sheet(isPresented: $showPhotoConsent) {
+                PhotoConsentSheet { accepted in
+                    guard accepted, let isFront = pendingCameraIsFront else { return }
+                    if isFront { showFrontCamera = true } else { showBackCamera = true }
+                    pendingCameraIsFront = nil
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
             }
             .sheet(isPresented: $showResultsSheet) {
                 ScanResultsSheet(result: viewModel.analysisResult, onDismiss: {
@@ -68,6 +82,8 @@ struct ScanView: View {
             .sheet(isPresented: $showTransformationSheet) {
                 TransformationSheet(
                     result: viewModel.transformationResult,
+                    currentPhoto: viewModel.analysisResult?.frontPhoto ?? viewModel.frontImage,
+                    potentialRating: viewModel.analysisResult?.potentialRating,
                     isGenerating: viewModel.isGeneratingTransformation,
                     onDismiss: { showTransformationSheet = false },
                     onStartWorkout: {
@@ -315,13 +331,21 @@ struct ScanView: View {
         )
     }
 
+    /// Gate camera launch on the photo-consent modal (GDPR Art. 9(2)(a)).
+    /// First-time users see the consent sheet; once granted (and the
+    /// version hasn't bumped) we go straight to the camera.
+    private func requestCamera(isFront: Bool) {
+        if appState.profile.hasGrantedPhotoConsent {
+            if isFront { showFrontCamera = true } else { showBackCamera = true }
+            return
+        }
+        pendingCameraIsFront = isFront
+        showPhotoConsent = true
+    }
+
     private func photoSourceCard(title: String, subtitle: String?, image: UIImage?, isFront: Bool) -> some View {
         Button {
-            if isFront {
-                showFrontCamera = true
-            } else {
-                showBackCamera = true
-            }
+            requestCamera(isFront: isFront)
         } label: {
             VStack(spacing: 0) {
                 if let image {
@@ -539,6 +563,22 @@ struct ScanView: View {
         if let result {
             appState.saveScanResult(result)
             showResultsSheet = true
+            requestReviewAfterFirstScan()
+        }
+    }
+
+    /// Fire SKStoreReviewController after the user's first completed scan —
+    /// the verified value moment. Guarded by a UserDefaults flag so we only
+    /// burn one of Apple's three yearly prompts on this trigger. Delayed
+    /// briefly so the results sheet animates in first; the prompt then
+    /// surfaces over a moment of peak satisfaction (just got their score).
+    private func requestReviewAfterFirstScan() {
+        let key = "didRequestReviewAfterFirstScan"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        UserDefaults.standard.set(true, forKey: key)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(2.5))
+            requestReview()
         }
     }
 }
@@ -868,9 +908,14 @@ struct ScanResultsSheet: View {
 struct TransformationSheet: View {
     @Environment(AppState.self) private var appState
     let result: TransformationResult?
+    var currentPhoto: UIImage? = nil
+    var potentialRating: Double? = nil
     let isGenerating: Bool
     let onDismiss: () -> Void
     var onStartWorkout: (() -> Void)? = nil
+
+    @State private var shareItem: TransformationShareItem? = nil
+    @State private var isPreparingShare: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -921,6 +966,8 @@ struct TransformationSheet: View {
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 20)
 
+                            shareButton(transformedImage: result.image)
+
                             if let onStartWorkout {
                                 Button(action: onStartWorkout) {
                                     HStack(spacing: 8) {
@@ -970,22 +1017,81 @@ struct TransformationSheet: View {
                         .foregroundStyle(.primary)
                 }
             }
+            .sheet(item: $shareItem) { item in
+                ActivityShareSheet(activityItems: [item.image])
+            }
         }
         .presentationDetents([.large])
-        
+    }
+
+    /// Renders the diptych share card off-screen and presents the system
+    /// share sheet so the user can post to Stories / iMessage / etc.
+    @ViewBuilder
+    private func shareButton(transformedImage: UIImage) -> some View {
+        Button {
+            isPreparingShare = true
+            Task { @MainActor in
+                let card = TransformationShareCardView.render(
+                    currentPhoto: currentPhoto,
+                    transformedPhoto: transformedImage,
+                    potentialRating: potentialRating
+                )
+                isPreparingShare = false
+                if let card { shareItem = TransformationShareItem(image: card) }
+            }
+        } label: {
+            HStack(spacing: 8) {
+                if isPreparingShare {
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                Text(isPreparingShare ? "Preparing…" : "Share")
+                    .font(.headline)
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 52)
+            .background(
+                LinearGradient(colors: [.black, .gray.opacity(0.85)], startPoint: .leading, endPoint: .trailing)
+            )
+            .clipShape(.rect(cornerRadius: 14))
+        }
+        .disabled(isPreparingShare)
     }
 }
 
+private struct TransformationShareItem: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
 struct PaywallSheet: View {
+    enum SelectedPlan { case weekly, yearly }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @State private var appeared: Bool = false
     @State private var crownScale: CGFloat = 0.6
-    @State private var isYearly: Bool = true
+    @State private var selectedPlan: SelectedPlan = .weekly
     @State private var store = StoreViewModel.shared
 
     private var lang: String { appState.profile.selectedLanguage }
+    private var isYearly: Bool { selectedPlan == .yearly }
 
     private let features: [(icon: String, title: String)] = [
         ("camera.viewfinder", "Unlimited Scans"),
@@ -996,16 +1102,6 @@ struct PaywallSheet: View {
         ("sparkles", "All Features"),
     ]
 
-    private var captionText: String {
-        if isYearly {
-            let yearly = store.annualPriceString
-            let monthly = store.monthlyPriceString
-            return "Just \(yearly)/year (\(monthly)/mo) · Cancel anytime"
-        } else {
-            return "Just \(store.monthlyPriceString)/month · Cancel anytime"
-        }
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             Capsule()
@@ -1015,25 +1111,14 @@ struct PaywallSheet: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 24) {
-                    // MARK: Hero
                     heroSection
-
-                    // MARK: Features grid
                     featuresCard
-
-                    // MARK: Plan picker
-                    planPicker
-
-                    // MARK: CTA
+                    planSelector
                     ctaButton
-
-                    // MARK: Lifetime
-                    lifetimeCard
-
-                    // MARK: Earn free
+                    moneyBackLine
+                    orDivider
                     freeEarnCard
-
-                    // MARK: Restore + Legal
+                    lifetimeCard
                     footer
                 }
                 .padding(.top, 8)
@@ -1138,104 +1223,157 @@ struct PaywallSheet: View {
         .opacity(appeared ? 1 : 0)
     }
 
-    // MARK: - Plan Picker
+    // MARK: - Plan Selector — stacked cards (weekly default, yearly with dynamic SAVE % badge)
 
-    private var planPicker: some View {
-        HStack(spacing: 12) {
+    private var planSelector: some View {
+        VStack(spacing: 10) {
             planCard(
-                title: "Monthly",
-                price: store.monthlyPriceString,
-                period: "/mo",
-                selected: !isYearly
-            ) { isYearly = false }
+                isSelected: selectedPlan == .weekly,
+                title: "Weekly",
+                subtitle: "Billed weekly",
+                price: store.weeklyPriceString,
+                priceUnit: "/wk",
+                badge: nil
+            )
+            .onTapGesture {
+                withAnimation(.spring(duration: 0.25)) { selectedPlan = .weekly }
+            }
 
             planCard(
+                isSelected: selectedPlan == .yearly,
                 title: "Yearly",
-                price: store.annualPriceString,
-                period: "/yr",
-                badge: "Save 33%",
-                selected: isYearly
-            ) { isYearly = true }
+                subtitle: "Billed annually as \(store.annualPriceString)",
+                price: store.annualPriceWeeklyString,
+                priceUnit: "/wk",
+                badge: "SAVE \(store.annualVsWeeklySavingsPercent)%"
+            )
+            .onTapGesture {
+                withAnimation(.spring(duration: 0.25)) { selectedPlan = .yearly }
+            }
         }
         .padding(.horizontal, 20)
         .opacity(appeared ? 1 : 0)
     }
 
-    private func planCard(title: String, price: String, period: String, badge: String? = nil, selected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Color(.systemBackground))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.green)
-                        .clipShape(.capsule)
-                } else {
-                    Color.clear.frame(height: 17)
-                }
-
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(selected ? .primary : .secondary)
-
-                HStack(alignment: .firstTextBaseline, spacing: 1) {
-                    Text(price)
-                        .font(.system(.title3, design: .rounded, weight: .bold))
-                        .foregroundStyle(selected ? .primary : .secondary)
-                    Text(period)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.tertiary)
+    private func planCard(
+        isSelected: Bool,
+        title: String,
+        subtitle: String,
+        price: String,
+        priceUnit: String,
+        badge: String?
+    ) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.40), lineWidth: 1.6)
+                    .frame(width: 22, height: 22)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.primary)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(
-                        selected
-                            ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom),
-                        lineWidth: 2
-                    )
-            )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.primary)
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                if let badge {
+                    Text(badge)
+                        .font(.system(size: 9, weight: .black))
+                        .foregroundStyle(Color(.systemBackground))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.green)
+                        .clipShape(.capsule)
+                }
+                HStack(alignment: .lastTextBaseline, spacing: 2) {
+                    Text(price)
+                        .font(.system(.title3, design: .rounded, weight: .heavy))
+                        .foregroundStyle(.primary)
+                    Text(priceUnit)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
-        .buttonStyle(.plain)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemGroupedBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(
+                    isSelected
+                        ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        : LinearGradient(colors: [Color.primary.opacity(0.10)], startPoint: .top, endPoint: .bottom),
+                    lineWidth: isSelected ? 2 : 1
+                )
+        )
+        .contentShape(Rectangle())
     }
 
     // MARK: - CTA
 
     private var ctaButton: some View {
-        VStack(spacing: 8) {
-            Button(action: purchase) {
-                Group {
-                    if store.isPurchasing {
-                        ProgressView()
-                            .tint(Color(.systemBackground))
-                            .scaleEffect(0.9)
-                    } else {
-                        Text("Continue")
-                            .font(.headline)
-                    }
+        Button(action: purchase) {
+            Group {
+                if store.isPurchasing {
+                    ProgressView()
+                        .tint(Color(.systemBackground))
+                        .scaleEffect(0.9)
+                } else {
+                    Text("Get Pro Access")
+                        .font(.headline)
                 }
-                .foregroundStyle(Color(.systemBackground))
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(Color.primary)
-                .clipShape(.rect(cornerRadius: 28))
             }
-            .disabled(store.isPurchasing)
-            .padding(.horizontal, 20)
-
-            Text(captionText)
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+            .foregroundStyle(Color(.systemBackground))
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
+            .background(Color.primary)
+            .clipShape(.rect(cornerRadius: 28))
         }
+        .disabled(store.isPurchasing)
+        .padding(.horizontal, 20)
+        .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - Money-back guarantee line (replaces price restating caption)
+
+    private var moneyBackLine: some View {
+        Text("Cancel anytime · 30-day money-back guarantee")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 32)
+            .opacity(appeared ? 1 : 0)
+    }
+
+    // MARK: - "or" divider — separates subscribe from invite-friends path
+
+    private var orDivider: some View {
+        HStack(spacing: 10) {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.20))
+                .frame(height: 1)
+            Text("OR")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.tertiary)
+                .tracking(0.6)
+            Rectangle()
+                .fill(Color.secondary.opacity(0.20))
+                .frame(height: 1)
+        }
+        .padding(.horizontal, 36)
         .opacity(appeared ? 1 : 0)
     }
 
@@ -1450,7 +1588,12 @@ struct PaywallSheet: View {
 
     private func purchase() {
         Task {
-            let pkg = isYearly ? store.annualPackage : store.monthlyPackage
+            let pkg: Package? = {
+                switch selectedPlan {
+                case .weekly: return store.weeklyPackage
+                case .yearly: return store.annualPackage
+                }
+            }()
             guard let pkg else {
                 appState.profile.isPremium = true
                 appState.saveProfile()

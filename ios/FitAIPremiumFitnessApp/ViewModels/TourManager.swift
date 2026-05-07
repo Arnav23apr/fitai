@@ -11,6 +11,10 @@ class TourManager {
     var isTransitioning: Bool = false
     var stepReady: Bool = false
     var scrollToAnchor: TourAnchorID? = nil
+    /// Set by NotificationRouter when a push notification taps into a
+    /// specific challenge. CompeteView observes this and presents the
+    /// matching ChallengeDetailSheet, then clears it back to nil.
+    var pendingChallengeId: String? = nil
 
     private let completedKey = "tourCompleted"
     private let skippedKey = "tourSkipped"

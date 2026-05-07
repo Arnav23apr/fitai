@@ -47,6 +47,9 @@ struct AppleHealthView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .onAppear {
+                isConnected = UserDefaults.standard.bool(forKey: "healthConnected")
+            }
             .alert("Unable to Connect", isPresented: $showError) {
                 Button("Open Settings") {
                     if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -62,21 +65,9 @@ struct AppleHealthView: View {
 
     private var iconHeader: some View {
         VStack(spacing: 16) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.pink, Color.red.opacity(0.8)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .shadow(color: .pink.opacity(0.4), radius: 16, y: 6)
-                Image(systemName: "heart.fill")
-                    .font(.system(size: 38))
-                    .foregroundStyle(.white)
-            }
+            AppleHealthIconMark()
+                .frame(width: 80, height: 80)
+                .shadow(color: Color.pink.opacity(0.25), radius: 18, y: 8)
 
             VStack(spacing: 6) {
                 Text("Connect Apple Health")

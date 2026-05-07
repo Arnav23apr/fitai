@@ -3,7 +3,6 @@ import SwiftUI
 struct NutritionView: View {
     @Environment(AppState.self) private var appState
     @State private var viewModel = NutritionViewModel()
-    @State private var showCoach: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -46,28 +45,6 @@ struct NutritionView: View {
                     }
                 }
             }
-            .overlay(alignment: .bottomTrailing) {
-                Button(action: { showCoach = true }) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(width: 52, height: 52)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(red: 0.35, green: 0.45, blue: 1.0), Color(red: 0.55, green: 0.35, blue: 0.95)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .clipShape(Circle())
-                        .shadow(color: Color(red: 0.4, green: 0.35, blue: 1.0).opacity(0.45), radius: 14, y: 6)
-                }
-                .padding(.trailing, 20)
-                .padding(.bottom, 24)
-            }
-            .sheet(isPresented: $showCoach) {
-                CoachView()
-            }
             .task {
                 await viewModel.generateMealPlan(profile: appState.profile)
             }
@@ -78,10 +55,10 @@ struct NutritionView: View {
         VStack(spacing: 20) {
             ProgressView()
                 .scaleEffect(1.2)
-            Text("Generating your meal plan...")
+            Text(L.t("generatingMealPlan", lang))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text("Our AI is crafting a personalized nutrition plan based on your goals.")
+            Text(L.t("generatingMealPlanDesc", lang))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -98,21 +75,21 @@ struct NutritionView: View {
                 Image(systemName: "flame.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.orange)
-                Text("Daily Targets")
+                Text(L.t("dailyTargets", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("\(plan.calories) cal")
+                Text("\(plan.calories) \(L.t("calShort", lang))")
                     .font(.system(.headline, design: .rounded, weight: .bold))
                     .foregroundStyle(.primary)
             }
 
             HStack(spacing: 0) {
-                macroItem(value: "\(plan.protein)g", label: "Protein", color: .blue, progress: Double(plan.protein * 4) / Double(max(plan.calories, 1)))
+                macroItem(value: "\(plan.protein)g", label: L.t("protein", lang), color: .blue, progress: Double(plan.protein * 4) / Double(max(plan.calories, 1)))
                 macroDivider
-                macroItem(value: "\(plan.carbs)g", label: "Carbs", color: .green, progress: Double(plan.carbs * 4) / Double(max(plan.calories, 1)))
+                macroItem(value: "\(plan.carbs)g", label: L.t("carbs", lang), color: .green, progress: Double(plan.carbs * 4) / Double(max(plan.calories, 1)))
                 macroDivider
-                macroItem(value: "\(plan.fat)g", label: "Fat", color: .orange, progress: Double(plan.fat * 9) / Double(max(plan.calories, 1)))
+                macroItem(value: "\(plan.fat)g", label: L.t("fat", lang), color: .orange, progress: Double(plan.fat * 9) / Double(max(plan.calories, 1)))
             }
 
             GeometryReader { geo in
@@ -173,11 +150,11 @@ struct NutritionView: View {
     private func mealsListSection(_ plan: MealPlan) -> some View {
         VStack(spacing: 14) {
             HStack {
-                Text("Today's Meals")
+                Text(L.t("todaysMeals", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("\(plan.meals.count) meals")
+                Text(L.t("mealsCount", lang).replacingOccurrences(of: "%@", with: "\(plan.meals.count)"))
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -224,7 +201,7 @@ struct NutritionView: View {
                 Text("\(meal.calories)")
                     .font(.system(.subheadline, design: .rounded, weight: .bold))
                     .foregroundStyle(.primary)
-                Text("cal")
+                Text(L.t("calShort", lang))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                 if meal.protein > 0 {
@@ -246,10 +223,10 @@ struct NutritionView: View {
                 .foregroundStyle(.green.opacity(0.5))
 
             VStack(spacing: 6) {
-                Text("AI Nutrition Plan")
+                Text(L.t("aiNutritionPlan", lang))
                     .font(.title3.weight(.bold))
                     .foregroundStyle(.primary)
-                Text("Get a personalized daily meal plan based on your fitness goals, body stats, and training schedule.")
+                Text(L.t("aiNutritionDesc", lang))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -261,7 +238,7 @@ struct NutritionView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 14))
-                    Text("Generate Meal Plan")
+                    Text(L.t("generateMealPlan", lang))
                         .font(.headline)
                 }
                 .foregroundStyle(.white)
@@ -310,16 +287,16 @@ struct NutritionView: View {
                 Image(systemName: "lightbulb.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.yellow)
-                Text("Nutrition Tips")
+                Text(L.t("nutritionTips", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                tipItem("Eat protein within 30 min after training")
-                tipItem("Drink at least 2-3L of water daily")
-                tipItem("Prioritize whole foods over supplements")
-                tipItem("Spread protein intake across all meals")
+                tipItem(L.t("tipProtein30Min", lang))
+                tipItem(L.t("tipWaterDaily", lang))
+                tipItem(L.t("tipWholeFoods", lang))
+                tipItem(L.t("tipSpreadProtein", lang))
             }
         }
         .padding(16)

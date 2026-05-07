@@ -2,8 +2,11 @@ import SwiftUI
 import Charts
 
 struct ScanHistoryGraphView: View {
+    @Environment(AppState.self) private var appState
     let entries: [ScanHistoryEntry]
     @State private var selectedEntry: ScanHistoryEntry? = nil
+
+    private var lang: String { appState.profile.selectedLanguage }
 
     private var sortedEntries: [ScanHistoryEntry] {
         entries.sorted { $0.date < $1.date }
@@ -34,12 +37,12 @@ struct ScanHistoryGraphView: View {
     var body: some View {
         VStack(spacing: 12) {
             HStack {
-                Text("Scan History")
+                Text(L.t("scanHistoryTitle", lang))
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
                 if !entries.isEmpty {
-                    Text("\(entries.count) scans")
+                    Text(L.t("scansCountFmt", lang).replacingOccurrences(of: "%@", with: "\(entries.count)"))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -67,7 +70,7 @@ struct ScanHistoryGraphView: View {
             Image(systemName: "chart.xyaxis.line")
                 .font(.title2)
                 .foregroundStyle(.tertiary)
-            Text("No scans yet")
+            Text(L.t("noScansYet", lang))
                 .font(.subheadline)
                 .foregroundStyle(.tertiary)
         }
@@ -209,7 +212,7 @@ struct ScanHistoryGraphView: View {
                             Image(systemName: "checkmark.seal.fill")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.green)
-                            Text("Strengths")
+                            Text(L.t("strengths", lang))
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
@@ -226,7 +229,7 @@ struct ScanHistoryGraphView: View {
                             Image(systemName: "target")
                                 .font(.system(size: 10))
                                 .foregroundStyle(.orange)
-                            Text("Improve")
+                            Text(L.t("improveShort", lang))
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(.secondary)
                         }
@@ -245,7 +248,7 @@ struct ScanHistoryGraphView: View {
                     selectedEntry = nil
                 }
             } label: {
-                Text("Dismiss")
+                Text(L.t("dismiss", lang))
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
             }

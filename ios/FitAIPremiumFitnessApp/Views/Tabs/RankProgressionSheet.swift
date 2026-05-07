@@ -3,7 +3,9 @@ import SwiftUI
 struct RankProgressionSheet: View {
     let currentPoints: Int
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
+    private var lang: String { appState.profile.selectedLanguage }
     private var currentTier: CompeteTier { CompeteTier.current(for: currentPoints) }
     private var nextTier: CompeteTier? { CompeteTier.next(for: currentPoints) }
 
@@ -22,7 +24,7 @@ struct RankProgressionSheet: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationTitle("Rank Progression")
+            .navigationTitle(L.t("rankProgressionTitle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

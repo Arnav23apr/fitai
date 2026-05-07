@@ -12,6 +12,7 @@ struct PlanPreviewView: View {
     @State private var rowsRevealed: Int = 0
     @State private var isGenerating: Bool = true
     @State private var showContent: Bool = false
+    @State private var generatingStage: Int = 0
 
     private let successHaptic = UINotificationFeedbackGenerator()
 
@@ -32,6 +33,16 @@ struct PlanPreviewView: View {
         case 5...: return 8
         case 3...4: return 11
         default: return 14
+        }
+    }
+
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var generatingStageText: String {
+        switch generatingStage {
+        case 0: return L.t("planStage1", lang)
+        case 1: return L.t("planStage2", lang)
+        default: return L.t("planStage3", lang)
         }
     }
 
@@ -78,22 +89,32 @@ struct PlanPreviewView: View {
             Spacer().frame(height: 28)
 
             if isGenerating {
-                // Generating spinner
                 VStack(spacing: 16) {
                     ProgressView()
                         .scaleEffect(1.2)
                         .tint(.primary)
-                    Text("Personalizing exercises, sets, and recovery...")
+                    Text(generatingStageText)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 280)
+                        .id(generatingStage)
+                        .transition(.opacity.combined(with: .offset(y: 4)))
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 20)
                 .transition(.opacity)
+                .animation(.easeInOut(duration: 0.35), value: generatingStage)
             } else {
-                planCard
-                    .padding(.horizontal, 20)
-                    .transition(.opacity.combined(with: .offset(y: 16)))
+                VStack(spacing: 14) {
+                    planCard
+                    if appState.profile.canSeeGoalProjection,
+                       appState.profile.goalProjectionURL != nil {
+                        GoalProjectionCard(context: .planPreview)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .transition(.opacity.combined(with: .offset(y: 16)))
             }
 
             Spacer()
@@ -119,6 +140,15 @@ struct PlanPreviewView: View {
             }
             withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
                 glowPulse = 1.15
+            }
+
+            // Rotate the spinner caption through 3 stages so the 3.5s wait
+            // feels like real computation (Cal AI / Brainrot pattern).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                withAnimation { generatingStage = 1 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+                withAnimation { generatingStage = 2 }
             }
 
             // Phase 1: Show "generating" state for 3.5 seconds
@@ -161,7 +191,7 @@ struct PlanPreviewView: View {
             .scaleEffect(glowPulse)
             .opacity(dumbbellSettled ? 1 : 0)
 
-            DumbbellSceneView(transparent: true, darkChrome: !isDark)
+            DumbbellSceneView(transparent: true, darkChrome: true)
                 .frame(width: 180, height: 180)
                 .shadow(color: Color.primary.opacity(0.10), radius: 20, y: 8)
                 .rotationEffect(.degrees(dumbbellSettled ? 0 : -90))

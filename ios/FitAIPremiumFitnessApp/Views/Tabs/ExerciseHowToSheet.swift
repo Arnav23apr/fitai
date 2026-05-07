@@ -5,9 +5,11 @@ import SwiftUI
 /// on tracking data (history, PRs, overload).
 struct ExerciseHowToSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     let exercise: Exercise
 
     private var demo: ExerciseDemoInfo { exercise.demoInfo }
+    private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
         NavigationStack {
@@ -36,11 +38,11 @@ struct ExerciseHowToSheet: View {
                 .padding(.bottom, 40)
             }
             .background(Color(.systemBackground))
-            .navigationTitle("How to perform")
+            .navigationTitle(L.t("howToPerform", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
             }

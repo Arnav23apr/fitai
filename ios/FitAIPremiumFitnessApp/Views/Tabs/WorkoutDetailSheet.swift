@@ -26,6 +26,8 @@ struct WorkoutDetailSheet: View {
     @State private var showRestartConfirm: Bool = false
     @State private var showEditFinished: Bool = false
 
+    private var lang: String { appState.profile.selectedLanguage }
+
     private var workoutStarted: Bool { session.isActive && session.workoutName == workout.name }
     private var completedExercises: Set<String> { session.completedExerciseIds }
     private var elapsedSeconds: Int { session.elapsedSeconds }
@@ -109,7 +111,7 @@ struct WorkoutDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button(L.t("done", lang)) { dismiss() }
                         .fontWeight(.medium)
                 }
                 if workoutStarted && !isAlreadyDone {
@@ -117,7 +119,7 @@ struct WorkoutDetailSheet: View {
                         Button(role: .destructive) {
                             showDiscardConfirm = true
                         } label: {
-                            Label("End", systemImage: "xmark.circle.fill")
+                            Label(L.t("endWorkoutBtn", lang), systemImage: "xmark.circle.fill")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.red)
                         }
@@ -143,33 +145,35 @@ struct WorkoutDetailSheet: View {
             }
             .sensoryFeedback(.success, trigger: shareData != nil)
             .confirmationDialog(
-                "End workout?",
+                L.t("endWorkoutTitle", lang),
                 isPresented: $showDiscardConfirm,
                 titleVisibility: .visible
             ) {
                 if completedExercises.count > 0 {
-                    Button("Save & Finish") { completeWorkout() }
+                    Button(L.t("saveAndFinish", lang)) { completeWorkout() }
                 }
-                Button("Discard Workout", role: .destructive) {
+                Button(L.t("discardWorkout", lang), role: .destructive) {
                     session.endSession()
                 }
-                Button("Keep Going", role: .cancel) { }
+                Button(L.t("keepGoing", lang), role: .cancel) { }
             } message: {
                 if completedExercises.count > 0 {
-                    Text("You've logged \(completedExercises.count) of \(workout.exercises.count) exercises. Save what you did, or discard everything?")
+                    Text(String(format: L.t("endWorkoutMsgPartial", lang),
+                                "\(completedExercises.count)" as NSString,
+                                "\(workout.exercises.count)" as NSString))
                 } else {
-                    Text("Discard this workout? Nothing has been logged yet.")
+                    Text(L.t("endWorkoutMsgEmpty", lang))
                 }
             }
             .confirmationDialog(
-                "Restart this workout?",
+                L.t("restartWorkoutTitle", lang),
                 isPresented: $showRestartConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Restart", role: .destructive) { restartWorkout() }
-                Button("Cancel", role: .cancel) { }
+                Button(L.t("restart", lang), role: .destructive) { restartWorkout() }
+                Button(L.t("cancel", lang), role: .cancel) { }
             } message: {
-                Text("Today's logged sets for this workout will be removed.")
+                Text(L.t("restartWorkoutMsg", lang))
             }
             .sheet(isPresented: $showEditFinished) {
                 EditFinishedWorkoutSheet(exercises: workout.exercises)
@@ -234,7 +238,7 @@ struct WorkoutDetailSheet: View {
                         Text(workout.name)
                             .font(.title3.weight(.bold))
                         if workout.isWeakPointFocus {
-                            Text("FOCUS")
+                            Text(L.t("focusBadge", lang))
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(.orange)
                                 .padding(.horizontal, 6)
@@ -243,7 +247,7 @@ struct WorkoutDetailSheet: View {
                                 .clipShape(.capsule)
                         }
                         if isAlreadyDone {
-                            Text("DONE")
+                            Text(L.t("doneBadge", lang))
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(.green)
                                 .padding(.horizontal, 6)
@@ -260,11 +264,11 @@ struct WorkoutDetailSheet: View {
             }
 
             HStack(spacing: 0) {
-                miniStat(value: "\(workout.exercises.count)", label: "Exercises", icon: "list.bullet", color: .blue)
+                miniStat(value: "\(workout.exercises.count)", label: L.t("exercisesLabel", lang), icon: "list.bullet", color: .blue)
                 miniDivider
-                miniStat(value: "\(totalSets)", label: "Total Sets", icon: "square.stack.fill", color: .purple)
+                miniStat(value: "\(totalSets)", label: L.t("totalSetsLabel", lang), icon: "square.stack.fill", color: .purple)
                 miniDivider
-                miniStat(value: estimatedTime, label: "Est. Time", icon: "clock.fill", color: .green)
+                miniStat(value: estimatedTime, label: L.t("estTime", lang), icon: "clock.fill", color: .green)
                 miniDivider
                 VStack(spacing: 4) {
                     HStack(spacing: 2) {
@@ -274,7 +278,7 @@ struct WorkoutDetailSheet: View {
                                 .foregroundStyle(i < difficultyLevel ? .orange : Color(.quaternaryLabel))
                         }
                     }
-                    Text("Difficulty")
+                    Text(L.t("difficulty", lang))
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
@@ -346,7 +350,7 @@ struct WorkoutDetailSheet: View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(isAlreadyDone ? "Completed" : "In Progress")
+                    Text(isAlreadyDone ? L.t("completedStatus", lang) : L.t("inProgress", lang))
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(isAlreadyDone ? .green : .primary)
                     if workoutStarted && !isAlreadyDone {
@@ -411,7 +415,7 @@ struct WorkoutDetailSheet: View {
 
     private var whyThisWorkoutButton: some View {
         Button {
-            withAnimation(.spring(duration: 0.4)) {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
                 if showWhyWorkout {
                     showWhyWorkout = false
                 } else {
@@ -426,7 +430,7 @@ struct WorkoutDetailSheet: View {
                 Image(systemName: "brain.fill")
                     .font(.system(size: 14))
                     .foregroundStyle(.purple)
-                Text("Why This Workout?")
+                Text(L.t("whyThisWorkout", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
@@ -462,7 +466,7 @@ struct WorkoutDetailSheet: View {
                 HStack(spacing: 8) {
                     ProgressView()
                         .scaleEffect(0.8)
-                    Text("AI is analyzing your workout...")
+                    Text(L.t("aiAnalyzing", lang))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -485,7 +489,12 @@ struct WorkoutDetailSheet: View {
         .padding(14)
         .background(Color.purple.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
-        .transition(.opacity.combined(with: .move(edge: .top)))
+        .transition(
+            .asymmetric(
+                insertion: .opacity.combined(with: .scale(scale: 0.96, anchor: .top)),
+                removal: .opacity
+            )
+        )
     }
 
     // MARK: - Muscles Section
@@ -496,7 +505,7 @@ struct WorkoutDetailSheet: View {
                 Image(systemName: "figure.strengthtraining.traditional")
                     .font(.system(size: 12))
                     .foregroundStyle(.orange)
-                Text("Muscles Targeted")
+                Text(L.t("musclesTargeted", lang))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
@@ -534,7 +543,7 @@ struct WorkoutDetailSheet: View {
     private var exercisesList: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("Exercises")
+                Text(L.t("exercisesLabel", lang))
                     .font(.title3.weight(.semibold))
                 Spacer()
             }
@@ -627,34 +636,9 @@ struct WorkoutDetailSheet: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     if history.logs.count > 0 {
-                        if let last = history.lastSession {
-                            HStack(spacing: 3) {
-                                Text("Last: \(Int(last.bestSetWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
-                                    .font(.system(size: 10, weight: .medium))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-
-                        HStack(spacing: 3) {
-                            Image(systemName: history.volumeTrend.icon)
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(trendColor(history.volumeTrend))
-                            Text("Best: \(Int(history.personalBestWeight))\(appState.profile.usesMetric ? "kg" : "lbs")")
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(trendColor(history.volumeTrend))
-                        }
-
-                        if history.isPRReady {
-                            Text("PR Ready")
-                                .font(.system(size: 8, weight: .bold))
-                                .foregroundStyle(.orange)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Color.orange.opacity(0.12))
-                                .clipShape(.capsule)
-                        }
+                        historyLabels(for: exercise, history: history)
                     } else {
-                        Text("No data yet")
+                        Text(L.t("noDataYet", lang))
                             .font(.system(size: 10))
                             .foregroundStyle(.quaternary)
                     }
@@ -739,7 +723,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "play.fill")
                             .font(.system(size: 14))
-                        Text("Start Workout")
+                        Text(L.t("startWorkoutBtn", lang))
                             .font(.headline)
                     }
                     .foregroundStyle(.black)
@@ -755,7 +739,7 @@ struct WorkoutDetailSheet: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 16))
                         VStack(spacing: 2) {
-                            Text("Complete Workout")
+                            Text(L.t("completeWorkoutBtn", lang))
                                 .font(.headline)
                             Text("+\(workoutPoints) pts")
                                 .font(.system(.caption2, design: .rounded, weight: .bold))
@@ -773,7 +757,9 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "flag.checkered")
                             .font(.system(size: 14))
-                        Text("Finish Early (\(completedExercises.count)/\(workout.exercises.count))")
+                        Text(String(format: L.t("finishEarlyFmt", lang),
+                                    "\(completedExercises.count)" as NSString,
+                                    "\(workout.exercises.count)" as NSString))
                             .font(.headline)
                     }
                     .foregroundStyle(.primary)
@@ -789,7 +775,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: "xmark.circle")
                             .font(.system(size: 14))
-                        Text("Abandon Workout")
+                        Text(L.t("abandonWorkout", lang))
                             .font(.headline)
                     }
                     .foregroundStyle(.red)
@@ -810,7 +796,7 @@ struct WorkoutDetailSheet: View {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.green)
-                Text("Completed today")
+                Text(L.t("completedToday", lang))
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.green)
                 Spacer()
@@ -822,7 +808,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "pencil")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Edit")
+                        Text(L.t("edit", lang))
                             .font(.subheadline.weight(.semibold))
                     }
                     .foregroundStyle(.primary)
@@ -836,7 +822,7 @@ struct WorkoutDetailSheet: View {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.counterclockwise")
                             .font(.system(size: 13, weight: .semibold))
-                        Text("Restart")
+                        Text(L.t("restart", lang))
                             .font(.subheadline.weight(.semibold))
                     }
                     .foregroundStyle(.white)
@@ -857,17 +843,17 @@ struct WorkoutDetailSheet: View {
                 Image(systemName: "trophy.fill")
                     .font(.system(size: 13))
                     .foregroundStyle(.yellow)
-                Text("Compete Rewards")
+                Text(L.t("competeRewards", lang))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
             }
 
             HStack(spacing: 0) {
-                rewardItem(icon: "checkmark.circle.fill", label: "Complete", value: "+100", color: .green)
+                rewardItem(icon: "checkmark.circle.fill", label: L.t("completeReward", lang), value: "+100", color: .green)
                 rewardDivider
-                rewardItem(icon: "list.bullet", label: "Per Exercise", value: "+10", color: .blue)
+                rewardItem(icon: "list.bullet", label: L.t("perExercise", lang), value: "+10", color: .blue)
                 rewardDivider
-                rewardItem(icon: "trophy.fill", label: "PR Bonus", value: "+50", color: .yellow)
+                rewardItem(icon: "trophy.fill", label: L.t("prBonus", lang), value: "+50", color: .yellow)
             }
         }
         .padding(16)
@@ -930,6 +916,16 @@ struct WorkoutDetailSheet: View {
             totalVolume: sets.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
         )
         logService.saveLog(log)
+
+        // Mirror per-set detail to Supabase so it survives logout/reinstall.
+        // This is the fix for the "0 sets / 0 kg volume" bug — without this
+        // the sets only lived in UserDefaults and got cleared on logout.
+        if let userId = appState.currentUserIdPublic {
+            let logCopy = log
+            Task.detached {
+                await SupabaseSyncService.shared.insertExerciseLog(userId: userId, log: logCopy)
+            }
+        }
 
         withAnimation(.spring(duration: 0.4)) {
             session.markExerciseCompleted(exercise.id, exerciseName: exercise.name, volume: log.computedVolume, hitPR: hitPR)
@@ -1003,7 +999,14 @@ struct WorkoutDetailSheet: View {
 
         session.endSession()
         pendingShareData = nil
-        shareData = IdentifiableShareData(data: data)
+        // Defer the cover presentation by one animation cycle. Without the
+        // delay, the toast dismiss (driven by isPendingFinish flipping) and
+        // the fullScreenCover present run in the same SwiftUI tick, and on
+        // iOS 17+ the cover gets visually swallowed — the user sees a grey
+        // screen instead of the share card.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            shareData = IdentifiableShareData(data: data)
+        }
     }
 
     private func undoFinish() {
@@ -1025,20 +1028,35 @@ struct WorkoutDetailSheet: View {
 
         let weakPts = appState.profile.weakPoints.joined(separator: ", ")
         let goal = appState.profile.primaryGoal
+        let g = appState.profile.gender.lowercased()
+        let isFemale = g.contains("female") || g == "woman" || g == "f"
+        let nameLower = workout.name.lowercased()
 
         var explanation = ""
         if workout.isWeakPointFocus {
             explanation = "This workout prioritizes your weaker areas (\(weakPts.isEmpty ? "overall balance" : weakPts)) with extra volume to accelerate growth where you need it most."
-        } else if workout.name.lowercased().contains("push") {
-            explanation = "Push day targets chest, shoulders, and triceps. Incline movements prioritize upper chest to build your V-taper, while overhead pressing develops capped delts."
-        } else if workout.name.lowercased().contains("pull") {
-            explanation = "Pull day develops back width and thickness. Rows build mid-back density while pulldowns create the wide lats that define an athletic physique."
-        } else if workout.name.lowercased().contains("leg") {
-            explanation = "Leg day is your foundation. Compound movements like squats boost natural testosterone production and build the base that supports all other lifts."
-        } else if workout.name.lowercased().contains("upper") {
-            explanation = "Upper body day provides balanced pushing and pulling volume. This complementary approach prevents imbalances and builds a proportional physique."
-        } else if workout.name.lowercased().contains("lower") || workout.name.lowercased().contains("core") {
-            explanation = "Lower body and core work builds functional strength and stability. A strong core transfers power to every other lift you do."
+        } else if nameLower.contains("glute") || nameLower.contains("hip thrust") {
+            explanation = "Glute day is the cornerstone of lower-body shape. Hip thrusts, glute bridges, and Bulgarian split squats build glute fullness, lift, and separation from the hamstrings."
+        } else if nameLower.contains("push") {
+            explanation = isFemale
+                ? "Push day strengthens shoulders, chest, and triceps for a balanced, toned upper body and stronger posture. Moderate pressing volume keeps things lean — not bulky."
+                : "Push day targets chest, shoulders, and triceps. Incline movements prioritize upper chest to build your V-taper, while overhead pressing develops capped delts."
+        } else if nameLower.contains("pull") {
+            explanation = isFemale
+                ? "Pull day strengthens your back and rear delts to lift your posture and define your shoulder line. Rows and pulldowns also tone the arms without adding bulk."
+                : "Pull day develops back width and thickness. Rows build mid-back density while pulldowns create the wide lats that define an athletic physique."
+        } else if nameLower.contains("leg") {
+            explanation = isFemale
+                ? "Leg day is the centerpiece of your training. Compound movements like squats, hip thrusts, and Romanian deadlifts build the glutes, hamstrings, and lower-body shape you're working toward."
+                : "Leg day is your foundation. Compound movements like squats boost natural testosterone production and build the base that supports all other lifts."
+        } else if nameLower.contains("upper") {
+            explanation = isFemale
+                ? "Upper body day balances pushing and pulling volume to improve posture, tone the arms, and define the shoulder line — without overdoing chest mass."
+                : "Upper body day provides balanced pushing and pulling volume. This complementary approach prevents imbalances and builds a proportional physique."
+        } else if nameLower.contains("lower") || nameLower.contains("core") {
+            explanation = isFemale
+                ? "Lower body and core work targets glutes, hamstrings, and waist definition. A strong core also tightens posture and transfers power to every other lift."
+                : "Lower body and core work builds functional strength and stability. A strong core transfers power to every other lift you do."
         } else {
             explanation = "This workout is designed around your \(goal.isEmpty ? "fitness goals" : goal). The exercise selection targets \(workout.focusAreas.joined(separator: " and ")) for balanced development."
         }
@@ -1047,7 +1065,9 @@ struct WorkoutDetailSheet: View {
             explanation += "\nYour scan shows \(weakPts) as areas to focus on. This plan accounts for that with targeted exercise selection."
         }
 
-        explanation += "\nThe rep ranges chosen optimize for hypertrophy (muscle growth) with enough volume to trigger adaptation without overtraining."
+        explanation += isFemale
+            ? "\nThe rep ranges chosen build muscle tone and shape with enough volume to drive results without overtraining."
+            : "\nThe rep ranges chosen optimize for hypertrophy (muscle growth) with enough volume to trigger adaptation without overtraining."
 
         whyExplanation = explanation
         isLoadingWhy = false
@@ -1059,6 +1079,74 @@ struct WorkoutDetailSheet: View {
         case .down: return .red
         case .neutral: return .secondary
         }
+    }
+
+    @ViewBuilder
+    private func historyLabels(for exercise: Exercise, history: ExerciseHistory) -> some View {
+        let mode = exercise.trackingMode
+        let unit = appState.profile.usesMetric ? "kg" : "lbs"
+
+        switch mode {
+        case .timed:
+            if let last = history.lastSession {
+                Text("Last: \(formatDuration(last.bestSetReps))")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 3) {
+                Image(systemName: history.volumeTrend.icon)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(trendColor(history.volumeTrend))
+                Text("Best: \(formatDuration(history.personalBestReps))")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(trendColor(history.volumeTrend))
+            }
+        case .repsOnly:
+            if let last = history.lastSession {
+                Text("Last: \(last.bestSetReps) reps")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 3) {
+                Image(systemName: history.volumeTrend.icon)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(trendColor(history.volumeTrend))
+                Text("Best: \(history.personalBestReps) reps")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(trendColor(history.volumeTrend))
+            }
+        case .weighted, .bodyweight:
+            if let last = history.lastSession {
+                Text("Last: \(Int(last.bestSetWeight))\(unit)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            HStack(spacing: 3) {
+                Image(systemName: history.volumeTrend.icon)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(trendColor(history.volumeTrend))
+                Text("Best: \(Int(history.personalBestWeight))\(unit)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(trendColor(history.volumeTrend))
+            }
+            if history.isPRReady {
+                Text(L.t("prReady", lang))
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(.capsule)
+            }
+        }
+    }
+
+    private func formatDuration(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        if m > 0 && s == 0 { return "\(m)m" }
+        if m > 0 { return String(format: "%d:%02d", m, s) }
+        return "\(s)s"
     }
 
     private func buildShareData() -> WorkoutShareCardData {

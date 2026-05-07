@@ -11,11 +11,11 @@ struct TrainingLocationView: View {
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
 
-    private var options: [(icon: String, labelKey: String, descKey: String, value: String)] {
+    private var options: [(icon: String, labelKey: String, value: String)] {
         [
-            ("building.2", "gym", "fullEquipment", "Gym"),
-            ("house", "home", "bodyweightMinimal", "Home"),
-            ("figure.mixed.cardio", "both", "mixGymHome", "Both")
+            ("building.2", "gym", "Gym"),
+            ("house", "home", "Home"),
+            ("figure.mixed.cardio", "both", "Both")
         ]
     }
 
@@ -67,12 +67,9 @@ struct TrainingLocationView: View {
                             Text(L.t(option.labelKey, lang))
                                 .font(.headline)
                                 .foregroundStyle(selected == option.value ? Color(.systemBackground) : .primary)
-                            Text(L.t(option.descKey, lang))
-                                .font(.caption)
-                                .foregroundStyle(selected == option.value ? Color(.systemBackground).opacity(0.6) : Color.secondary)
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 120)
+                        .frame(height: 110)
                         .background(selected == option.value ? Color.primary : Color.primary.opacity(0.05))
                         .clipShape(.rect(cornerRadius: 20))
                     }

@@ -24,8 +24,18 @@ struct SetLoggingSheet: View {
     private let exerciseLogService = ExerciseLogService.shared
     private let maxWeight: Double = 9999
 
+    private var lang: String { appState.profile.selectedLanguage }
+
+    private var trackingMode: ExerciseTrackingMode {
+        exercise.trackingMode
+    }
+
+    private var isWeighted: Bool { trackingMode == .weighted || trackingMode == .bodyweight }
+    private var isTimed: Bool { trackingMode == .timed }
+    private var isRepsOnly: Bool { trackingMode == .repsOnly }
+
     private var isBodyweightEligible: Bool {
-        BodyweightDetector.isBodyweightExercise(exercise.name)
+        trackingMode == .bodyweight && BodyweightDetector.isBodyweightExercise(exercise.name)
     }
 
     private var isEquipmentOnly: Bool {
@@ -64,18 +74,32 @@ struct SetLoggingSheet: View {
 
         let hasAISuggestions = !exercise.suggestedWeights.isEmpty && !exercise.suggestedReps.isEmpty
 
+        let mode = exercise.trackingMode
         for i in 0..<exercise.sets {
-            if hasLastSession {
-                let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
+            switch mode {
+            case .timed:
+                // Prefill from last session, else from the planned target.
+                let prevSeconds = lastSession?.sets[safe: i]?.reps ?? 0
+                let target = exercise.targetDurationSeconds
+                let seconds = prevSeconds > 0 ? prevSeconds : target
+                initialSets.append(SetLog(weight: 0, reps: seconds, isBodyweight: false))
+            case .repsOnly:
                 let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
-                initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: wasBW))
-            } else if hasAISuggestions {
-                let sugWeight = exercise.suggestedWeights[safe: i] ?? 0
-                let sugReps = exercise.suggestedReps[safe: i] ?? 0
-                initialSets.append(SetLog(weight: sugWeight, reps: sugReps, isBodyweight: false))
-            } else {
-                let (defWeight, defReps) = Self.experienceDefaults()
-                initialSets.append(SetLog(weight: defWeight, reps: defReps, isBodyweight: false))
+                let suggested = exercise.suggestedReps[safe: i] ?? Int(exercise.reps) ?? 10
+                initialSets.append(SetLog(weight: 0, reps: prevReps > 0 ? prevReps : suggested, isBodyweight: false))
+            case .weighted, .bodyweight:
+                if hasLastSession {
+                    let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
+                    let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
+                    initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: wasBW))
+                } else if hasAISuggestions {
+                    let sugWeight = exercise.suggestedWeights[safe: i] ?? 0
+                    let sugReps = exercise.suggestedReps[safe: i] ?? 0
+                    initialSets.append(SetLog(weight: sugWeight, reps: sugReps, isBodyweight: false))
+                } else {
+                    let (defWeight, defReps) = Self.experienceDefaults()
+                    initialSets.append(SetLog(weight: defWeight, reps: defReps, isBodyweight: false))
+                }
             }
         }
         _sets = State(initialValue: initialSets)
@@ -128,7 +152,7 @@ struct SetLoggingSheet: View {
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button(L.t("done", lang)) {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     }
                     .fontWeight(.semibold)
@@ -136,11 +160,11 @@ struct SetLoggingSheet: View {
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(L.t("cancel", lang)) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if completedSetsCount > 0 {
-                        Button("Save") { saveAndDismiss() }
+                        Button(L.t("save", lang)) { saveAndDismiss() }
                             .fontWeight(.semibold)
                     }
                 }
@@ -153,10 +177,12 @@ struct SetLoggingSheet: View {
         }
         .onDisappear { timer?.invalidate() }
         .sensoryFeedback(.success, trigger: showPRCelebration)
-        .alert("Slow down brother 😭", isPresented: $showWeightLimitAlert) {
-            Button("OK", role: .cancel) { }
+        .alert(L.t("slowDownTitle", lang), isPresented: $showWeightLimitAlert) {
+            Button(L.t("ok", lang), role: .cancel) { }
         } message: {
-            Text("That's gonna break the app! Max weight is \(Int(maxWeight))\(weightUnit).")
+            Text(String(format: L.t("maxWeightMsg", lang),
+                        "\(Int(maxWeight))" as NSString,
+                        weightUnit as NSString))
         }
     }
 
@@ -167,7 +193,7 @@ struct SetLoggingSheet: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 12))
                 .foregroundStyle(.cyan)
-            Text("AI Suggested weights & reps based on your profile")
+            Text(L.t("aiSuggestedBanner", lang))
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
@@ -205,10 +231,10 @@ struct SetLoggingSheet: View {
                         .clipShape(Circle())
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Bodyweight")
+                        Text(L.t("bodyweightLabel", lang))
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(.tertiary)
-                        Text("Requires equipment")
+                        Text(L.t("requiresEquipment", lang))
                             .font(.caption)
                             .foregroundStyle(.quaternary)
                     }
@@ -275,10 +301,10 @@ struct SetLoggingSheet: View {
                             .clipShape(Circle())
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Bodyweight")
+                            Text(L.t("bodyweightLabel", lang))
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(.primary)
-                            Text(useBodyweight ? "Using your body weight (\(Int(bodyweightValue)) \(weightUnit))" : "Tap to use bodyweight")
+                            Text(useBodyweight ? "\(L.t("bodyweightLabel", lang)): \(Int(bodyweightValue)) \(weightUnit)" : L.t("tapBodyweight", lang))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -369,19 +395,19 @@ struct SetLoggingSheet: View {
             HStack(spacing: 0) {
                 statPill(
                     value: history.personalBestWeight > 0 ? "\(Int(history.personalBestWeight))\(weightUnit)" : "-",
-                    label: "Best Weight",
+                    label: L.t("bestWeightLabel", lang),
                     color: .orange
                 )
                 pillDivider
                 statPill(
                     value: history.personalBestReps > 0 ? "\(history.personalBestReps)" : "-",
-                    label: "Best Reps",
+                    label: L.t("bestRepsLabel", lang),
                     color: .green
                 )
                 pillDivider
                 statPill(
                     value: history.logs.count > 0 ? "\(history.logs.count)" : "-",
-                    label: "Sessions",
+                    label: L.t("sessionsLabel", lang),
                     color: .cyan
                 )
             }
@@ -417,7 +443,7 @@ struct SetLoggingSheet: View {
                 Image(systemName: "clock.arrow.circlepath")
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                Text("Last Session")
+                Text(L.t("lastSessionLabel", lang))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -432,17 +458,31 @@ struct SetLoggingSheet: View {
                         Text("S\(idx + 1)")
                             .font(.system(size: 9, weight: .bold))
                             .foregroundStyle(.tertiary)
-                        if set.isBodyweight {
-                            Text("BW")
+                        switch trackingMode {
+                        case .timed:
+                            Text(formatDuration(set.reps))
                                 .font(.system(.caption2, design: .rounded, weight: .bold))
-                                .foregroundStyle(.green)
-                        } else {
-                            Text("\(Int(set.weight))")
+                                .foregroundStyle(.primary)
+                        case .repsOnly:
+                            Text("\(set.reps)")
                                 .font(.system(.caption2, design: .rounded, weight: .bold))
+                                .foregroundStyle(.primary)
+                            Text("reps")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        case .weighted, .bodyweight:
+                            if set.isBodyweight {
+                                Text("BW")
+                                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                                    .foregroundStyle(.green)
+                            } else {
+                                Text("\(Int(set.weight))")
+                                    .font(.system(.caption2, design: .rounded, weight: .bold))
+                            }
+                            Text("×\(set.reps)")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
                         }
-                        Text("×\(set.reps)")
-                            .font(.system(size: 9))
-                            .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
@@ -474,7 +514,7 @@ struct SetLoggingSheet: View {
                 Image(systemName: "timer")
                     .font(.system(size: 14))
                     .foregroundStyle(.orange)
-                Text("Rest Timer")
+                Text(L.t("restTimer", lang))
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 Text(formatRestTime(restSecondsRemaining))
@@ -496,14 +536,17 @@ struct SetLoggingSheet: View {
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: max(geo.size.width * (Double(restSecondsRemaining) / Double(restTimerTotal)), 0), height: 6)
+                        // Clamp the ratio at 1.0 so the bar never extends
+                        // beyond its container if remaining ever exceeds total
+                        // (e.g. user taps +30s near a fresh start).
+                        .frame(width: max(geo.size.width * min(Double(restSecondsRemaining) / Double(max(restTimerTotal, 1)), 1.0), 0), height: 6)
                         .animation(.linear(duration: 1), value: restSecondsRemaining)
                 }
             }
             .frame(height: 6)
 
             HStack(spacing: 12) {
-                Text("Rest 90s for optimal hypertrophy")
+                Text(L.t("restMessage", lang))
                     .font(.caption)
                     .foregroundStyle(.secondary)
 
@@ -511,6 +554,10 @@ struct SetLoggingSheet: View {
 
                 Button {
                     restSecondsRemaining = min(restSecondsRemaining + 30, 300)
+                    // Keep the bar's denominator >= remaining so the
+                    // progress ratio stays in [0, 1] and the bar grows
+                    // visibly when the user extends rest.
+                    restTimerTotal = max(restTimerTotal, restSecondsRemaining)
                 } label: {
                     Text("+30s")
                         .font(.caption.weight(.bold))
@@ -524,7 +571,7 @@ struct SetLoggingSheet: View {
                 Button {
                     stopRestTimer()
                 } label: {
-                    Text("Skip")
+                    Text(L.t("skip", lang))
                         .font(.caption.weight(.bold))
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 10)
@@ -558,7 +605,7 @@ struct SetLoggingSheet: View {
     private var setsListSection: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("Sets")
+                Text(L.t("setsTitle", lang))
                     .font(.title3.weight(.semibold))
                 Spacer()
                 Text("\(completedSetsCount)/\(sets.count)")
@@ -634,12 +681,114 @@ struct SetLoggingSheet: View {
         }
     }
 
+    private func formatDuration(_ seconds: Int) -> String {
+        let m = seconds / 60
+        let s = seconds % 60
+        if m > 0 && s == 0 { return "\(m)m" }
+        if m > 0 { return String(format: "%d:%02d", m, s) }
+        return "\(s)s"
+    }
+
     private static func formatWeight(_ weight: Double) -> String {
         guard weight > 0 else { return "" }
         return weight.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(weight))" : String(format: "%.1f", weight)
     }
 
+    @ViewBuilder
     private func setInputFields(index: Int, isDisabled: Bool) -> some View {
+        switch trackingMode {
+        case .timed:
+            timedInputField(index: index, isDisabled: isDisabled)
+        case .repsOnly:
+            repsOnlyInputField(index: index, isDisabled: isDisabled)
+        case .weighted, .bodyweight:
+            weightedInputFields(index: index, isDisabled: isDisabled)
+        }
+    }
+
+    private func timedInputField(index: Int, isDisabled: Bool) -> some View {
+        let totalSeconds = sets[safe: index]?.reps ?? 0
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+
+        return HStack(spacing: 8) {
+            VStack(spacing: 4) {
+                Text("MIN")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.tertiary)
+                Picker("", selection: Binding(
+                    get: { minutes },
+                    set: { newM in
+                        guard sets.indices.contains(index) else { return }
+                        let s = sets[index].reps % 60
+                        sets[index].reps = newM * 60 + s
+                    }
+                )) {
+                    ForEach(0...60, id: \.self) { m in
+                        Text("\(m)")
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .tag(m)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 64, height: 80)
+                .clipped()
+                .disabled(isDisabled)
+            }
+
+            Text(":")
+                .font(.title3.weight(.bold))
+                .foregroundStyle(.tertiary)
+
+            VStack(spacing: 4) {
+                Text("SEC")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(.tertiary)
+                Picker("", selection: Binding(
+                    get: { seconds },
+                    set: { newS in
+                        guard sets.indices.contains(index) else { return }
+                        let m = sets[index].reps / 60
+                        sets[index].reps = m * 60 + newS
+                    }
+                )) {
+                    ForEach(Array(stride(from: 0, through: 55, by: 5)), id: \.self) { s in
+                        Text(String(format: "%02d", s))
+                            .font(.system(.body, design: .rounded, weight: .semibold))
+                            .tag(s)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 64, height: 80)
+                .clipped()
+                .disabled(isDisabled)
+            }
+        }
+    }
+
+    private func repsOnlyInputField(index: Int, isDisabled: Bool) -> some View {
+        VStack(spacing: 4) {
+            Text(L.t("repsUpper", lang))
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.tertiary)
+            Picker("", selection: Binding(
+                get: { sets[index].reps },
+                set: { sets[index].reps = $0 }
+            )) {
+                ForEach(Self.repsValues, id: \.self) { r in
+                    Text("\(r)")
+                        .font(.system(.body, design: .rounded, weight: .semibold))
+                        .tag(r)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(width: 80, height: 80)
+            .clipped()
+            .disabled(isDisabled)
+        }
+    }
+
+    private func weightedInputFields(index: Int, isDisabled: Bool) -> some View {
         HStack(spacing: 4) {
             if useBodyweight {
                 bodyweightWeightLabel
@@ -716,7 +865,7 @@ struct SetLoggingSheet: View {
                 .foregroundStyle(.tertiary)
 
             VStack(spacing: 0) {
-                Text("REPS")
+                Text(L.t("repsUpper", lang))
                     .font(.system(size: 8, weight: .bold))
                     .foregroundStyle(.tertiary)
                 Picker("", selection: Binding(
@@ -798,7 +947,7 @@ struct SetLoggingSheet: View {
             HStack(spacing: 8) {
                 Image(systemName: "plus.circle.fill")
                     .font(.system(size: 16))
-                Text("Add Drop Set")
+                Text(L.t("addDropSet", lang))
                     .font(.subheadline.weight(.medium))
             }
             .foregroundStyle(.purple)
@@ -816,7 +965,7 @@ struct SetLoggingSheet: View {
             HStack(spacing: 10) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.system(size: 16))
-                Text("Exercise Complete")
+                Text(L.t("exerciseComplete", lang))
                     .font(.headline)
             }
             .foregroundStyle(.black)
@@ -837,11 +986,11 @@ struct SetLoggingSheet: View {
                 .foregroundStyle(.yellow)
                 .symbolEffect(.bounce, value: showPRCelebration)
 
-            Text("NEW PR!")
+            Text(L.t("newPRTitle", lang))
                 .font(.system(.title, design: .rounded, weight: .black))
                 .foregroundStyle(.yellow)
 
-            Text("You just set a personal record!")
+            Text(L.t("newPRSubtitle", lang))
                 .font(.subheadline)
                 .foregroundStyle(.white.opacity(0.8))
         }

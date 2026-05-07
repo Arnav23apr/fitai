@@ -37,6 +37,34 @@ struct ContentView: View {
             } else {
                 MainTabView()
                     .transition(.opacity)
+                    .fullScreenCover(isPresented: Binding(
+                        get: {
+                            // Backfill: existing accounts that completed
+                            // onboarding before usernames were required
+                            // get a one-time forced picker on launch.
+                            appState.isLoggedIn
+                            && appState.profile.username
+                                .trimmingCharacters(in: .whitespacesAndNewlines)
+                                .isEmpty
+                        },
+                        set: { _ in }
+                    )) {
+                        UsernamePickerView(
+                            title: "Pick your handle",
+                            subtitle: "Friends need a way to find you. Lock in your @ now — you can change it later.",
+                            isModal: true,
+                            onConfirm: { final in
+                                appState.profile.username = final
+                                await SupabaseSyncService.shared.setIdentity(
+                                    userId: appState.currentUserIdPublic ?? "",
+                                    name: appState.profile.name,
+                                    username: final,
+                                    email: appState.profile.email
+                                )
+                            }
+                        )
+                        .interactiveDismissDisabled()
+                    }
             }
         }
         .animation(.easeInOut(duration: 0.4), value: appState.showLogoSplash)
