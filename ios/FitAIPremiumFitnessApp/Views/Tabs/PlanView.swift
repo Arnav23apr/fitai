@@ -95,12 +95,16 @@ struct PlanView: View {
                         quickStartButton
                             .padding(.top, 4)
 
-                        // Mode-driven layout. AI-generated path keeps the
-                        // segmented Plan/Templates toggle. The other two
-                        // paths skip the AI plan entirely — templates are
-                        // the primary surface.
+                        // Mode-driven layout. AI-generated and unset both
+                        // get the segmented Plan/Templates toggle — `.unset`
+                        // collapses into AI-plan view so users who somehow
+                        // landed there without picking a mode (e.g. after
+                        // a sign-out/sign-in that didn't restore the mode
+                        // field) still get a functional layout. The other
+                        // two paths skip the AI plan entirely; templates
+                        // are the primary surface.
                         switch workoutMode {
-                        case .aiGenerated:
+                        case .aiGenerated, .unset:
                             modeSegmentedControl
                             if planMode == .today {
                                 todayGoalHero
@@ -115,13 +119,6 @@ struct PlanView: View {
                             generateAIPlanCTA
                             routinesSection
                             exampleTemplatesSection
-                        case .unset:
-                            // The choice screen is presented as a cover
-                            // on .onAppear; this branch only renders if
-                            // the cover hasn't yet appeared. Show the
-                            // segmented layout as a neutral default.
-                            modeSegmentedControl
-                            routinesSection
                         }
 
                         comingSoonStrip

@@ -73,11 +73,20 @@ struct FitAIPremiumFitnessAppApp: App {
                     // the device token to push_tokens.
                     await PushNotificationService.shared.requestAuthorizationAndRegister()
                     await StoreViewModel.shared.fetchOfferings()
+                    // Wait for RevenueCat to actually return customer info
+                    // before reconciling. fetchOfferings() only loads
+                    // packages, not entitlements — without this awaited
+                    // refresh, syncPremiumStatus() reads StoreViewModel's
+                    // default `isPremium = false` and downgrades the
+                    // profile every cold launch (the bug where Pro
+                    // disappears on every relaunch).
+                    await StoreViewModel.shared.refreshPremiumStatus()
                     syncPremiumStatus()
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                     Task {
                         await StoreViewModel.shared.fetchOfferings()
+                        await StoreViewModel.shared.refreshPremiumStatus()
                         syncPremiumStatus()
                         // Bump presence heartbeat — friends will see us as
                         // online for the next 5 min after every foreground.
@@ -87,6 +96,9 @@ struct FitAIPremiumFitnessAppApp: App {
         }
     }
 
+    /// Reconciles `profile.isPremium` against RevenueCat's view of the
+    /// world. Caller MUST await `refreshPremiumStatus()` first so we're
+    /// reading a fresh entitlement, not StoreViewModel's default-false.
     private func syncPremiumStatus() {
         let rcPremium = StoreViewModel.shared.isPremium
         if rcPremium && !appState.profile.isPremium {
