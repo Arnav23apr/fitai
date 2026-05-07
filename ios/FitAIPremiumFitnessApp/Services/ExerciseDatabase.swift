@@ -1080,7 +1080,58 @@ final class ExerciseDatabase: Sendable {
             thumbnailURL: ""
         )
 
+        // Merge in the bundled free-exercise-db (873 entries, MIT-licensed
+        // from yuhonas/free-exercise-db). Hardcoded entries above win on
+        // name collision because they carry video URLs + tips that the
+        // bundled data doesn't include.
+        for bundled in ExerciseDatabase.loadBundledExercises() {
+            let info = bundled.toDemoInfo()
+            if db[info.name] == nil {
+                db[info.name] = info
+            }
+        }
+
+        // Merge in wger.de exercises if the import script has been run
+        // (CC-BY-SA 4.0 — attributed in Profile → About). Same precedence
+        // rule as above: existing entries win on collision so we don't
+        // overwrite curated tips/instructions with auto-generated ones.
+        for entry in ExerciseDatabase.loadWgerExercises() {
+            if db[entry.name] == nil {
+                db[entry.name] = entry
+            }
+        }
+
         self.exercises = db
+    }
+
+    /// All exercise names known to the database. Used by the routine
+    /// editor's exercise picker for browsing/searching the full catalog.
+    var allNames: [String] {
+        Array(exercises.keys).sorted()
+    }
+
+    /// Names filtered by primary muscle group (case-insensitive contains).
+    /// `muscle` is one of: chest, back, shoulders, biceps, triceps, legs,
+    /// quadriceps, hamstrings, glutes, calves, abdominals, forearms, traps,
+    /// lats, abs, core. Pass empty string for all.
+    func names(forMuscle muscle: String) -> [String] {
+        guard !muscle.isEmpty else { return allNames }
+        let needle = muscle.lowercased()
+        return exercises
+            .filter { _, info in
+                info.primaryMuscles.contains { $0.lowercased().contains(needle) }
+            }
+            .map(\.key)
+            .sorted()
+    }
+
+    /// Search by case-insensitive substring on the exercise name.
+    func search(_ query: String) -> [String] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return allNames }
+        return exercises.keys
+            .filter { $0.lowercased().contains(q) }
+            .sorted()
     }
 
     func info(for exerciseName: String) -> ExerciseDemoInfo {
@@ -1115,6 +1166,15 @@ final class ExerciseDatabase: Sendable {
         )
     }
 
+    private static func loadBundledExercises() -> [BundledExercise] {
+        guard let url = Bundle.main.url(forResource: "exercises", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([BundledExercise].self, from: data) else {
+            return []
+        }
+        return decoded
+    }
+
     private static func loadMediaManifest() -> [String: ExerciseMediaEntry] {
         guard let url = Bundle.main.url(forResource: "exercise_media", withExtension: "json"),
               let data = try? Data(contentsOf: url),
@@ -1124,10 +1184,106 @@ final class ExerciseDatabase: Sendable {
         // Lower-case the keys so lookup is case-insensitive.
         return Dictionary(uniqueKeysWithValues: decoded.map { ($0.key.lowercased(), $0.value) })
     }
+
+    /// Load wger.de imported exercises if `wger_exercises.json` is present
+    /// in the bundle. The script `scripts/import_wger.py` writes that file;
+    /// it's optional — missing-bundle returns []. License is CC-BY-SA 4.0,
+    /// attributed in Profile → About.
+    private static func loadWgerExercises() -> [ExerciseDemoInfo] {
+        guard let url = Bundle.main.url(forResource: "wger_exercises", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let payload = try? JSONDecoder().decode(WgerPayload.self, from: data) else {
+            return []
+        }
+        return payload.exercises.map { row in
+            ExerciseDemoInfo(
+                name: row.name,
+                instructions: row.instructions,
+                tips: row.tips,
+                primaryMuscles: row.primaryMuscles,
+                secondaryMuscles: row.secondaryMuscles,
+                videoURL: row.videoURL,
+                thumbnailURL: row.thumbnailURL,
+                frames: row.frames
+            )
+        }
+    }
+}
+
+private struct WgerPayload: Decodable {
+    let exercises: [WgerEntry]
+}
+
+private struct WgerEntry: Decodable {
+    let name: String
+    let instructions: [String]
+    let tips: [String]
+    let primaryMuscles: [String]
+    let secondaryMuscles: [String]
+    let videoURL: String
+    let thumbnailURL: String
+    let frames: [String]
 }
 
 private struct ExerciseMediaEntry: Decodable, Sendable {
     let video: String
     let thumb: String
     let frames: [String]?
+}
+
+// MARK: - Bundled exercise schema (yuhonas/free-exercise-db)
+//
+// Mirrors the JSON entries in `exercises.json`. We map this into the
+// app's `ExerciseDemoInfo` shape on load. Image paths reference the
+// upstream sprite sheet — we don't ship those images yet, so the
+// converted info has empty video/thumbnail URLs; the existing fallback
+// in `info(for:)` handles missing media gracefully.
+private struct BundledExercise: Decodable, Sendable {
+    let id: String
+    let name: String
+    let force: String?
+    let level: String?
+    let mechanic: String?
+    let equipment: String?
+    let primaryMuscles: [String]
+    let secondaryMuscles: [String]
+    let instructions: [String]
+    let category: String?
+    let images: [String]?
+
+    func toDemoInfo() -> ExerciseDemoInfo {
+        ExerciseDemoInfo(
+            name: name,
+            instructions: instructions,
+            tips: BundledExercise.tipsFor(level: level, mechanic: mechanic, equipment: equipment),
+            primaryMuscles: primaryMuscles.map { $0.capitalized },
+            secondaryMuscles: secondaryMuscles.map { $0.capitalized },
+            videoURL: "",
+            thumbnailURL: ""
+        )
+    }
+
+    /// Auto-generate a couple of generic tips from the metadata so the
+    /// detail sheet doesn't show an empty Tips section. Hardcoded entries
+    /// override these with real cues.
+    private static func tipsFor(level: String?, mechanic: String?, equipment: String?) -> [String] {
+        var tips: [String] = []
+        if let lvl = level?.lowercased(), lvl == "beginner" {
+            tips.append("Beginner-friendly — start light and dial in form before adding weight.")
+        }
+        if let mech = mechanic?.lowercased() {
+            if mech == "compound" {
+                tips.append("Compound lift — recruits multiple muscle groups; warm up thoroughly.")
+            } else if mech == "isolation" {
+                tips.append("Isolation movement — use a controlled tempo for full muscle activation.")
+            }
+        }
+        if let eq = equipment?.lowercased(), eq != "body only" {
+            tips.append("Equipment: \(eq.capitalized).")
+        }
+        if tips.isEmpty {
+            tips.append("Use a weight that allows clean reps for the full set.")
+        }
+        return tips
+    }
 }

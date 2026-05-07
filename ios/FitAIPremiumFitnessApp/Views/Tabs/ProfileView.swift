@@ -13,8 +13,14 @@ struct ProfileView: View {
     @State private var showCurrentPlan: Bool = false
     @State private var showWeightHeightEditor: Bool = false
     @State private var showCustomerCenter: Bool = false
+    @State private var showWorkoutPreferences: Bool = false
     @State private var showDeleteConfirm: Bool = false
     @State private var isDeletingAccount: Bool = false
+    @State private var showFeedback: Bool = false
+    @State private var feedbackInitialKind: FeedbackService.Kind = .bug
+    @State private var showPreCancelIntercept: Bool = false
+    @State private var showMeasurements: Bool = false
+    @State private var showPhotosAndData: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -30,6 +36,10 @@ struct ProfileView: View {
                         if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
                             limitedOfferCard
                         }
+                        if appState.profile.canSeeGoalProjection {
+                            GoalProjectionCard(context: .profile)
+                        }
+                        WorkoutCalendarHeatmap(logs: appState.profile.workoutLogs)
                         scanHistorySection
                         settingsSection
                     }
@@ -70,7 +80,17 @@ struct ProfileView: View {
                     .presentationDetents([.fraction(0.75)])
                     .presentationDragIndicator(.hidden)
             }
-            .sheet(isPresented: $showNotificationSettings) { NotificationSettingsView() }
+            .sheet(isPresented: $showNotificationSettings) {
+                NotificationSettingsView()
+                    .presentationDetents([.fraction(0.85), .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(.thinMaterial)
+            }
+            .sheet(isPresented: $showPhotosAndData) {
+                PhotosAndDataSheet()
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
             .sheet(isPresented: $showLanguagePicker) { LanguagePickerSheet() }
             .sheet(isPresented: $showWeightHeightEditor) {
                 WeightHeightEditorSheet()
@@ -83,6 +103,36 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showCustomerCenter) {
                 CustomerCenterView()
+            }
+            .sheet(isPresented: $showFeedback) {
+                FeedbackSheet(initialKind: feedbackInitialKind)
+            }
+            .sheet(isPresented: $showMeasurements) {
+                BodyMeasurementsSheet()
+            }
+            .sheet(isPresented: $showPreCancelIntercept) {
+                GoalProjectionCard(
+                    context: .preCancel,
+                    onProceedCancel: {
+                        showPreCancelIntercept = false
+                        // Hand off to the system manage-subscription sheet.
+                        // Slight delay so the dismiss animation finishes
+                        // before the next sheet presents (avoids a flicker).
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            showCustomerCenter = true
+                        }
+                    },
+                    onStaySubscribed: {
+                        showPreCancelIntercept = false
+                    }
+                )
+                .presentationDetents([.large])
+            }
+            .sheet(isPresented: $showWorkoutPreferences) {
+                EditWorkoutPreferencesSheet()
+                    .presentationDetents([.fraction(0.85), .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground(.thinMaterial)
             }
         }
     }
@@ -344,17 +394,21 @@ struct ProfileView: View {
             }
 
             VStack(spacing: 0) {
+                settingsRow(title: L.t("workoutPreferences", lang), icon: "dumbbell.fill", iconColor: .orange) {
+                    showWorkoutPreferences = true
+                }
+                Divider().padding(.leading, 52)
+                settingsRow(title: "Measurements", icon: "ruler.fill", iconColor: .indigo) {
+                    showMeasurements = true
+                }
+                Divider().padding(.leading, 52)
                 settingsRow(title: L.t("notifications", lang), icon: "bell.fill", iconColor: .secondary) {
                     showNotificationSettings = true
                 }
                 Divider().padding(.leading, 52)
-                darkModeToggle
-                Divider().padding(.leading, 52)
                 weightUnitRow
                 Divider().padding(.leading, 52)
-                settingsRow(title: L.t("appleHealth", lang), icon: "heart.fill", iconColor: .pink) {
-                    showAppleHealth = true
-                }
+                appleHealthRow
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("restorePurchases", lang), icon: "arrow.clockwise") {
                     Task {
@@ -368,7 +422,15 @@ struct ProfileView: View {
                 if appState.profile.isPremium {
                     Divider().padding(.leading, 52)
                     settingsRow(title: "Manage Subscription", icon: "crown.fill", iconColor: .yellow) {
-                        showCustomerCenter = true
+                        // If we have a goal projection, intercept with the
+                        // "this is who you walk away from" sheet first. Users
+                        // can still proceed to the system manage sheet from
+                        // there. No projection → straight to the system sheet.
+                        if appState.profile.goalProjectionURL != nil {
+                            showPreCancelIntercept = true
+                        } else {
+                            showCustomerCenter = true
+                        }
                     }
                 }
                 Divider().padding(.leading, 52)
@@ -376,11 +438,25 @@ struct ProfileView: View {
                     showLanguagePicker = true
                 }
                 Divider().padding(.leading, 52)
-                settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {
-                    if let url = URL(string: "https://arnav23apr.github.io/fitai/terms.html") {
-                        UIApplication.shared.open(url)
-                    }
+                // Single feedback entry — the kind picker (bug/suggestion)
+                // lives inside FeedbackSheet, so we don't need two rows
+                // that both open the same sheet.
+                settingsRow(title: L.t("sendFeedback", lang), icon: "paperplane.fill", iconColor: Color(red: 0.20, green: 0.55, blue: 1.00)) {
+                    feedbackInitialKind = .suggestion
+                    showFeedback = true
                 }
+                Divider().padding(.leading, 52)
+                settingsRow(title: "Photos & Data", icon: "lock.shield.fill", iconColor: .green) {
+                    showPhotosAndData = true
+                }
+                Divider().padding(.leading, 52)
+                settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {
+                    UIApplication.shared.open(LegalLinks.terms)
+                }
+                Divider().padding(.leading, 52)
+                workoutModeResetRow
+                Divider().padding(.leading, 52)
+                exerciseDataAttributionRow
                 Divider().padding(.leading, 52)
                 restartTourRow
             }
@@ -511,6 +587,72 @@ struct ProfileView: View {
         }
     }
 
+    /// Lets the user re-pick their Workouts-tab mode (AI plan / custom /
+    /// reviewed). Sets `workoutMode = .unset` so the choice screen
+    /// re-presents on next visit.
+    private var workoutModeResetRow: some View {
+        Button {
+            appState.profile.workoutMode = .unset
+            appState.saveProfile()
+            UISelectionFeedbackGenerator().selectionChanged()
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.cyan)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Workout mode")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text(appState.profile.workoutMode.label)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text("Change")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.blue)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Attribution for the open-source exercise databases bundled with FitAI.
+    /// Required by their licenses (MIT for free-exercise-db, CC-BY-SA 4.0 for
+    /// wger.de). Tap opens wger.de's site so users can verify the upstream.
+    private var exerciseDataAttributionRow: some View {
+        Button {
+            if let url = URL(string: "https://wger.de/") {
+                UIApplication.shared.open(url)
+            }
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.purple)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Exercise Database Credits")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary)
+                    Text("free-exercise-db (MIT) · wger.de (CC-BY-SA 4.0)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+    }
+
     private var restartTourRow: some View {
         Button { tourManager.restartTour() } label: {
             HStack(spacing: 14) {
@@ -532,30 +674,6 @@ struct ProfileView: View {
         .tourAnchor(.profileRestartTour)
     }
 
-    private var darkModeToggle: some View {
-        HStack(spacing: 14) {
-            Image(systemName: "moon.fill")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-                .frame(width: 28)
-            Text(L.t("darkMode", lang))
-                .font(.subheadline)
-                .foregroundStyle(.primary)
-            Spacer()
-            Toggle("", isOn: Binding(
-                get: { appState.profile.forceDarkMode },
-                set: { newValue in
-                    appState.profile.forceDarkMode = newValue
-                    appState.saveProfile()
-                }
-            ))
-            .tint(.green)
-            .labelsHidden()
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-    }
-
     private var weightUnitRow: some View {
         Button {
             appState.profile.usesMetric.toggle()
@@ -573,6 +691,24 @@ struct ProfileView: View {
                 Text(appState.profile.usesMetric ? "kg" : "lbs")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private var appleHealthRow: some View {
+        Button(action: { showAppleHealth = true }) {
+            HStack(spacing: 14) {
+                AppleHealthIconMark()
+                    .frame(width: 24, height: 24)
+                Text(L.t("appleHealth", lang))
+                    .font(.subheadline)
+                    .foregroundStyle(.primary)
+                Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -622,8 +758,17 @@ struct EditProfileSheet: View {
         "figure.boxing", "figure.martial.arts", "dumbbell.fill"
     ]
     @State private var selectedAvatar: String = "person.crop.circle.fill"
-    @State private var usernameError: String? = nil
-    @State private var isCheckingUsername: Bool = false
+    @State private var usernameStatus: UsernameStatus = .idle
+    @State private var usernameCheckTask: Task<Void, Never>? = nil
+
+    enum UsernameStatus: Equatable {
+        case idle
+        case invalid(UsernameValidationError)
+        case checking
+        case available
+        case taken
+        case error
+    }
 
     var body: some View {
         NavigationStack {
@@ -697,20 +842,21 @@ struct EditProfileSheet: View {
                                     .font(.body).foregroundStyle(.primary)
                                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                                     .padding(.vertical, 16).padding(.leading, 4).padding(.trailing, 16)
-                                    .onChange(of: username) { _, _ in usernameError = nil }
-                                if isCheckingUsername {
-                                    ProgressView().scaleEffect(0.8).padding(.trailing, 16)
-                                }
+                                    .onChange(of: username) { _, newValue in
+                                        scheduleUsernameCheck(newValue)
+                                    }
                             }
                             .background(Color(.secondarySystemGroupedBackground))
                             .clipShape(.rect(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(usernameBorderColor, lineWidth: usernameBorderColor == .clear ? 0 : 1)
+                            )
+                            .animation(.snappy(duration: 0.2), value: usernameStatus)
 
-                            if let usernameError {
-                                Text(usernameError)
-                                    .font(.caption)
-                                    .foregroundStyle(.red)
-                                    .padding(.leading, 4)
-                            }
+                            usernameStatusLabel
+                                .padding(.leading, 4)
+                                .animation(.snappy(duration: 0.2), value: usernameStatus)
                         }
 
                         TextField(L.t("shortBio", appState.profile.selectedLanguage), text: $bio)
@@ -734,7 +880,7 @@ struct EditProfileSheet: View {
                         Task { await save() }
                     }
                     .fontWeight(.semibold)
-                    .disabled(isCheckingUsername)
+                    .disabled(usernameStatus == .checking)
                 }
             }
             .onChange(of: selectedPhotoItem) { _, newValue in
@@ -755,24 +901,127 @@ struct EditProfileSheet: View {
         }
     }
 
+    private var usernameBorderColor: Color {
+        switch usernameStatus {
+        case .available: return .green.opacity(0.6)
+        case .taken, .invalid: return .red.opacity(0.6)
+        default: return .clear
+        }
+    }
+
+    @ViewBuilder
+    private var usernameStatusLabel: some View {
+        switch usernameStatus {
+        case .idle:
+            EmptyView()
+        case .checking:
+            HStack(spacing: 6) {
+                ProgressView().scaleEffect(0.7)
+                Text("Checking…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        case .available:
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.green)
+                Text("Username available")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.green)
+            }
+        case .taken:
+            HStack(spacing: 6) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+                Text("Username not available")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.red)
+            }
+        case .invalid(let err):
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.circle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+                Text(UsernameValidator.message(for: err))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.red)
+            }
+        case .error:
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.orange)
+                Text("Couldn't verify. Check connection.")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    private func scheduleUsernameCheck(_ raw: String) {
+        usernameCheckTask?.cancel()
+
+        let normalized = raw.lowercased().trimmingCharacters(in: .whitespaces)
+        let current = appState.profile.username.lowercased()
+
+        if normalized.isEmpty || normalized == current {
+            usernameStatus = .idle
+            return
+        }
+
+        if let err = UsernameValidator.validate(normalized) {
+            usernameStatus = .invalid(err)
+            return
+        }
+
+        usernameStatus = .checking
+
+        usernameCheckTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            if Task.isCancelled { return }
+
+            let result = await appState.isUsernameAvailable(normalized)
+            if Task.isCancelled { return }
+
+            switch result {
+            case .some(true):  usernameStatus = .available
+            case .some(false): usernameStatus = .taken
+            case .none:        usernameStatus = .error
+            }
+        }
+    }
+
     @MainActor
     private func save() async {
         let normalized = username.lowercased().trimmingCharacters(in: .whitespaces)
         let current = appState.profile.username.lowercased()
+        let usernameDidChange = !normalized.isEmpty && normalized != current
 
-        if !normalized.isEmpty && normalized != current {
-            isCheckingUsername = true
-            let available = await appState.isUsernameAvailable(normalized)
-            isCheckingUsername = false
-            switch available {
-            case .some(false):
-                usernameError = "That username is already taken."
-                return
-            case .none:
-                usernameError = "Couldn't verify username. Check your connection and try again."
-                return
-            case .some(true):
+        if usernameDidChange {
+            switch usernameStatus {
+            case .available:
                 break
+            case .taken, .invalid, .error:
+                return
+            case .checking, .idle:
+                if let validationError = UsernameValidator.validate(normalized) {
+                    usernameStatus = .invalid(validationError)
+                    return
+                }
+                usernameStatus = .checking
+                let available = await appState.isUsernameAvailable(normalized)
+                switch available {
+                case .some(false):
+                    usernameStatus = .taken
+                    return
+                case .none:
+                    usernameStatus = .error
+                    return
+                case .some(true):
+                    usernameStatus = .available
+                }
             }
         }
 
@@ -780,8 +1029,28 @@ struct EditProfileSheet: View {
         appState.profile.username = normalized
         appState.profile.bio = bio
         appState.profile.avatarSystemName = selectedAvatar
-        appState.profile.customPhotoData = customPhotoData
-        appState.saveProfile()
+        if usernameDidChange {
+            appState.profile.usernameChangedAt = Date()
+        }
+        // Photo update goes through `setCustomPhotoData` so the avatar
+        // also uploads to Supabase Storage (cross-device sync). It calls
+        // saveProfile() internally, so we don't double-save.
+        appState.setCustomPhotoData(customPhotoData)
+
+        // Identity fields are skipped by the bulk upsert; sync them
+        // explicitly here since the user just changed them on purpose.
+        if let userId = appState.currentUserIdPublic {
+            let nameToSync = name
+            let usernameToSync = normalized
+            Task.detached {
+                await SupabaseSyncService.shared.setIdentity(
+                    userId: userId,
+                    name: nameToSync,
+                    username: usernameToSync,
+                    email: nil
+                )
+            }
+        }
         dismiss()
     }
 }
@@ -844,5 +1113,34 @@ struct LanguagePickerSheet: View {
             }
         }
         .onAppear { selectedLanguage = appState.profile.selectedLanguage }
+    }
+}
+
+struct AppleHealthIconMark: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = min(geo.size.width, geo.size.height)
+            let isDark = colorScheme == .dark
+
+            ZStack {
+                RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
+                    .fill(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
+                            .strokeBorder(
+                                isDark ? Color.white.opacity(0.10) : Color.black.opacity(0.06),
+                                lineWidth: 0.5
+                            )
+                    )
+
+                Image("AppleHealthLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * 0.84, height: size * 0.84)
+            }
+            .frame(width: size, height: size)
+        }
     }
 }
