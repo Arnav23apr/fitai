@@ -130,9 +130,12 @@ class AIService {
     private let imageModel = "gemini-3-pro-image-preview"
 
     /// Simple per-day rate limiter to prevent runaway API costs.
+    /// Bumped to 500/day to avoid blocking heavy testing during dev. The
+    /// real budget gate is `FreeUsageTracker` for free users; this is a
+    /// last-resort runaway-cost protection.
     private static let dailyLimitKey = "ai_daily_request_count"
     private static let dailyLimitDateKey = "ai_daily_request_date"
-    private static let maxDailyRequests = 100
+    private static let maxDailyRequests = 500
 
     init() {
         self.apiKey = Config.GEMINI_API_KEY

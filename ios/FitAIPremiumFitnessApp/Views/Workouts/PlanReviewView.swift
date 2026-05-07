@@ -365,11 +365,28 @@ struct PlanReviewView: View {
                 isLoading = false
             }
         } catch {
+            // Surface the actual underlying error so we can tell apart
+            // rate limits, schema rejections, network issues, etc.
             await MainActor.run {
-                errorMessage = "Couldn't reach the coach right now. Check your connection."
+                errorMessage = humanReadableError(error)
                 isLoading = false
             }
         }
+    }
+
+    /// Converts an AIService / network error into a user-friendly string.
+    /// Distinguishes rate limit, server rejection, and connection issues
+    /// so the user knows what to actually do about it.
+    private func humanReadableError(_ error: Error) -> String {
+        let raw = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        if raw.contains("Daily limit") {
+            return "Daily AI limit reached. Try again tomorrow."
+        }
+        if raw.contains("network") || raw.localizedCaseInsensitiveContains("offline") {
+            return "No connection. Check your internet and try again."
+        }
+        // Default: show the raw error so it's actionable instead of vague.
+        return "Coach error: \(raw). Try again."
     }
 
     private func saveAll(_ specs: [PlanModificationService.TemplateSpec]) {

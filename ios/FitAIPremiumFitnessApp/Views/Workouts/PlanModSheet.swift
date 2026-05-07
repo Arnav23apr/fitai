@@ -435,7 +435,14 @@ struct PlanModSheet: View {
             }
         } catch {
             await MainActor.run {
-                errorMessage = "Couldn't reach the coach right now. Check your connection and try again."
+                let raw = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+                if raw.contains("Daily limit") {
+                    errorMessage = "Daily AI limit reached. Try again tomorrow."
+                } else if raw.contains("network") || raw.localizedCaseInsensitiveContains("offline") {
+                    errorMessage = "No connection. Check your internet and try again."
+                } else {
+                    errorMessage = "Coach error: \(raw). Try again."
+                }
                 isLoading = false
             }
         }
