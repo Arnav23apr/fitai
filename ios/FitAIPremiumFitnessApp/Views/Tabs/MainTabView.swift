@@ -6,6 +6,10 @@ struct MainTabView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var appeared: Bool = false
     @State private var showResumeWorkout: Bool = false
+    /// Share overlay presented after a finished resume-flow workout. Owned
+    /// here (not inside ActiveSessionView) so the cover unwinds first,
+    /// preventing the fresh-session re-launch bug.
+    @State private var pendingShareData: WorkoutShareCardData? = nil
 
     private let session = WorkoutSessionManager.shared
     private var lang: String { appState.profile.selectedLanguage }
@@ -18,11 +22,11 @@ struct MainTabView: View {
             }
             .accessibilityLabel("Scan tab")
             .accessibilityHint("Body scan and physique analysis")
-            Tab(L.t("plan", lang), systemImage: "calendar.badge.clock", value: 1) {
+            Tab("Workouts", systemImage: "dumbbell.fill", value: 1) {
                 PlanView()
             }
-            .accessibilityLabel("Plan tab")
-            .accessibilityHint("Your workout plan and schedule")
+            .accessibilityLabel("Workouts tab")
+            .accessibilityHint("Start, log, and track your workouts")
             Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 2) {
                 CompeteView()
             }
@@ -53,11 +57,31 @@ struct MainTabView: View {
             TourOverlayView()
                 .allowsHitTesting(tourManager.showWelcome || (tourManager.isActive && tourManager.stepReady))
         }
-        .sheet(isPresented: $showResumeWorkout) {
+        .fullScreenCover(isPresented: $showResumeWorkout) {
             if session.isActive {
-                let resumeWorkout = buildResumeWorkoutDay()
-                WorkoutDetailSheet(workout: resumeWorkout)
+                ActiveSessionView(
+                    initialName: session.workoutName,
+                    initialIcon: session.workoutIcon.isEmpty ? "dumbbell.fill" : session.workoutIcon,
+                    initialExercises: session.exercises.map(RoutineExercise.init(from:)),
+                    defaultRestSeconds: 90,
+                    sourceTemplateId: nil,
+                    onFinish: { share in
+                        showResumeWorkout = false
+                        if let share {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                                pendingShareData = share
+                            }
+                        }
+                    }
+                )
             }
+        }
+        .fullScreenCover(item: $pendingShareData.asIdentifiable) { wrapper in
+            WorkoutShareOverlay(
+                data: wrapper.value,
+                onDismiss: { pendingShareData = nil }
+            )
+            .background(ClearBackground())
         }
         .onAppear {
             let tabBarAppearance = UITabBarAppearance()
@@ -79,20 +103,6 @@ struct MainTabView: View {
         .onChange(of: tourManager.showWelcome) { _, showing in
             if showing { registerTabBarFrame() }
         }
-    }
-
-    private func buildResumeWorkoutDay() -> WorkoutDay {
-        WorkoutDay(
-            dayLabel: session.workoutDayLabel,
-            name: session.workoutName,
-            focusAreas: session.workoutFocusAreas,
-            icon: session.workoutIcon,
-            isRestDay: false,
-            exercises: zip(session.exerciseIds, session.exerciseNames).map { id, name in
-                Exercise(id: id, name: name, sets: 3, reps: "8-12", muscleGroup: "")
-            },
-            isWeakPointFocus: session.workoutIsWeakPointFocus
-        )
     }
 
     private func registerTabBarFrame() {

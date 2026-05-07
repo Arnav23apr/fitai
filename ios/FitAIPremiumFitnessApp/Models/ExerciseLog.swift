@@ -1,5 +1,32 @@
 import Foundation
 
+/// Strong-style set tag. Tap the set number in ActiveSessionView to assign.
+/// Warm-up sets are excluded from PR + volume calculations.
+nonisolated enum SetType: String, Codable, Sendable, CaseIterable {
+    case normal
+    case warmup
+    case dropSet
+    case failure
+
+    var badge: String {
+        switch self {
+        case .normal: return ""
+        case .warmup: return "W"
+        case .dropSet: return "D"
+        case .failure: return "F"
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .normal: return "Normal Set"
+        case .warmup: return "Warm-up Set"
+        case .dropSet: return "Drop Set"
+        case .failure: return "Failure Set"
+        }
+    }
+}
+
 nonisolated struct SetLog: Codable, Identifiable, Sendable {
     let id: String
     var weight: Double
@@ -9,8 +36,31 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
     var isDropSet: Bool
     var isBodyweight: Bool
     var timestamp: Date
+    /// Strong-style set type. Source of truth going forward; the legacy
+    /// `isFailure`/`isDropSet` fields are kept for backwards compatibility
+    /// with previously-persisted logs and are mirrored on writes.
+    var setType: SetType
+    /// Rate of Perceived Exertion (6–10). nil = not recorded.
+    var rpe: Double?
+    /// Actual rest time taken before this set, in seconds. nil = not tracked.
+    var restSeconds: Int?
+    /// Per-set freeform note. nil = none.
+    var note: String?
 
-    init(id: String = UUID().uuidString, weight: Double = 0, reps: Int = 0, isCompleted: Bool = false, isFailure: Bool = false, isDropSet: Bool = false, isBodyweight: Bool = false, timestamp: Date = Date()) {
+    init(
+        id: String = UUID().uuidString,
+        weight: Double = 0,
+        reps: Int = 0,
+        isCompleted: Bool = false,
+        isFailure: Bool = false,
+        isDropSet: Bool = false,
+        isBodyweight: Bool = false,
+        timestamp: Date = Date(),
+        setType: SetType = .normal,
+        rpe: Double? = nil,
+        restSeconds: Int? = nil,
+        note: String? = nil
+    ) {
         self.id = id
         self.weight = weight
         self.reps = reps
@@ -19,6 +69,48 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
         self.isDropSet = isDropSet
         self.isBodyweight = isBodyweight
         self.timestamp = timestamp
+        // Auto-derive setType when callers only set the legacy flags.
+        if setType == .normal {
+            if isFailure { self.setType = .failure }
+            else if isDropSet { self.setType = .dropSet }
+            else { self.setType = .normal }
+        } else {
+            self.setType = setType
+        }
+        self.rpe = rpe
+        self.restSeconds = restSeconds
+        self.note = note
+    }
+
+    // Custom decoder so legacy logs (no setType field) decode cleanly.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.weight = try c.decode(Double.self, forKey: .weight)
+        self.reps = try c.decode(Int.self, forKey: .reps)
+        self.isCompleted = try c.decode(Bool.self, forKey: .isCompleted)
+        self.isFailure = try c.decodeIfPresent(Bool.self, forKey: .isFailure) ?? false
+        self.isDropSet = try c.decodeIfPresent(Bool.self, forKey: .isDropSet) ?? false
+        self.isBodyweight = try c.decodeIfPresent(Bool.self, forKey: .isBodyweight) ?? false
+        self.timestamp = try c.decodeIfPresent(Date.self, forKey: .timestamp) ?? Date()
+        if let raw = try c.decodeIfPresent(String.self, forKey: .setType),
+           let t = SetType(rawValue: raw) {
+            self.setType = t
+        } else if isFailure {
+            self.setType = .failure
+        } else if isDropSet {
+            self.setType = .dropSet
+        } else {
+            self.setType = .normal
+        }
+        self.rpe = try c.decodeIfPresent(Double.self, forKey: .rpe)
+        self.restSeconds = try c.decodeIfPresent(Int.self, forKey: .restSeconds)
+        self.note = try c.decodeIfPresent(String.self, forKey: .note)
+    }
+
+    /// True for sets that should count toward volume / PRs.
+    var countsTowardVolume: Bool {
+        isCompleted && setType != .warmup
     }
 }
 
@@ -39,16 +131,17 @@ nonisolated struct ExerciseLog: Codable, Identifiable, Sendable {
         self.totalVolume = totalVolume
     }
 
+    /// Working-set volume only — warm-ups excluded so they don't pollute PRs.
     var computedVolume: Double {
-        sets.filter(\.isCompleted).reduce(0) { $0 + ($1.weight * Double($1.reps)) }
+        sets.filter(\.countsTowardVolume).reduce(0) { $0 + ($1.weight * Double($1.reps)) }
     }
 
     var bestSetWeight: Double {
-        sets.filter(\.isCompleted).map(\.weight).max() ?? 0
+        sets.filter(\.countsTowardVolume).map(\.weight).max() ?? 0
     }
 
     var bestSetReps: Int {
-        sets.filter(\.isCompleted).map(\.reps).max() ?? 0
+        sets.filter(\.countsTowardVolume).map(\.reps).max() ?? 0
     }
 }
 
@@ -57,11 +150,11 @@ nonisolated struct ExerciseHistory: Codable, Sendable {
     var logs: [ExerciseLog]
 
     var personalBestWeight: Double {
-        logs.flatMap(\.sets).filter(\.isCompleted).map(\.weight).max() ?? 0
+        logs.flatMap(\.sets).filter(\.countsTowardVolume).map(\.weight).max() ?? 0
     }
 
     var personalBestReps: Int {
-        logs.flatMap(\.sets).filter(\.isCompleted).map(\.reps).max() ?? 0
+        logs.flatMap(\.sets).filter(\.countsTowardVolume).map(\.reps).max() ?? 0
     }
 
     var personalBestVolume: Double {

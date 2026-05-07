@@ -15,8 +15,29 @@ struct PlanView: View {
     @State private var showStreakSheet: Bool = false
     @State private var showHistory: Bool = false
     @State private var showCalendar: Bool = false
+    @State private var planMode: PlanMode = .today
+    @State private var showCreateRoutine: Bool = false
+    @State private var routineToEdit: Routine? = nil
+    @State private var activeSessionRoutine: Routine? = nil
+    @State private var showEmptyWorkoutSession: Bool = false
+    @State private var showComingSoon: ComingSoonFeature? = nil
+    @State private var planModRoutine: Routine? = nil
+    @State private var showCreateWithCoach: Bool = false
+    @State private var showPlanReview: Bool = false
+    @State private var showHubPhotoScanner: Bool = false
+    @State private var hubPhotoCapture: UIImage? = nil
+    @State private var hubPhotoAnalysis: WeightOCRService.Result? = nil
+    /// Owned at this level (not inside ActiveSessionView) so the active
+    /// cover dismisses fully before the share overlay presents — fixes
+    /// the cover-on-cover bug where a fresh empty session would re-launch
+    /// after Finish.
+    @State private var pendingShareData: WorkoutShareCardData? = nil
+
+    /// Computed view of the user's chosen workout-tab behavior.
+    private var workoutMode: UserProfile.WorkoutMode { appState.profile.workoutMode }
 
     private let session = WorkoutSessionManager.shared
+    private let routines = RoutineService.shared
 
     private var workoutPlan: [WorkoutDay] {
         generatePersonalizedPlan()
@@ -71,12 +92,39 @@ struct PlanView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 20) {
-                        todayGoalHero
-                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        quickStartButton
+                            .padding(.top, 4)
 
-                        planSummaryCard
+                        // Mode-driven layout. AI-generated path keeps the
+                        // segmented Plan/Templates toggle. The other two
+                        // paths skip the AI plan entirely — templates are
+                        // the primary surface.
+                        switch workoutMode {
+                        case .aiGenerated:
+                            modeSegmentedControl
+                            if planMode == .today {
+                                todayGoalHero
+                                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                                planSummaryCard
+                                weeklyPlanSection
+                            } else {
+                                routinesSection
+                                exampleTemplatesSection
+                            }
+                        case .userBuilt, .userPlanReviewed:
+                            generateAIPlanCTA
+                            routinesSection
+                            exampleTemplatesSection
+                        case .unset:
+                            // The choice screen is presented as a cover
+                            // on .onAppear; this branch only renders if
+                            // the cover hasn't yet appeared. Show the
+                            // segmented layout as a neutral default.
+                            modeSegmentedControl
+                            routinesSection
+                        }
 
-                        weeklyPlanSection
+                        comingSoonStrip
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -87,12 +135,13 @@ struct PlanView: View {
                     .tourAutoScroll(tab: 1, proxy: scrollProxy)
                 }
                 .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+                .animation(.snappy(duration: 0.25), value: planMode)
             }
             .background(Color(.systemBackground))
             .overlay(alignment: .bottomTrailing) {
                 aiFloatingButton
             }
-            .navigationTitle(L.t("plan", lang))
+            .navigationTitle("Workouts")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -125,11 +174,19 @@ struct PlanView: View {
             }
             .sheet(item: $selectedDay) { day in
                 WorkoutDetailSheet(workout: day)
+                    .interactiveDismissDisabled(false)
+                    .presentationDetents([.large])
+                    .presentationContentInteraction(.scrolls)
             }
             .onAppear {
                 withAnimation(.easeOut(duration: 0.5)) {
                     appeared = true
                 }
+                // Always land on Today when the user opens the Plan tab.
+                // @State persists across tab switches inside TabView, so
+                // without this the tab would stick on whichever mode the
+                // user last selected (Advanced).
+                planMode = .today
                 autoResumeIfNeeded()
             }
             .onChange(of: session.isActive) { _, newValue in
@@ -137,26 +194,796 @@ struct PlanView: View {
                     autoResumeIfNeeded()
                 }
             }
+            .sheet(isPresented: $showCreateRoutine) {
+                RoutineEditorSheet(initial: nil) { saved in
+                    if let saved {
+                        routines.save(saved)
+                    }
+                }
+            }
+            .sheet(item: $routineToEdit) { existing in
+                RoutineEditorSheet(initial: existing) { saved in
+                    if let saved {
+                        routines.save(saved)
+                    }
+                }
+            }
+            .fullScreenCover(item: $activeSessionRoutine) { routine in
+                ActiveSessionView(
+                    initialName: routine.name,
+                    initialIcon: routine.icon,
+                    initialExercises: routine.exercises,
+                    defaultRestSeconds: routine.defaultRestSeconds,
+                    sourceTemplateId: routine.id,
+                    onFinish: { share in
+                        // Force-dismiss the active session, then queue the
+                        // share overlay one runloop tick later. This is
+                        // the order that prevents iOS from coalescing the
+                        // two presentation changes into a re-presentation.
+                        activeSessionRoutine = nil
+                        if let share {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                                pendingShareData = share
+                            }
+                        }
+                    }
+                )
+            }
+            .fullScreenCover(isPresented: $showEmptyWorkoutSession) {
+                ActiveSessionView(
+                    initialName: WorkoutSessionManager.timeOfDayWorkoutName(),
+                    initialIcon: "dumbbell.fill",
+                    initialExercises: [],
+                    defaultRestSeconds: 90,
+                    sourceTemplateId: nil,
+                    onFinish: { share in
+                        showEmptyWorkoutSession = false
+                        if let share {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                                pendingShareData = share
+                            }
+                        }
+                    }
+                )
+            }
+            .fullScreenCover(item: $pendingShareData.asIdentifiable) { wrapper in
+                WorkoutShareOverlay(
+                    data: wrapper.value,
+                    onDismiss: { pendingShareData = nil }
+                )
+                .background(ClearBackground())
+            }
+            .fullScreenCover(isPresented: Binding(
+                get: { workoutMode == .unset },
+                set: { _ in /* dismissal happens via onChoice */ }
+            )) {
+                WorkoutOnboardingChoiceView { picked in
+                    handleModeChoice(picked)
+                }
+            }
+            .sheet(isPresented: $showPlanReview) {
+                PlanReviewView { /* templates already saved by view */ }
+            }
+            .fullScreenCover(isPresented: $showHubPhotoScanner) {
+                WeightScannerView(
+                    onCapture: { image in
+                        showHubPhotoScanner = false
+                        hubPhotoCapture = image
+                        Task { await analyzeHubPhoto(image) }
+                    },
+                    onCancel: { showHubPhotoScanner = false }
+                )
+            }
+            .sheet(item: Binding(
+                get: { hubPhotoAnalysis.map { HubPhotoResult(value: $0) } },
+                set: { hubPhotoAnalysis = $0?.value }
+            )) { wrapper in
+                if let img = hubPhotoCapture {
+                    WeightOCRConfirmSheet(
+                        capturedImage: img,
+                        analysis: wrapper.value,
+                        onApply: { apply in
+                            startSessionFromPhoto(apply)
+                            hubPhotoCapture = nil
+                            hubPhotoAnalysis = nil
+                        }
+                    )
+                }
+            }
+            .sheet(item: $showComingSoon) { feature in
+                ComingSoonSheet(feature: feature)
+                    .presentationDetents([.fraction(0.55)])
+            }
+            .sheet(item: $planModRoutine) { rt in
+                PlanModSheet(routine: rt) { _ in
+                    // Routine already saved by PlanModSheet; no-op.
+                }
+            }
+            .sheet(isPresented: $showCreateWithCoach) {
+                PlanModSheet(routine: nil) { _ in
+                    // Templates already saved by PlanModSheet; no-op.
+                }
+            }
         }
     }
 
-    private func autoResumeIfNeeded() {
-        guard session.isActive, selectedDay == nil, !hasAutoResumed else { return }
-        hasAutoResumed = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let resumeDay = WorkoutDay(
-                dayLabel: session.workoutDayLabel,
-                name: session.workoutName,
-                focusAreas: session.workoutFocusAreas,
-                icon: session.workoutIcon,
-                isRestDay: false,
-                exercises: zip(session.exerciseIds, session.exerciseNames).map { id, name in
-                    Exercise(id: id, name: name, sets: 3, reps: "8-12", muscleGroup: "")
-                },
-                isWeakPointFocus: session.workoutIsWeakPointFocus
-            )
-            selectedDay = resumeDay
+    // MARK: - Quick Start
+    //
+    // Monochrome primary CTA + a smaller "Log via Photo" affordance for
+    // users who want to start a session from a snap of their loaded
+    // equipment.
+
+    private var quickStartButton: some View {
+        HStack(spacing: 10) {
+            Button {
+                showEmptyWorkoutSession = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 14, weight: .heavy))
+                    Text("Start Empty Workout")
+                        .font(.subheadline.weight(.bold))
+                }
+                .foregroundStyle(Color(.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(Color.primary)
+                .clipShape(.rect(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .sensoryFeedback(.impact(weight: .medium), trigger: showEmptyWorkoutSession)
+
+            Button {
+                showHubPhotoScanner = true
+            } label: {
+                Image(systemName: "camera.fill")
+                    .font(.system(size: 18, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 50)
+                    .background(LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .clipShape(.rect(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Log via Photo")
         }
+    }
+
+    // MARK: - Example Templates (seeded)
+
+    private var exampleTemplatesSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Examples")
+                    .font(.title3.weight(.bold))
+                Text("\(routines.examples.count)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(routines.examples) { example in
+                    exampleTemplateCard(example)
+                }
+            }
+        }
+    }
+
+    private func exampleTemplateCard(_ routine: Routine) -> some View {
+        let tint = exampleTint(for: routine)
+        return Button {
+            activeSessionRoutine = routine
+        } label: {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .center, spacing: 0) {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [tint.opacity(0.22), tint.opacity(0.06)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 34, height: 34)
+                        Image(systemName: routine.icon)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(tint)
+                    }
+                    Spacer()
+                    Text("\(routine.exercises.count) ex")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(routine.name)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(routine.exercises.prefix(3).map(\.name).joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+                HStack(spacing: 5) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 8, weight: .heavy))
+                    Text("Start")
+                        .font(.caption2.weight(.bold))
+                }
+                .foregroundStyle(tint)
+            }
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
+            .padding(14)
+            .background(
+                ZStack {
+                    Color.primary.opacity(0.04)
+                    LinearGradient(
+                        colors: [tint.opacity(0.06), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(tint.opacity(0.10), lineWidth: 0.6)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Per-template accent — keeps the grid visually rhythmic without
+    /// each card looking the same. Stable per routine.id so the same
+    /// template always reads in the same color.
+    private func exampleTint(for routine: Routine) -> Color {
+        switch routine.id {
+        case "example-5x5-a", "example-5x5-b": return .red
+        case "example-ppl-push": return .orange
+        case "example-ppl-pull": return .blue
+        case "example-ppl-legs": return .purple
+        case "example-upper": return .indigo
+        case "example-lower": return .green
+        default: return .cyan
+        }
+    }
+
+    // MARK: - Coming Soon strip
+
+    private var comingSoonStrip: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text("Coming Soon")
+                    .font(.title3.weight(.bold))
+                Image(systemName: "sparkles")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+            HStack(spacing: 10) {
+                // Voice + photo are LIVE now (mic + camera in active
+                // session, photo CTA in hub). Apple Watch is the only
+                // teaser left.
+                comingSoonCard(.appleWatch)
+                Spacer()
+            }
+        }
+        .padding(.top, 12)
+    }
+
+    private func comingSoonCard(_ feature: ComingSoonFeature) -> some View {
+        Button {
+            showComingSoon = feature
+        } label: {
+            VStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [feature.tint.opacity(0.20), feature.tint.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                    Image(systemName: feature.icon)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(feature.tint)
+                }
+                Text(feature.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("Soon")
+                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .tracking(0.5)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.primary.opacity(0.08))
+                    .clipShape(.capsule)
+            }
+            .frame(maxWidth: .infinity, minHeight: 118)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 8)
+            .background(
+                LinearGradient(
+                    colors: [feature.tint.opacity(0.08), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(feature.tint.opacity(0.14), lineWidth: 0.6)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Mode segmented control
+    //
+    // Native SwiftUI Picker with .segmented style — same component the
+    // imperial/metric picker on HeightWeightView uses. On iOS 26 this
+    // automatically picks up the system Liquid Glass treatment with no
+    // extra code; on older iOS it falls back to UIKit's UISegmentedControl.
+
+    private var modeSegmentedControl: some View {
+        Picker("Plan mode", selection: Binding(
+            get: { planMode },
+            set: { newValue in
+                withAnimation(.snappy(duration: 0.22)) { planMode = newValue }
+            }
+        )) {
+            Text("Plan").tag(PlanMode.today)
+            Text("Templates").tag(PlanMode.routines)
+        }
+        .pickerStyle(.segmented)
+        .sensoryFeedback(.selection, trigger: planMode)
+    }
+
+    // MARK: - Routines section
+
+    private var routinesSection: some View {
+        VStack(spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("My Templates")
+                    .font(.title3.weight(.bold))
+                if !routines.routines.isEmpty {
+                    Text("\(routines.routines.count)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
+                Button {
+                    showCreateWithCoach = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 10, weight: .heavy))
+                        Text("Coach")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 6)
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .indigo],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(.capsule)
+                }
+                Button {
+                    showCreateRoutine = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 11, weight: .heavy))
+                        Text("New")
+                            .font(.caption.weight(.bold))
+                    }
+                    .foregroundStyle(Color(.systemBackground))
+                    .padding(.horizontal, 11)
+                    .padding(.vertical, 6)
+                    .background(Color.primary)
+                    .clipShape(.capsule)
+                }
+            }
+
+            if routines.routines.isEmpty {
+                routinesEmptyState
+            } else {
+                aiCoachModifyCallout
+                ForEach(routines.routines) { routine in
+                    routineCard(routine)
+                }
+            }
+        }
+    }
+
+    /// Discovery banner for the chat-based plan editor. Surfaces above the
+    /// user's templates so they realize they can ask Coach to swap
+    /// exercises, change splits, etc. — instead of editing manually.
+    private var aiCoachModifyCallout: some View {
+        Button {
+            // Open the modal on the first template — picking a specific
+            // one is overkill; users can modify others via the card menu.
+            if let first = routines.routines.first {
+                planModRoutine = first
+            }
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.purple.opacity(0.30), Color.indigo.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.purple, .indigo],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Modify with AI Coach")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("Ask Coach to swap, add, or change exercises")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.purple)
+            }
+            .padding(12)
+            .background(
+                LinearGradient(
+                    colors: [Color.purple.opacity(0.06), Color.indigo.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.purple.opacity(0.18), lineWidth: 0.6)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var routinesEmptyState: some View {
+        VStack(spacing: 14) {
+            // Iconified header: gradient backdrop circle behind the icon
+            // so the empty state has visual weight, not just gray space.
+            ZStack {
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.indigo.opacity(0.20), Color.purple.opacity(0.08), .clear],
+                            center: .center,
+                            startRadius: 4,
+                            endRadius: 50
+                        )
+                    )
+                    .frame(width: 88, height: 88)
+                Image(systemName: "list.bullet.rectangle.portrait")
+                    .font(.system(size: 32))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color.indigo, Color.purple],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(color: Color.indigo.opacity(0.30), radius: 8, y: 3)
+            }
+
+            Text("No templates yet")
+                .font(.headline)
+                .foregroundStyle(.primary)
+            Text("Build a reusable template — pick exercises, sets, reps, and rest. Or have Coach build one for you.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 16)
+            VStack(spacing: 8) {
+                Button {
+                    showCreateWithCoach = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .heavy))
+                        Text("Create with Coach")
+                            .font(.subheadline.weight(.bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .indigo],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(.capsule)
+                }
+                .buttonStyle(.plain)
+                Button {
+                    showCreateRoutine = true
+                } label: {
+                    Text("Build manually")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.vertical, 28)
+        .frame(maxWidth: .infinity)
+        .background(
+            ZStack {
+                Color.primary.opacity(0.04)
+                LinearGradient(
+                    colors: [Color.indigo.opacity(0.08), Color.purple.opacity(0.04), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.18), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
+                )
+        )
+    }
+
+    private func routineCard(_ routine: Routine) -> some View {
+        Button {
+            // Strong-style: tap a template → straight into ActiveSessionView.
+            activeSessionRoutine = routine
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.indigo.opacity(0.18),
+                                    Color.purple.opacity(0.10)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 46, height: 46)
+                    Image(systemName: routine.icon)
+                        .font(.system(size: 20))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.indigo, Color.purple],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(routine.name)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    HStack(spacing: 8) {
+                        Label("\(routine.exercises.count) ex", systemImage: "list.bullet")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text("·")
+                            .foregroundStyle(.tertiary)
+                        Label("\(routine.defaultRestSeconds)s rest", systemImage: "timer")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Menu {
+                    Button { routineToEdit = routine } label: {
+                        Label("Edit", systemImage: "pencil")
+                    }
+                    Button { planModRoutine = routine } label: {
+                        Label("Modify with Coach", systemImage: "sparkles")
+                    }
+                    Button(role: .destructive) {
+                        routines.delete(id: routine.id)
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 36, height: 36)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(14)
+            .background(
+                ZStack {
+                    Color.primary.opacity(0.04)
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.06), Color.purple.opacity(0.03), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.indigo.opacity(0.12), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.5
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func autoResumeIfNeeded() {
+        guard session.isActive, !hasAutoResumed else { return }
+        hasAutoResumed = true
+        // Pop the user straight back into the active session via the
+        // Strong-style tracker, not the legacy WorkoutDetailSheet.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            startWorkoutDay(session.resumedWorkoutDay())
+        }
+    }
+
+    /// Unified entry point: start (or resume) a `WorkoutDay` via
+    /// ActiveSessionView. AI-plan days, template launches, and resume all
+    /// go through here so the active-session UI is the single source of
+    /// truth for in-workout logging.
+    private func startWorkoutDay(_ workout: WorkoutDay) {
+        guard !workout.isRestDay else { return }
+        activeSessionRoutine = Routine(from: workout)
+    }
+
+    @MainActor
+    private func analyzeHubPhoto(_ image: UIImage) async {
+        let result = await WeightOCRService.shared.analyze(image: image, profile: appState.profile)
+        hubPhotoAnalysis = result
+    }
+
+    /// Hub photo confirm → starts a fresh session with the detected
+    /// exercise as the first card and the captured set already logged.
+    private func startSessionFromPhoto(_ apply: WeightOCRConfirmSheet.Apply) {
+        let routineExercise = RoutineExercise(
+            name: apply.exercise,
+            sets: 1,
+            reps: "\(apply.reps)",
+            muscleGroup: ""
+        )
+        let routine = Routine(
+            name: WorkoutSessionManager.timeOfDayWorkoutName(),
+            icon: "dumbbell.fill",
+            exercises: [routineExercise],
+            defaultRestSeconds: 90
+        )
+        // Defer one tick so the confirm sheet's dismiss has time to
+        // unwind before the active session cover presents.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+            activeSessionRoutine = routine
+        }
+    }
+
+    /// Handles the user's choice from `WorkoutOnboardingChoiceView`.
+    /// Persists the mode to the profile and routes path 3 (paste-plan-for-
+    /// review) into the dedicated PlanReviewView immediately.
+    private func handleModeChoice(_ mode: UserProfile.WorkoutMode) {
+        if mode == .userPlanReviewed && !appState.profile.isPremium {
+            // Pro-gated path — fall back to userBuilt and surface paywall.
+            appState.profile.workoutMode = .userBuilt
+            appState.saveProfile()
+            // Optional: trigger paywall here. For now, just default in.
+            return
+        }
+        appState.profile.workoutMode = mode
+        appState.saveProfile()
+        if mode == .userPlanReviewed {
+            // Defer presentation past the cover dismissal for clean
+            // transitions — same trick used in finishAndExit.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                showPlanReview = true
+            }
+        }
+    }
+
+    /// CTA shown when the user is in custom-templates mode but might want
+    /// the AI plan after all. Generates one on tap by flipping the mode.
+    private var generateAIPlanCTA: some View {
+        Button {
+            appState.profile.workoutMode = .aiGenerated
+            appState.saveProfile()
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [.cyan.opacity(0.30), .blue.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 38, height: 38)
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom)
+                        )
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Generate AI plan")
+                        .font(.subheadline.weight(.bold))
+                    Text("Build a 7-day program from your profile")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.cyan)
+            }
+            .padding(12)
+            .background(
+                LinearGradient(
+                    colors: [.cyan.opacity(0.06), .blue.opacity(0.03), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.cyan.opacity(0.18), lineWidth: 0.6)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Plan Builder Summary
@@ -377,19 +1204,8 @@ struct PlanView: View {
                                     .fill(Color.primary.opacity(0.06))
                                     .frame(width: 1, height: 28)
 
-                                VStack(spacing: 2) {
-                                    Text("\(nextTierPoints - appState.profile.points)")
-                                        .font(.system(.subheadline, design: .rounded, weight: .bold))
-                                        .foregroundStyle(.cyan)
-                                    Text("to \(nextTierName)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                .frame(maxWidth: .infinity)
-
-                                Rectangle()
-                                    .fill(Color.primary.opacity(0.06))
-                                    .frame(width: 1, height: 28)
+                                // Tier-progression stat (was "X to NextTier") removed —
+                                // ranks aren't shipping in v1.
 
                                 VStack(spacing: 2) {
                                     Text(workout.focusAreas.first ?? "–")
@@ -405,7 +1221,7 @@ struct PlanView: View {
                         }
 
                         if !isCompleted {
-                            Button(action: { selectedDay = workout }) {
+                            Button(action: { startWorkoutDay(workout) }) {
                                 HStack(spacing: 8) {
                                     Image(systemName: isSessionActiveForToday ? "arrow.right.circle.fill" : "play.fill")
                                         .font(.system(size: isSessionActiveForToday ? 16 : 12))
@@ -824,25 +1640,14 @@ struct PlanView: View {
 
     private var aiFloatingButton: some View {
         Button(action: { showCoach = true }) {
-            HStack(spacing: 0) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.white)
-                    .frame(width: 52, height: 52)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(red: 0.35, green: 0.45, blue: 1.0), Color(red: 0.55, green: 0.35, blue: 0.95)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .clipShape(Circle())
-            }
-            .shadow(color: Color(red: 0.4, green: 0.35, blue: 1.0).opacity(0.45), radius: 14, y: 6)
-            .shadow(color: .black.opacity(0.25), radius: 6, y: 3)
+            Image(systemName: "sparkles")
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 60, height: 60)
+                .modifier(AICoachGlassBackground())
         }
-        .padding(.trailing, 20)
-        .padding(.bottom, session.isActive ? 70 : 14)
+        .padding(.trailing, 18)
+        .padding(.bottom, session.isActive ? 76 : 20)
         .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
         .animation(.spring(duration: 0.3), value: session.isActive)
     }
@@ -889,13 +1694,7 @@ struct PlanView: View {
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text(appState.profile.tier)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.cyan)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.cyan.opacity(0.12))
-                    .clipShape(.capsule)
+                // Tier capsule hidden — ranks aren't shipping in v1.
             }
 
             if let workout = todayWorkout, !workout.isRestDay {
@@ -938,19 +1737,7 @@ struct PlanView: View {
                 }
                 .frame(maxWidth: .infinity)
 
-                Rectangle()
-                    .fill(Color.white.opacity(0.06))
-                    .frame(width: 1, height: 28)
-
-                VStack(spacing: 2) {
-                    Text("#\(leaderboardPosition)")
-                        .font(.system(.headline, design: .rounded, weight: .bold))
-                        .foregroundStyle(.green)
-                    Text(L.t("rank", lang))
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                .frame(maxWidth: .infinity)
+                // Rank/leaderboard-position stat hidden — ranks not shipping in v1.
             }
         }
         .padding(16)
@@ -1687,4 +2474,73 @@ extension Array {
     subscript(safe index: Index) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
+}
+
+private struct AICoachGlassBackground: ViewModifier {
+    private let tint = Color(red: 0.45, green: 0.40, blue: 0.98)
+    private let accent = Color(red: 0.62, green: 0.40, blue: 1.00)
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .background(
+                    Circle()
+                        .fill(
+                            RadialGradient(
+                                colors: [accent.opacity(0.55), tint.opacity(0.30), .clear],
+                                center: UnitPoint(x: 0.3, y: 0.3),
+                                startRadius: 4,
+                                endRadius: 38
+                            )
+                        )
+                )
+                .glassEffect(.regular.tint(tint.opacity(0.55)).interactive(), in: .circle)
+                .shadow(color: tint.opacity(0.45), radius: 18, y: 8)
+                .shadow(color: .black.opacity(0.20), radius: 5, y: 2)
+        } else {
+            content
+                .background(
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [tint, accent],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .opacity(0.55)
+                        Circle()
+                            .fill(.ultraThinMaterial)
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [.white.opacity(0.35), .clear],
+                                    center: UnitPoint(x: 0.3, y: 0.3),
+                                    startRadius: 2,
+                                    endRadius: 30
+                                )
+                            )
+                        Circle()
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.45), .white.opacity(0.08)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                                lineWidth: 0.75
+                            )
+                    }
+                )
+                .clipShape(Circle())
+                .shadow(color: tint.opacity(0.45), radius: 16, y: 7)
+                .shadow(color: .black.opacity(0.22), radius: 5, y: 2)
+        }
+    }
+}
+
+/// Identifiable wrapper so `WeightOCRService.Result` can drive a sheet.
+private struct HubPhotoResult: Identifiable {
+    let id = UUID()
+    let value: WeightOCRService.Result
 }
