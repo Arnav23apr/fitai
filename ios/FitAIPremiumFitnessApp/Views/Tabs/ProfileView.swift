@@ -21,6 +21,8 @@ struct ProfileView: View {
     @State private var showPreCancelIntercept: Bool = false
     @State private var showMeasurements: Bool = false
     @State private var showPhotosAndData: Bool = false
+    @State private var showWorkoutModePicker: Bool = false
+    @State private var showWorkoutPlanReview: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -109,6 +111,14 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showMeasurements) {
                 BodyMeasurementsSheet()
+            }
+            .sheet(isPresented: $showWorkoutModePicker) {
+                WorkoutOnboardingChoiceView { picked in
+                    handleWorkoutModeChange(picked)
+                }
+            }
+            .sheet(isPresented: $showWorkoutPlanReview) {
+                PlanReviewView { /* templates saved by view */ }
             }
             .sheet(isPresented: $showPreCancelIntercept) {
                 GoalProjectionCard(
@@ -587,16 +597,40 @@ struct ProfileView: View {
         }
     }
 
+    /// Saves the user's pick from the choice picker and routes the
+    /// "review existing plan" path into PlanReviewView. Mirrors PlanView's
+    /// handleModeChoice so the result is identical regardless of which
+    /// surface the user picked from.
+    private func handleWorkoutModeChange(_ mode: UserProfile.WorkoutMode) {
+        UserDefaults.standard.set(true, forKey: "workoutOnboarding.shown.v1")
+        if mode == .userPlanReviewed && !appState.profile.isPremium {
+            // Pro-gated path. Fall back to userBuilt for now.
+            appState.profile.workoutMode = .userBuilt
+            appState.saveProfile()
+            showWorkoutModePicker = false
+            return
+        }
+        appState.profile.workoutMode = mode
+        appState.saveProfile()
+        showWorkoutModePicker = false
+        if mode == .userPlanReviewed {
+            // Defer one tick so the picker dismiss animation completes
+            // before the review sheet presents.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                showWorkoutPlanReview = true
+            }
+        }
+    }
+
     /// Lets the user re-pick their Workouts-tab mode (AI plan / custom /
-    /// reviewed). Resets both the profile mode AND the UserDefaults
-    /// "shown" gate so the choice screen re-appears on next Workouts-tab
-    /// visit.
+    /// reviewed). Tapping presents the same choice screen the user sees on
+    /// first launch, with the picked option saved straight into the
+    /// profile. Picking "Review my existing plan" auto-opens the
+    /// PlanReviewView so the user lands directly on the paste box.
     private var workoutModeResetRow: some View {
         Button {
-            appState.profile.workoutMode = .unset
-            appState.saveProfile()
-            UserDefaults.standard.set(false, forKey: "workoutOnboarding.shown.v1")
             UISelectionFeedbackGenerator().selectionChanged()
+            showWorkoutModePicker = true
         } label: {
             HStack(spacing: 14) {
                 Image(systemName: "dumbbell.fill")
