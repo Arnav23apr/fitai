@@ -82,19 +82,13 @@ struct ExerciseCard: View {
                             onSetCompleted(set.id, $set.wrappedValue.isCompleted)
                         }
                     )
-                    if !isLastSet(set) {
-                        Text(formatRest(set.restSeconds ?? defaultRest))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(set.isCompleted ? .green : .blue)
-                            .padding(.vertical, 4)
-                    }
                 }
             }
 
             Button {
                 addSet()
             } label: {
-                Text("+ Add Set (\(formatRest(defaultRest)))")
+                Text("+ Add Set")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.primary)
                     .frame(maxWidth: .infinity)
@@ -107,10 +101,6 @@ struct ExerciseCard: View {
         .padding(14)
         .background(Color.primary.opacity(0.04))
         .clipShape(.rect(cornerRadius: 14))
-    }
-
-    private func isLastSet(_ set: SessionSet) -> Bool {
-        exercise.sets.last?.id == set.id
     }
 
     /// True when this set is the FIRST un-completed set, the prior set
@@ -205,12 +195,6 @@ struct ExerciseCard: View {
         exercise.sets.append(new)
     }
 
-    private func formatRest(_ seconds: Int) -> String {
-        if seconds < 60 { return "\(seconds)s" }
-        let m = seconds / 60
-        let s = seconds % 60
-        return s == 0 ? "\(m):00" : String(format: "%d:%02d", m, s)
-    }
 }
 
 /// Single set row inside an exercise card. Tap-buttons (no real TextField)
