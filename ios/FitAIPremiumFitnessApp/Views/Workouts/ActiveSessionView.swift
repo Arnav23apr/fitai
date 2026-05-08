@@ -1,4 +1,5 @@
 import SwiftUI
+import AudioToolbox
 
 /// Strong-style all-in-one active workout session. Replaces the per-exercise
 /// `SetLoggingSheet` flow for templates, AI plan days, and empty workouts.
@@ -40,6 +41,7 @@ struct ActiveSessionView: View {
     @State private var didStartManager: Bool = false
     @State private var showVoiceSheet: Bool = false
     @State private var showPhotoScanner: Bool = false
+    @State private var showCoachDrawer: Bool = false
     @State private var photoTargetSetId: String? = nil
     @State private var pendingPhotoCapture: UIImage? = nil
     @State private var pendingPhotoAnalysis: WeightOCRService.Result? = nil
@@ -147,6 +149,17 @@ struct ActiveSessionView: View {
                                 .background(LinearGradient(colors: [.purple, .indigo], startPoint: .top, endPoint: .bottom))
                                 .clipShape(.rect(cornerRadius: 10))
                         }
+                        Button {
+                            focusedField = nil
+                            showCoachDrawer = true
+                        } label: {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 14, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .frame(width: 36, height: 36)
+                                .background(LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom))
+                                .clipShape(.rect(cornerRadius: 10))
+                        }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -205,6 +218,10 @@ struct ActiveSessionView: View {
                     dispatchVoiceIntent(intent)
                 }
                 .environment(appState)
+            }
+            .sheet(isPresented: $showCoachDrawer) {
+                CoachView(sessionContext: buildCoachSessionContext())
+                    .environment(appState)
             }
             .fullScreenCover(isPresented: $showPhotoScanner) {
                 WeightScannerView(
@@ -420,7 +437,10 @@ struct ActiveSessionView: View {
 
         let setRow = sessionExercises[exIdx].sets[setIdx]
         if completed {
-            UISelectionFeedbackGenerator().selectionChanged()
+            // Confirmation chirp + haptic for the manual ✓ tap path.
+            // Voice and photo paths play their own confirmation in
+            // applyVoiceLogSet / applyPhotoLog after the toggle.
+            playLogConfirmation()
             // PR detection (working sets only).
             if setRow.tag != .warmup && setRow.weight > 0 {
                 let isPR = logService.checkForNewPR(
@@ -884,6 +904,10 @@ struct ActiveSessionView: View {
         switch intent {
         case .logSet(let log):
             applyVoiceLogSet(log)
+        case .logMultiple(let count, let weight, let reps):
+            applyVoiceLogMultiple(count: count, weight: weight, reps: reps)
+        case .repeatLast:
+            applyVoiceRepeatLast()
         case .tagSet(let tag):
             applyVoiceTag(tag)
         case .structure(.addSet(let tag)):
@@ -982,8 +1006,88 @@ struct ActiveSessionView: View {
             setId: sessionExercises[exIdx].sets[setIdx].id,
             completed: true
         )
-        let weightLabel = log.weight.map { " at \(formatWeight($0))" } ?? ""
-        flashFeedback("Logged set \(setIdx + 1)\(weightLabel) × \(log.reps)")
+        // Confirmation chirp + haptic instead of a text toast.
+        // Phone-face-down workflow: user hears a short tink and feels a
+        // success bump, no need to look at the screen. Research-validated
+        // pattern from Vora / GhostFit reviews.
+        playLogConfirmation()
+    }
+
+    /// "five sets of five at 225" — fills N sets at the given weight/reps
+    /// and marks them complete. Used after warmups when the user knows
+    /// they're committing to a target. Each set still kicks off the rest
+    /// timer for the LAST set logged (the others are batch-applied so
+    /// they don't all start countdowns).
+    private func applyVoiceLogMultiple(count: Int, weight: Double, reps: Int) {
+        guard !sessionExercises.isEmpty else {
+            flashFeedback("Add an exercise first")
+            return
+        }
+        guard let exIdx = sessionExercises.firstIndex(where: { ex in
+            !ex.sets.allSatisfy(\.isCompleted)
+        }) ?? sessionExercises.indices.first else { return }
+
+        // Make sure there are enough rows.
+        while sessionExercises[exIdx].sets.filter({ !$0.isCompleted }).count < count {
+            appendSetToExercise(at: exIdx, tag: nil)
+        }
+
+        var filled = 0
+        for setIdx in sessionExercises[exIdx].sets.indices {
+            guard !sessionExercises[exIdx].sets[setIdx].isCompleted else { continue }
+            guard filled < count else { break }
+            sessionExercises[exIdx].sets[setIdx].weight = weight
+            sessionExercises[exIdx].sets[setIdx].reps = reps
+            sessionExercises[exIdx].sets[setIdx].isCompleted = true
+            filled += 1
+        }
+
+        // PR check on the heaviest one (they're all the same here).
+        let isPR = logService.checkForNewPR(
+            exerciseName: sessionExercises[exIdx].name,
+            weight: weight,
+            reps: reps
+        )
+        if isPR {
+            prCount += 1
+            if !prExerciseNames.contains(sessionExercises[exIdx].name) {
+                prExerciseNames.append(sessionExercises[exIdx].name)
+            }
+        }
+        // Start a single rest timer (post-final-set) instead of one per
+        // set, since we just batch-logged.
+        let restSec = sessionExercises[exIdx].sets.last?.restSeconds ?? defaultRestSeconds
+        startRest(seconds: restSec)
+        playLogConfirmation()
+    }
+
+    /// "same again" / "repeat" — copies the last completed set's
+    /// weight + reps onto the next empty set and marks it complete.
+    /// Useful for AMRAP and drop-set sequences where the user just wants
+    /// to log "another one" hands-free.
+    private func applyVoiceRepeatLast() {
+        guard let exIdx = sessionExercises.firstIndex(where: { ex in
+            !ex.sets.allSatisfy(\.isCompleted)
+        }) ?? sessionExercises.indices.first else { return }
+        guard let lastCompleted = sessionExercises[exIdx].sets.last(where: \.isCompleted) else {
+            flashFeedback("Nothing to repeat yet")
+            return
+        }
+        // Find or create the next empty set.
+        let setIdx: Int
+        if let idx = sessionExercises[exIdx].sets.firstIndex(where: { !$0.isCompleted }) {
+            setIdx = idx
+        } else {
+            appendSetToExercise(at: exIdx, tag: lastCompleted.tag)
+            setIdx = sessionExercises[exIdx].sets.count - 1
+        }
+        sessionExercises[exIdx].sets[setIdx].weight = lastCompleted.weight
+        sessionExercises[exIdx].sets[setIdx].reps = lastCompleted.reps
+        sessionExercises[exIdx].sets[setIdx].tag = lastCompleted.tag
+        sessionExercises[exIdx].sets[setIdx].isCompleted = true
+        let restSec = sessionExercises[exIdx].sets[setIdx].restSeconds ?? defaultRestSeconds
+        startRest(seconds: restSec)
+        playLogConfirmation()
     }
 
     private func applyVoiceTag(_ tag: VoiceIntent.TagSet) {
@@ -1087,6 +1191,36 @@ struct ActiveSessionView: View {
         }
     }
 
+    /// Short confirmation tink + success haptic. Used after successful
+    /// set logs so the user gets non-visual feedback (phone face-down on
+    /// the bench). 1057 = "Tink" SystemSoundID, the cleanest of Apple's
+    /// built-ins for a "logged" cue.
+    private func playLogConfirmation() {
+        AudioServicesPlaySystemSound(1057)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+
+    /// Snapshot of the active session for Coach drawer. Lets Coach answer
+    /// "what did I just do?" / "should I bump weight?" questions with real
+    /// context instead of asking the user to retype it.
+    private func buildCoachSessionContext() -> String {
+        var lines: [String] = ["The user is mid-workout. Active session state:"]
+        lines.append("Workout: \(workoutName)")
+        let elapsed = Int(Date().timeIntervalSince(sessionStart))
+        lines.append("Elapsed: \(elapsed / 60)m \(elapsed % 60)s")
+        for (i, ex) in sessionExercises.enumerated() {
+            lines.append("\nExercise \(i + 1): \(ex.name)")
+            for s in ex.sets {
+                let status = s.isCompleted ? "✓" : "_"
+                let w = s.weight > 0 ? formatWeight(s.weight) : "?"
+                let r = s.reps > 0 ? "\(s.reps)" : "?"
+                let tag = s.tag == .normal ? "" : " [\(s.tag.label)]"
+                lines.append("  Set \(s.index): \(w) × \(r) \(status)\(tag)")
+            }
+        }
+        return lines.joined(separator: "\n")
+    }
+
     // MARK: - Photo flow
 
     @MainActor
@@ -1135,7 +1269,7 @@ struct ActiveSessionView: View {
             completed: true
         )
         photoTargetSetId = nil
-        flashFeedback("Logged \(apply.exercise): \(formatWeight(apply.weight)) × \(apply.reps)")
+        playLogConfirmation()
     }
 }
 
@@ -1164,12 +1298,18 @@ struct SessionExercise: Identifiable, Equatable {
         for i in 0..<ex.sets {
             let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
             let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
+            // Leave actual weight/reps at 0 so the cell renders the
+            // historical value as a MUTED suggestion. Tapping ✓ accepts
+            // the suggestion (handled in handleSetCompletion); typing a
+            // new value overrides it. This is the Vora / GhostFit
+            // "auto-fill" pattern that reviewers describe as the single
+            // biggest "this app knows me" win.
             rows.append(SessionSet(
                 index: i + 1,
                 previousWeight: prevWeight,
                 previousReps: prevReps,
-                weight: prevWeight,
-                reps: prevReps,
+                weight: 0,
+                reps: 0,
                 tag: .normal,
                 isCompleted: false,
                 restSeconds: ex.restSecondsOverride ?? defaultRest
@@ -1188,16 +1328,20 @@ struct SessionExercise: Identifiable, Equatable {
         let lastSession = ExerciseLogService.shared.lastSession(for: ex.name)
         var rows: [SessionSet] = []
         for i in 0..<ex.sets {
+            // Suggestion priority: actual previous-session value first,
+            // AI-plan suggestedWeights/Reps second. Both stored on
+            // `previous*` so the row can render them as a muted
+            // suggestion until user types or ✓.
             let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
             let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
-            let suggestedW = ex.suggestedWeights[safe: i] ?? prevWeight
-            let suggestedR = ex.suggestedReps[safe: i] ?? prevReps
+            let suggestedW = prevWeight > 0 ? prevWeight : (ex.suggestedWeights[safe: i] ?? 0)
+            let suggestedR = prevReps > 0 ? prevReps : (ex.suggestedReps[safe: i] ?? 0)
             rows.append(SessionSet(
                 index: i + 1,
-                previousWeight: prevWeight,
-                previousReps: prevReps,
-                weight: prevWeight > 0 ? prevWeight : suggestedW,
-                reps: prevReps > 0 ? prevReps : suggestedR,
+                previousWeight: suggestedW,
+                previousReps: suggestedR,
+                weight: 0,
+                reps: 0,
                 tag: .normal,
                 isCompleted: false,
                 restSeconds: defaultRest

@@ -4,6 +4,8 @@ import Foundation
 /// dispatcher matches on this and mutates session state accordingly.
 nonisolated enum VoiceIntent: Sendable {
     case logSet(LogSet)
+    case logMultiple(count: Int, weight: Double, reps: Int)  // "5 sets of 5 at 225"
+    case repeatLast                                          // "same again" / "repeat"
     case tagSet(TagSet)
     case structure(Structure)
     case rest(Rest)
@@ -91,8 +93,10 @@ nonisolated struct VoiceIntentParser: Sendable {
 
     /// Tries every fast-path matcher in order. Returns the first hit.
     private func parseLocally(_ t: String) -> VoiceIntent? {
-        // Order matters — more specific patterns first so "log warmup at
+        // Order matters. More specific patterns first so "log warmup at
         // 135 for 8" doesn't get caught by the bare-numbers pattern.
+        if let v = matchRepeatLast(t) { return v }
+        if let v = matchLogMultiple(t) { return v }
         if let v = matchLogSetWithPosition(t) { return v }
         if let v = matchLogSetTagged(t) { return v }
         if let v = matchLogSetBare(t) { return v }
@@ -102,6 +106,35 @@ nonisolated struct VoiceIntentParser: Sendable {
         if let v = matchQuery(t) { return v }
         if let v = matchSession(t) { return v }
         if let v = matchUnit(t) { return v }
+        return nil
+    }
+
+    /// "same again", "repeat", "same as last", "do it again"
+    private func matchRepeatLast(_ t: String) -> VoiceIntent? {
+        if t.range(of: #"^(?:same\s+again|repeat(?:\s+(?:that|set))?|same\s+as\s+last|do\s+it\s+again|one\s+more)$"#,
+                   options: .regularExpression) != nil {
+            return .repeatLast
+        }
+        return nil
+    }
+
+    /// "five sets of five at 225", "3 sets of 8 at 135 lbs", "4x8 at 100"
+    private func matchLogMultiple(_ t: String) -> VoiceIntent? {
+        let patterns = [
+            // "5 sets of 5 at 225"
+            #"^(\d+)\s*sets?\s+of\s+(\d+)\s+(?:at|@|with)\s+(\d+\.?\d*)\s*(?:lb|lbs|pound|pounds|kg|kilo|kilos)?$"#,
+            // "5x5 at 225"
+            #"^(\d+)\s*[xX×]\s*(\d+)\s+(?:at|@|with)\s+(\d+\.?\d*)\s*(?:lb|lbs|pound|pounds|kg|kilo|kilos)?$"#
+        ]
+        for pattern in patterns {
+            if let match = firstMatch(t, pattern: pattern),
+               let count = Int(match[safe: 1] ?? ""),
+               count > 1, count <= 10,           // sane bounds
+               let reps = Int(match[safe: 2] ?? ""),
+               let weight = Double(match[safe: 3] ?? "") {
+                return .logMultiple(count: count, weight: weight, reps: reps)
+            }
+        }
         return nil
     }
 

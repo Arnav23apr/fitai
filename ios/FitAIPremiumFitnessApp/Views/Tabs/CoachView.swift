@@ -7,10 +7,22 @@ struct CoachView: View {
     @State private var viewModel = CoachViewModel()
     @FocusState private var isInputFocused: Bool
 
+    /// Snapshot of an active workout session passed in when Coach is
+    /// opened mid-workout. When non-nil, prepended to the user's prompt
+    /// so Coach can answer "what did I just do?" / "should I bump weight?"
+    /// with real context. nil = standard out-of-session Coach.
+    let sessionContext: String?
+
+    init(sessionContext: String? = nil) {
+        self.sessionContext = sessionContext
+    }
+
     // Welcome entrance phases
     @State private var welcomePhase: Int = -1
     @State private var showConfirmClear: Bool = false
     @State private var showPaywall: Bool = false
+    @State private var showVoiceCapture: Bool = false
+    @State private var showCoachPhotoScanner: Bool = false
 
     // Haptic generators
     private let impactLight = UIImpactFeedbackGenerator(style: .light)
@@ -106,6 +118,9 @@ struct CoachView: View {
                 notification.prepare()
                 selection.prepare()
                 startWelcomeAnimation()
+                // Hand off active-session snapshot (if any) so Coach
+                // can answer in-workout questions without asking.
+                viewModel.sessionContext = sessionContext
             }
             .onChange(of: viewModel.errorMessage) { _, newValue in
                 if newValue != nil {
@@ -542,7 +557,36 @@ struct CoachView: View {
                 freeQuotaHint
             }
 
-            HStack(alignment: .bottom, spacing: 10) {
+            HStack(alignment: .bottom, spacing: 8) {
+                // Mic: push-to-talk transcribes into the text field. User
+                // reviews + sends. Same VoiceLogService used in active
+                // session for parity.
+                Button {
+                    showVoiceCapture = true
+                } label: {
+                    Image(systemName: "mic.fill")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(LinearGradient(colors: [.red, .red.opacity(0.85)], startPoint: .top, endPoint: .bottom))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
+                // Camera: opens the weight scanner; OCR result populates
+                // the input field as a structured prompt the user can edit.
+                Button {
+                    showCoachPhotoScanner = true
+                } label: {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(LinearGradient(colors: [.purple, .indigo], startPoint: .top, endPoint: .bottom))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+
                 TextField(L.t("askYourCoach", lang), text: $viewModel.inputText, axis: .vertical)
                     .font(.body)
                     .foregroundStyle(.primary)
@@ -579,6 +623,39 @@ struct CoachView: View {
             .padding(.vertical, 8)
         }
         .background(.ultraThinMaterial)
+        .sheet(isPresented: $showVoiceCapture) {
+            CoachVoiceCaptureSheet { transcript in
+                viewModel.inputText = (viewModel.inputText.isEmpty ? "" : viewModel.inputText + " ") + transcript
+            }
+            .environment(appState)
+        }
+        .fullScreenCover(isPresented: $showCoachPhotoScanner) {
+            WeightScannerView(
+                onCapture: { image in
+                    showCoachPhotoScanner = false
+                    Task { await analyzeCoachPhoto(image) }
+                },
+                onCancel: { showCoachPhotoScanner = false }
+            )
+        }
+    }
+
+    @MainActor
+    private func analyzeCoachPhoto(_ image: UIImage) async {
+        let result = await WeightOCRService.shared.analyze(image: image, profile: appState.profile)
+        // Compose a natural-language description for the chat field. The
+        // user can refine and send.
+        var pieces: [String] = []
+        if let exercise = result.exercise { pieces.append(exercise) }
+        if let weight = result.weight {
+            let w = weight == weight.rounded() ? "\(Int(weight))" : String(format: "%.1f", weight)
+            pieces.append("\(w) \(result.unit)")
+        }
+        if pieces.isEmpty {
+            viewModel.inputText = "I just took a photo at the gym. Can you help me figure out what I should log?"
+        } else {
+            viewModel.inputText = "I'm doing \(pieces.joined(separator: " at "))"
+        }
     }
 
     private var freeQuotaHint: some View {

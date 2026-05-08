@@ -279,8 +279,12 @@ struct VoiceLogSheet: View {
     private func humanReadable(_ intent: VoiceIntent) -> String {
         switch intent {
         case .logSet(let s):
-            let w = s.weight.map { "\(Int($0))" } ?? "—"
+            let w = s.weight.map { "\(Int($0))" } ?? "-"
             return "Logged \(w) × \(s.reps)"
+        case .logMultiple(let count, let weight, let reps):
+            return "Logged \(count) sets of \(reps) at \(Int(weight))"
+        case .repeatLast:
+            return "Repeated last set"
         case .tagSet:
             return "Tag updated"
         case .structure(.addSet(let tag)):

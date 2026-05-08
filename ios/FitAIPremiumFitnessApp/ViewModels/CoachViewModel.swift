@@ -209,6 +209,12 @@ class CoachViewModel {
 
     // MARK: - Send Message
 
+    /// Set by the View when Coach is opened mid-workout. Snapshot of the
+    /// active session — passed to the model as system context so Coach
+    /// can answer "what did I just do?" without asking. nil = out-of-
+    /// session conversation, no prepend.
+    var sessionContext: String? = nil
+
     func sendMessage(profile: UserProfile) {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -222,7 +228,10 @@ class CoachViewModel {
 
         Task {
             do {
-                let systemContext = buildSystemContext(profile: profile)
+                var systemContext = buildSystemContext(profile: profile)
+                if let sessionContext, !sessionContext.isEmpty {
+                    systemContext += "\n\nACTIVE SESSION CONTEXT (read-only snapshot):\n\(sessionContext)"
+                }
                 var apiMessages: [ChatAPIMessage] = [
                     ChatAPIMessage(role: "system", text: systemContext)
                 ]

@@ -55,12 +55,29 @@ struct ExerciseCard: View {
 
             ForEach($exercise.sets) { $set in
                 VStack(spacing: 0) {
+                    if shouldShowBumpSuggestion(for: set) {
+                        bumpSuggestionBanner(for: $set)
+                    }
                     SetRow(
                         set: $set,
                         focusedField: $focusedField,
                         editingText: editingText,
                         onTapSetNumber: { onTapSetNumber(set.id) },
                         onToggleComplete: {
+                            // If marking complete with empty fields,
+                            // accept any visible suggestion as the actual
+                            // logged value. This is the "tap ✓ to accept
+                            // last session's numbers" affordance.
+                            if !$set.wrappedValue.isCompleted {
+                                if $set.wrappedValue.weight == 0,
+                                   $set.wrappedValue.previousWeight > 0 {
+                                    $set.wrappedValue.weight = $set.wrappedValue.previousWeight
+                                }
+                                if $set.wrappedValue.reps == 0,
+                                   $set.wrappedValue.previousReps > 0 {
+                                    $set.wrappedValue.reps = $set.wrappedValue.previousReps
+                                }
+                            }
                             $set.wrappedValue.isCompleted.toggle()
                             onSetCompleted(set.id, $set.wrappedValue.isCompleted)
                         }
@@ -94,6 +111,82 @@ struct ExerciseCard: View {
 
     private func isLastSet(_ set: SessionSet) -> Bool {
         exercise.sets.last?.id == set.id
+    }
+
+    /// True when this set is the FIRST un-completed set, the prior set
+    /// was crushed (matched or exceeded last-session reps at the same
+    /// weight), and the last session's same-position weight is known.
+    /// Used to surface the "Crushed last session, +5?" bump banner.
+    private func shouldShowBumpSuggestion(for set: SessionSet) -> Bool {
+        guard !set.isCompleted else { return false }
+        guard let firstUncompletedIdx = exercise.sets.firstIndex(where: { !$0.isCompleted }),
+              exercise.sets[firstUncompletedIdx].id == set.id else { return false }
+        // Need a previously-completed set in this same exercise.
+        guard let priorIdx = exercise.sets[..<firstUncompletedIdx].lastIndex(where: \.isCompleted) else {
+            return false
+        }
+        let priorSet = exercise.sets[priorIdx]
+        // Prior set's weight should match the suggestion (i.e. user is
+        // continuing at the same weight).
+        guard priorSet.weight > 0,
+              priorSet.previousWeight > 0,
+              abs(priorSet.weight - priorSet.previousWeight) < 0.01 else { return false }
+        // Did they match or exceed the same-position last-session reps?
+        return priorSet.reps >= priorSet.previousReps && priorSet.previousReps > 0
+    }
+
+    private func suggestedBumpWeight(for set: SessionSet) -> Double {
+        // 2.5 for kg, 5 for lbs. Use the unit string passed in to decide.
+        let increment: Double = weightUnit.lowercased().contains("kg") ? 2.5 : 5.0
+        // Find the prior completed set's weight as the base.
+        guard let priorIdx = exercise.sets.lastIndex(where: { $0.isCompleted && $0.id != set.id }) else {
+            return 0
+        }
+        return exercise.sets[priorIdx].weight + increment
+    }
+
+    private func bumpSuggestionBanner(for set: Binding<SessionSet>) -> some View {
+        let suggested = suggestedBumpWeight(for: set.wrappedValue)
+        let suggestedStr = suggested == suggested.rounded()
+            ? "\(Int(suggested))"
+            : String(format: "%.1f", suggested)
+        return Button {
+            set.wrappedValue.weight = suggested
+            // Clear the "previousWeight" suggestion so the new target
+            // shows in primary color (it's now the user's choice).
+            set.wrappedValue.previousWeight = 0
+            UISelectionFeedbackGenerator().selectionChanged()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 12, weight: .heavy))
+                    .foregroundStyle(.white)
+                Text("Crushed last set. Try \(suggestedStr) \(weightUnit)?")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                Spacer(minLength: 0)
+                Text("Use")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.white.opacity(0.22))
+                    .clipShape(.capsule)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                LinearGradient(
+                    colors: [.purple, .indigo],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .clipShape(.rect(cornerRadius: 10))
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+        .transition(.scale.combined(with: .opacity))
     }
 
     private func addSet() {
@@ -168,7 +261,7 @@ struct SetRow: View {
 
             // Weight cell
             cellButton(
-                text: displayText(for: .weight(setId: set.id)),
+                state: displayText(for: .weight(setId: set.id)),
                 isFocused: focusedField == .weight(setId: set.id),
                 width: 70
             ) {
@@ -177,7 +270,7 @@ struct SetRow: View {
 
             // Reps cell
             cellButton(
-                text: displayText(for: .reps(setId: set.id)),
+                state: displayText(for: .reps(setId: set.id)),
                 isFocused: focusedField == .reps(setId: set.id),
                 width: 60
             ) {
@@ -207,25 +300,38 @@ struct SetRow: View {
         .clipShape(.rect(cornerRadius: 10))
     }
 
-    /// Pick what to render in a cell — the live-edit buffer if this is the
-    /// focused field, otherwise the formatted model value.
-    private func displayText(for field: FieldFocus) -> String {
+    /// Pick what to render in a cell. Three states:
+    ///   1. Field is focused: show the live-edit buffer
+    ///   2. Actual value > 0: show the typed/logged value in primary color
+    ///   3. Actual is 0 but a previous-session value exists: show that as
+    ///      a MUTED suggestion (user can ✓ to accept or type to override)
+    private func displayText(for field: FieldFocus) -> (text: String, isSuggestion: Bool) {
         if focusedField == field {
-            return editingText
+            return (editingText, false)
         }
         switch field {
         case .weight:
-            return set.weight > 0 ? formatWeight(set.weight) : ""
+            if set.weight > 0 { return (formatWeight(set.weight), false) }
+            if set.previousWeight > 0 { return (formatWeight(set.previousWeight), true) }
+            return ("", false)
         case .reps:
-            return set.reps > 0 ? "\(set.reps)" : ""
+            if set.reps > 0 { return ("\(set.reps)", false) }
+            if set.previousReps > 0 { return ("\(set.previousReps)", true) }
+            return ("", false)
         }
     }
 
-    private func cellButton(text: String, isFocused: Bool, width: CGFloat, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(text.isEmpty ? "0" : text)
+    private func cellButton(state: (text: String, isSuggestion: Bool), isFocused: Bool, width: CGFloat, action: @escaping () -> Void) -> some View {
+        let displayValue = state.text.isEmpty ? "0" : state.text
+        let foreground: Color = {
+            if state.text.isEmpty { return Color.secondary.opacity(0.5) }
+            if state.isSuggestion { return Color.secondary.opacity(0.7) }
+            return Color.primary
+        }()
+        return Button(action: action) {
+            Text(displayValue)
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(text.isEmpty ? Color.secondary.opacity(0.5) : Color.primary)
+                .foregroundStyle(foreground)
                 .frame(width: width, height: 34)
                 .background(
                     RoundedRectangle(cornerRadius: 8)
