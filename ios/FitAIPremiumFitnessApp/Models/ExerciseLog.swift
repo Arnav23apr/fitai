@@ -46,6 +46,14 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
     var restSeconds: Int?
     /// Per-set freeform note. nil = none.
     var note: String?
+    /// Cardio distance for the set, in meters (canonical SI). The UI
+    /// layer renders km/mi based on the user's profile preference.
+    /// nil = not a distance set.
+    var distanceMeters: Double?
+    /// Cardio duration for the set, in seconds. Surfaces alongside
+    /// `distanceMeters` for distance-mode exercises and on its own for
+    /// pure-timed exercises (plank, dead hang). nil = no duration.
+    var durationSeconds: Int?
 
     init(
         id: String = UUID().uuidString,
@@ -59,7 +67,9 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
         setType: SetType = .normal,
         rpe: Double? = nil,
         restSeconds: Int? = nil,
-        note: String? = nil
+        note: String? = nil,
+        distanceMeters: Double? = nil,
+        durationSeconds: Int? = nil
     ) {
         self.id = id
         self.weight = weight
@@ -80,6 +90,8 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
         self.rpe = rpe
         self.restSeconds = restSeconds
         self.note = note
+        self.distanceMeters = distanceMeters
+        self.durationSeconds = durationSeconds
     }
 
     // Custom decoder so legacy logs (no setType field) decode cleanly.
@@ -106,6 +118,8 @@ nonisolated struct SetLog: Codable, Identifiable, Sendable {
         self.rpe = try c.decodeIfPresent(Double.self, forKey: .rpe)
         self.restSeconds = try c.decodeIfPresent(Int.self, forKey: .restSeconds)
         self.note = try c.decodeIfPresent(String.self, forKey: .note)
+        self.distanceMeters = try c.decodeIfPresent(Double.self, forKey: .distanceMeters)
+        self.durationSeconds = try c.decodeIfPresent(Int.self, forKey: .durationSeconds)
     }
 
     /// True for sets that should count toward volume / PRs.
@@ -143,6 +157,14 @@ nonisolated struct ExerciseLog: Codable, Identifiable, Sendable {
     var bestSetReps: Int {
         sets.filter(\.countsTowardVolume).map(\.reps).max() ?? 0
     }
+
+    /// Highest Epley-estimated 1RM across all working sets in this log.
+    /// Used for est-1RM PR detection in the shared `detectPRs` flow.
+    var bestEstimatedOneRM: Double {
+        sets.filter(\.countsTowardVolume)
+            .map { StrengthMath.estimatedOneRM(weight: $0.weight, reps: $0.reps) }
+            .max() ?? 0
+    }
 }
 
 nonisolated struct ExerciseHistory: Codable, Sendable {
@@ -159,6 +181,24 @@ nonisolated struct ExerciseHistory: Codable, Sendable {
 
     var personalBestVolume: Double {
         logs.map(\.computedVolume).max() ?? 0
+    }
+
+    /// Best Epley-estimated 1RM across the whole history. Used as the
+    /// long-term strength baseline on the exercise detail screen.
+    var personalBestEstimatedOneRM: Double {
+        logs.flatMap(\.sets)
+            .filter(\.countsTowardVolume)
+            .map { StrengthMath.estimatedOneRM(weight: $0.weight, reps: $0.reps) }
+            .max() ?? 0
+    }
+
+    /// Best (most reps) at a given weight. Powers rep-PR detection so
+    /// "10 reps at 225 → 11 reps at 225" registers as a PR.
+    func personalBestReps(at weight: Double) -> Int {
+        logs.flatMap(\.sets)
+            .filter { $0.countsTowardVolume && $0.weight == weight }
+            .map(\.reps)
+            .max() ?? 0
     }
 
     var lastSession: ExerciseLog? {

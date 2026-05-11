@@ -37,11 +37,33 @@ struct ActiveSessionView: View {
     @State private var sessionStart: Date = Date()
     @State private var prCount: Int = 0
     @State private var prExerciseNames: [String] = []
+    /// `<exerciseName>|<PRType.rawValue>` keys for PRs already counted
+    /// this session. Stops a single set from inflating the badge by
+    /// hitting weight + reps + 1RM PRs simultaneously.
+    @State private var sessionPRKeys: Set<String> = []
     @State private var exerciseVolumes: [String: Double] = [:]
     @State private var didStartManager: Bool = false
     @State private var showVoiceSheet: Bool = false
     @State private var showPhotoScanner: Bool = false
     @State private var showCoachDrawer: Bool = false
+    @State private var showReorderSheet: Bool = false
+    /// Set when the user picks "Add to superset" from a card menu.
+    /// Drives the `SupersetPickerSheet` presentation.
+    @State private var supersetTargetId: String? = nil
+    /// Set when the user picks "Replace exercise" from a card menu.
+    /// Drives the ExercisePickerSheet presentation; on selection we
+    /// swap the exercise in place, preserving order and the set count.
+    @State private var replaceTargetId: String? = nil
+    /// Plate calculator sheet trigger. Surfaced as a chip above the
+    /// keypad when a weight cell is focused on a barbell-loadable
+    /// exercise. Saves the lifter from doing 225 / 2 / 45 in their head.
+    @State private var showPlateCalc: Bool = false
+    /// One-shot RPE discoverability hint. Shown above the keypad once
+    /// after the user logs their first set, then dismissed permanently.
+    /// Persists via UserDefaults `rpeHintDismissed_v1` so it never
+    /// reappears even across app launches.
+    @State private var showRPEHint: Bool = false
+    @State private var rpeHintDismissTask: Task<Void, Never>? = nil
     @State private var photoTargetSetId: String? = nil
     @State private var pendingPhotoCapture: UIImage? = nil
     @State private var pendingPhotoAnalysis: WeightOCRService.Result? = nil
@@ -76,11 +98,17 @@ struct ActiveSessionView: View {
                             onSetCompleted: { setId, completed in
                                 handleSetCompletion(exerciseId: sx.id, setId: setId, completed: completed)
                             },
-                            onRemoveExercise: { removeExercise(id: sx.id) }
+                            onRemoveExercise: { removeExercise(id: sx.id) },
+                            supersetColor: supersetColor(for: sx),
+                            supersetLetter: supersetLetter(for: sx),
+                            onTapSuperset: { supersetTargetId = sx.id },
+                            onReplaceExercise: {
+                                focusedField = nil
+                                replaceTargetId = sx.id
+                            }
                         )
                     }
                     addExercisesButton
-                    cancelWorkoutButton
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -89,6 +117,7 @@ struct ActiveSessionView: View {
             .background(Color(.systemBackground))
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 0) {
+                    rpeHintBanner
                     if case .running(let endsAt, _) = restState {
                         RestTimerBanner(
                             endsAt: endsAt,
@@ -100,6 +129,7 @@ struct ActiveSessionView: View {
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                     if focusedField != nil {
+                        plateCalcChip
                         StrongKeypad(
                             allowsDecimal: isDecimalField(focusedField),
                             onKey: handleKeypadKey
@@ -115,71 +145,45 @@ struct ActiveSessionView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 8) {
-                        Button {
+                        // Close / back. Empty session exits immediately;
+                        // anything logged hits the same cancel confirmation
+                        // as the "Cancel workout" menu item.
+                        sessionToolbarButton(icon: "xmark", tint: .primary) {
+                            focusedField = nil
+                            handleCloseTapped()
+                        }
+                        sessionToolbarButton(icon: "timer", tint: .primary) {
                             // Manual rest timer — Strong's small clock icon.
                             startManualRest(seconds: defaultRestSeconds)
-                        } label: {
-                            Image(systemName: "timer")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .frame(width: 36, height: 36)
-                                .background(Color.primary.opacity(0.06))
-                                .clipShape(.rect(cornerRadius: 10))
                         }
-                        Button {
-                            focusedField = nil
-                            showVoiceSheet = true
-                        } label: {
-                            Image(systemName: "mic.fill")
-                                .font(.system(size: 14, weight: .heavy))
-                                .foregroundStyle(.white)
-                                .frame(width: 36, height: 36)
-                                .background(LinearGradient(colors: [.red, .red.opacity(0.85)], startPoint: .top, endPoint: .bottom))
-                                .clipShape(.rect(cornerRadius: 10))
-                        }
-                        Button {
-                            focusedField = nil
-                            photoTargetSetId = nil
-                            showPhotoScanner = true
-                        } label: {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 14, weight: .heavy))
-                                .foregroundStyle(.white)
-                                .frame(width: 36, height: 36)
-                                .background(LinearGradient(colors: [.purple, .indigo], startPoint: .top, endPoint: .bottom))
-                                .clipShape(.rect(cornerRadius: 10))
-                        }
-                        Button {
+                        // Voice + photo logging are sunset for now; the
+                        // sheets and handlers are still wired below so we
+                        // can flip them back on without rebuilding. Keep
+                        // only the in-session Coach drawer surfaced.
+                        sessionToolbarButton(icon: "sparkles", tint: .cyan) {
                             focusedField = nil
                             showCoachDrawer = true
-                        } label: {
-                            Image(systemName: "sparkles")
-                                .font(.system(size: 14, weight: .heavy))
-                                .foregroundStyle(.white)
-                                .frame(width: 36, height: 36)
-                                .background(LinearGradient(colors: [.cyan, .blue], startPoint: .top, endPoint: .bottom))
-                                .clipShape(.rect(cornerRadius: 10))
                         }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        focusedField = nil
-                        handleFinishTapped()
-                    } label: {
-                        Text("Finish")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color.green)
-                            .clipShape(.capsule)
-                    }
+                    finishButton
                 }
             }
             .sheet(isPresented: $showExercisePicker) {
                 ExercisePickerSheet { picked in
                     addExercise(name: picked.name, muscleGroup: picked.muscleGroup)
+                }
+            }
+            .sheet(isPresented: Binding(
+                get: { replaceTargetId != nil },
+                set: { if !$0 { replaceTargetId = nil } }
+            )) {
+                ExercisePickerSheet { picked in
+                    if let id = replaceTargetId {
+                        replaceExercise(id: id, with: picked)
+                        replaceTargetId = nil
+                    }
                 }
             }
             .sheet(item: $setTagSheet) { target in
@@ -222,6 +226,36 @@ struct ActiveSessionView: View {
             .sheet(isPresented: $showCoachDrawer) {
                 CoachView(sessionContext: buildCoachSessionContext())
                     .environment(appState)
+            }
+            .sheet(isPresented: $showReorderSheet) {
+                ReorderExercisesSheet(
+                    exercises: sessionExercises,
+                    onSave: { reordered in
+                        sessionExercises = reordered
+                        showReorderSheet = false
+                    },
+                    onCancel: { showReorderSheet = false }
+                )
+                .presentationDetents([.medium, .large])
+            }
+            .sheet(isPresented: Binding(
+                get: { supersetTargetId != nil },
+                set: { if !$0 { supersetTargetId = nil } }
+            )) {
+                if let id = supersetTargetId,
+                   let ex = sessionExercises.first(where: { $0.id == id }) {
+                    SupersetPickerSheet(
+                        exerciseName: ex.name,
+                        currentGroup: ex.supersetGroup,
+                        availableGroups: availableSupersetGroups,
+                        onPick: { group in
+                            setSupersetGroup(group, forExerciseId: id)
+                            supersetTargetId = nil
+                        },
+                        onCancel: { supersetTargetId = nil }
+                    )
+                    .presentationDetents([.medium])
+                }
             }
             .fullScreenCover(isPresented: $showPhotoScanner) {
                 WeightScannerView(
@@ -280,6 +314,268 @@ struct ActiveSessionView: View {
         .onAppear { startIfNeeded() }
     }
 
+    // MARK: - RPE discoverability hint
+
+    private static let rpeHintFlagKey = "rpeHintDismissed_v1"
+
+    private func maybeShowRPEHint() {
+        guard !UserDefaults.standard.bool(forKey: Self.rpeHintFlagKey) else { return }
+        guard !showRPEHint else { return }
+        withAnimation(.snappy(duration: 0.25)) {
+            showRPEHint = true
+        }
+        rpeHintDismissTask?.cancel()
+        rpeHintDismissTask = Task {
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            await MainActor.run {
+                if !Task.isCancelled {
+                    dismissRPEHint(persist: true)
+                }
+            }
+        }
+    }
+
+    private func dismissRPEHint(persist: Bool) {
+        if persist {
+            UserDefaults.standard.set(true, forKey: Self.rpeHintFlagKey)
+        }
+        withAnimation(.snappy(duration: 0.2)) {
+            showRPEHint = false
+        }
+    }
+
+    @ViewBuilder
+    private var rpeHintBanner: some View {
+        if showRPEHint {
+            Button {
+                dismissRPEHint(persist: true)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "hand.point.up.left.fill")
+                        .font(.system(size: 12, weight: .heavy))
+                    Text("Tip: long-press ✓ to log RPE")
+                        .font(.caption.weight(.semibold))
+                    Spacer(minLength: 4)
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundStyle(.secondary)
+                }
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.yellow.opacity(0.18))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(Color.yellow.opacity(0.30), lineWidth: 0.5)
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 6)
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
+    // MARK: - Plate calculator chip
+
+    /// Inline "Load: 2 × 45 + 1 × 25" chip above the keypad. Tapping
+    /// expands into the full PlateCalculatorPopover sheet. Hidden when:
+    /// - the focused cell is a reps cell (no plates to load)
+    /// - the current focused weight is below the empty bar
+    /// - the exercise is bodyweight-only (no plates either)
+    @ViewBuilder
+    private var plateCalcChip: some View {
+        if let focused = focusedField,
+           case .weight(let setId) = focused,
+           let (exIdx, setIdx) = locateSet(focused),
+           !sessionExercises[exIdx].sets[setIdx].isBodyweight {
+            let unit: PlateCalculator.Unit = appState.profile.usesMetric ? .kg : .lb
+            let bar = PlateCalculator.defaultBar(for: unit)
+            // Use the live editing buffer if the user is mid-type; else
+            // fall back to the persisted weight on the row.
+            let weight: Double = {
+                if let typed = Double(editingText), typed > 0 { return typed }
+                return sessionExercises[exIdx].sets[setIdx].weight
+            }()
+            if weight >= bar {
+                Button {
+                    showPlateCalc = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle.grid.2x2.fill")
+                            .font(.system(size: 11, weight: .heavy))
+                        Text("Plates: \(plateChipSummary(target: weight, unit: unit))")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Color.blue.opacity(0.10))
+                    .clipShape(.capsule)
+                    .overlay(
+                        Capsule().strokeBorder(Color.blue.opacity(0.20), lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
+                .sheet(isPresented: $showPlateCalc) {
+                    NavigationStack {
+                        PlateCalculatorPopover(target: weight, unit: unit)
+                            .padding(20)
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("Done") { showPlateCalc = false }
+                                }
+                            }
+                    }
+                    .presentationDetents([.medium])
+                }
+                .transition(.opacity)
+                // Suppress chip ID for `setId` to silence unused warning.
+                .id(setId)
+            }
+        }
+    }
+
+    /// One-line plate summary for the chip. e.g. "2×45 + 1×25 per side".
+    /// Shows up to 3 plate sizes; falls back to "calculate" when the
+    /// loadable amount doesn't divide cleanly.
+    private func plateChipSummary(target: Double, unit: PlateCalculator.Unit) -> String {
+        let bar = PlateCalculator.defaultBar(for: unit)
+        let result = PlateCalculator.compute(target: target, bar: bar, unit: unit)
+        let groups = PlateCalculator.grouped(result.perSide).prefix(3)
+        let pieces = groups.map { item -> String in
+            let weightStr = item.weight == item.weight.rounded()
+                ? "\(Int(item.weight))"
+                : String(format: "%.1f", item.weight)
+            return "\(item.count)×\(weightStr)"
+        }
+        return pieces.isEmpty ? "calculate" : pieces.joined(separator: " + ")
+    }
+
+    // MARK: - Supersets
+
+    /// Stable color rotation for visualized superset groups. Group 1 →
+    /// indigo, 2 → teal, 3 → pink, etc. We mod the group number by
+    /// the palette length so any number of groups still gets a color.
+    private static let supersetColors: [Color] = [
+        .indigo, .teal, .pink, .orange, .green, .cyan
+    ]
+
+    private func supersetColor(for ex: SessionExercise) -> Color? {
+        guard let group = ex.supersetGroup else { return nil }
+        let idx = (group - 1) % Self.supersetColors.count
+        return Self.supersetColors[max(0, idx)]
+    }
+
+    /// Letter label inside a superset (A, B, C…). Computed by counting
+    /// the position of `ex` among same-group exercises in document
+    /// order, so the lifter can scan "A1 vs B1" type patterns at a
+    /// glance.
+    private func supersetLetter(for ex: SessionExercise) -> String? {
+        guard let group = ex.supersetGroup else { return nil }
+        let groupMembers = sessionExercises.filter { $0.supersetGroup == group }
+        guard let pos = groupMembers.firstIndex(where: { $0.id == ex.id }) else { return nil }
+        let letters = ["A", "B", "C", "D", "E", "F", "G"]
+        return letters[safe: pos] ?? "?"
+    }
+
+    /// Available group numbers, ordered for the picker. Strong/Hevy
+    /// both start at 1 and let the user pick higher group numbers if
+    /// they want a third triple-set in the same workout.
+    private var availableSupersetGroups: [Int] {
+        let used = Set(sessionExercises.compactMap(\.supersetGroup))
+        let highest = used.max() ?? 0
+        return Array(1...max(3, highest + 1))
+    }
+
+    private func setSupersetGroup(_ group: Int?, forExerciseId id: String) {
+        guard let idx = sessionExercises.firstIndex(where: { $0.id == id }) else { return }
+        sessionExercises[idx].supersetGroup = group
+    }
+
+    // MARK: - Toolbar
+
+    /// Finish CTA in the nav bar. iOS 26 uses `.glassProminent` so the
+    /// capsule picks up the system Liquid Glass material with a green
+    /// tint; older OSes fall back to a refined gradient with an inner
+    /// highlight + soft glow so the button still feels premium.
+    @ViewBuilder
+    private var finishButton: some View {
+        if #available(iOS 26.0, *) {
+            Button {
+                focusedField = nil
+                handleFinishTapped()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .heavy))
+                    Text("Finish")
+                        .font(.subheadline.weight(.bold))
+                }
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.green)
+            .controlSize(.small)
+            .sensoryFeedback(.success, trigger: showSaveTemplatePrompt)
+        } else {
+            Button {
+                focusedField = nil
+                handleFinishTapped()
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .heavy))
+                    Text("Finish")
+                        .font(.subheadline.weight(.bold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.30, green: 0.85, blue: 0.50),
+                            Color(red: 0.15, green: 0.70, blue: 0.40)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .clipShape(.capsule)
+                .overlay(
+                    Capsule()
+                        .strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5)
+                )
+                .shadow(color: Color.green.opacity(0.35), radius: 8, y: 3)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// Liquid Glass icon button used across the active session toolbar.
+    /// Each gets a tint so the icons stay color-coded (red mic, purple
+    /// camera, cyan coach) but the heavy gradient backgrounds are gone —
+    /// the row reads cleaner and feels more Apple-native.
+    private func sessionToolbarButton(
+        icon: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .heavy))
+                .foregroundStyle(tint)
+                .frame(width: 36, height: 36)
+                .modifier(SessionToolbarGlass(tint: tint))
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Header
 
     private var headerSection: some View {
@@ -306,6 +602,20 @@ struct ActiveSessionView: View {
                         editingName = true
                     } label: {
                         Label("Rename", systemImage: "pencil")
+                    }
+                    Button {
+                        focusedField = nil
+                        showReorderSheet = true
+                    } label: {
+                        Label("Reorder exercises", systemImage: "arrow.up.arrow.down")
+                    }
+                    .disabled(sessionExercises.count < 2)
+                    Divider()
+                    Button(role: .destructive) {
+                        focusedField = nil
+                        showCancelConfirm = true
+                    } label: {
+                        Label("Cancel workout", systemImage: "xmark.circle")
                     }
                 } label: {
                     Image(systemName: "ellipsis")
@@ -348,22 +658,6 @@ struct ActiveSessionView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 48)
                 .background(Color.blue.opacity(0.12))
-                .clipShape(.rect(cornerRadius: 12))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var cancelWorkoutButton: some View {
-        Button(role: .destructive) {
-            focusedField = nil
-            showCancelConfirm = true
-        } label: {
-            Text("Cancel Workout")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.red)
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-                .background(Color.red.opacity(0.10))
                 .clipShape(.rect(cornerRadius: 12))
         }
         .buttonStyle(.plain)
@@ -441,24 +735,58 @@ struct ActiveSessionView: View {
             // Voice and photo paths play their own confirmation in
             // applyVoiceLogSet / applyPhotoLog after the toggle.
             playLogConfirmation()
-            // PR detection (working sets only).
+            // PR detection (working sets only). detectPRs returns every
+            // PR type the set hit, so a single heavy single can register
+            // as both a weight PR and a 1RM PR. Each unique exercise +
+            // PR type combo only counts once per session so we don't
+            // inflate the share-card "X PRs" badge.
             if setRow.tag != .warmup && setRow.weight > 0 {
-                let isPR = logService.checkForNewPR(
+                let prs = logService.detectPRs(
                     exerciseName: sessionExercises[exIdx].name,
                     weight: setRow.weight,
                     reps: setRow.reps
                 )
-                if isPR {
-                    prCount += 1
-                    if !prExerciseNames.contains(sessionExercises[exIdx].name) {
-                        prExerciseNames.append(sessionExercises[exIdx].name)
+                let exName = sessionExercises[exIdx].name
+                var didFireAny = false
+                for pr in prs {
+                    let key = "\(exName)|\(pr.rawValue)"
+                    if !sessionPRKeys.contains(key) {
+                        sessionPRKeys.insert(key)
+                        prCount += 1
+                        didFireAny = true
                     }
+                }
+                if !prs.isEmpty, !prExerciseNames.contains(exName) {
+                    prExerciseNames.append(exName)
+                }
+                if didFireAny {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
             }
-            // Auto-start per-set rest timer.
-            let restSec = sessionExercises[exIdx].sets[setIdx].restSeconds ?? defaultRestSeconds
-            startRest(seconds: restSec)
+            // RPE discoverability nudge. The first time a user marks
+            // any set complete (lifetime), surface a one-shot hint
+            // pointing at the long-press-to-set-RPE gesture, since the
+            // gesture itself is invisible. Auto-dismisses after 6s or
+            // on tap; flagged as seen so it never returns.
+            maybeShowRPEHint()
+
+            // Auto-start per-set rest timer. Inside a superset, the
+            // rest timer skips between A1 and B1 (Hevy / Strong
+            // behavior): rest only fires after the last exercise in
+            // the round has logged the same set index, since the
+            // lifter is going to walk straight to the next exercise.
+            let isInSuperset = sessionExercises[exIdx].supersetGroup != nil
+            let suppressRest: Bool = {
+                guard isInSuperset else { return false }
+                let group = sessionExercises[exIdx].supersetGroup
+                let groupMembers = sessionExercises.filter { $0.supersetGroup == group }
+                let isLastInGroup = groupMembers.last?.id == sessionExercises[exIdx].id
+                return !isLastInGroup
+            }()
+            if !suppressRest {
+                let restSec = sessionExercises[exIdx].sets[setIdx].restSeconds ?? defaultRestSeconds
+                startRest(seconds: restSec)
+            }
         }
     }
 
@@ -530,6 +858,65 @@ struct ActiveSessionView: View {
         session.appendExercise(exerciseModel)
     }
 
+    /// Swap one exercise for another in place. Preserves the position
+    /// in the session, the planned set count, the superset group, and
+    /// pinned-note context. Sets that have already been completed are
+    /// kept (with values cleared) so the rep targets stay; user can
+    /// re-enter weight/reps for the new movement.
+    private func replaceExercise(id: String, with picked: PickedExercise) {
+        guard let idx = sessionExercises.firstIndex(where: { $0.id == id }) else { return }
+        let original = sessionExercises[idx]
+        let setCount = max(1, original.sets.count)
+        // Build a fresh exercise but preserve position metadata.
+        let routineEx = RoutineExercise(
+            name: picked.name,
+            sets: setCount,
+            reps: original.targetReps,
+            muscleGroup: picked.muscleGroup
+        )
+        var replacement = SessionExercise.fromRoutineExercise(routineEx, defaultRest: defaultRestSeconds)
+        replacement.supersetGroup = original.supersetGroup
+        // Same id so any external references (focusedField, set tag
+        // sheets, etc.) keep working through the swap.
+        replacement = SessionExercise(
+            id: original.id,
+            name: replacement.name,
+            muscleGroup: replacement.muscleGroup,
+            targetReps: replacement.targetReps,
+            sets: replacement.sets,
+            supersetGroup: replacement.supersetGroup
+        )
+        sessionExercises[idx] = replacement
+        if let field = focusedField, focusBelongsToReplacedExercise(field, exerciseId: id) {
+            focusedField = nil
+        }
+        session.replaceExercise(
+            id: id,
+            with: Exercise(
+                id: id,
+                name: picked.name,
+                sets: setCount,
+                reps: original.targetReps,
+                muscleGroup: picked.muscleGroup
+            )
+        )
+        UISelectionFeedbackGenerator().selectionChanged()
+    }
+
+    /// True when the focused field belongs to a set on the exercise
+    /// being replaced. Used to safely clear focus on swap so the
+    /// keypad doesn't keep editing a set that's about to disappear.
+    private func focusBelongsToReplacedExercise(_ field: FieldFocus, exerciseId: String) -> Bool {
+        guard let exIdx = sessionExercises.firstIndex(where: { $0.id == exerciseId }) else {
+            return false
+        }
+        let setIds = Set(sessionExercises[exIdx].sets.map(\.id))
+        switch field {
+        case .weight(let setId), .reps(let setId):
+            return setIds.contains(setId)
+        }
+    }
+
     private func removeExercise(id: String) {
         if let field = focusedField, locateSet(field)?.0 != nil,
            sessionExercises.first(where: { $0.id == id })?.sets.contains(where: { setMatchesField($0.id, field) }) == true {
@@ -546,6 +933,18 @@ struct ActiveSessionView: View {
     }
 
     // MARK: - Finish / cancel
+
+    /// Close-button entry point in the leading toolbar. Empty sessions
+    /// exit immediately (no data to lose); anything beyond that hits the
+    /// existing cancel confirmation so the user can't dismiss work by
+    /// accident.
+    private func handleCloseTapped() {
+        if sessionExercises.isEmpty {
+            discardWorkout()
+        } else {
+            showCancelConfirm = true
+        }
+    }
 
     /// Tap-Finish entry point. Decides whether to show the save-as-template
     /// prompt, then hands off to the parent (which owns the post-workout
@@ -597,6 +996,22 @@ struct ActiveSessionView: View {
                     .filter(\.countsTowardVolume)
                     .reduce(0) { $0 + ($1.weight * Double($1.reps)) }
             )
+
+            // Volume-PR check: is this session's working-set volume for
+            // this exercise the highest ever? Done before persisting so
+            // the comparison baseline is history minus this session.
+            let priorBest = logService.history(for: sx.name).personalBestVolume
+            if priorBest > 0 && log.totalVolume > priorBest {
+                let key = "\(sx.name)|\(PRType.volume.rawValue)"
+                if !sessionPRKeys.contains(key) {
+                    sessionPRKeys.insert(key)
+                    prCount += 1
+                    if !prExerciseNames.contains(sx.name) {
+                        prExerciseNames.append(sx.name)
+                    }
+                }
+            }
+
             logService.saveLog(log)
             exerciseVolumes[sx.id] = log.totalVolume
         }
@@ -613,7 +1028,8 @@ struct ActiveSessionView: View {
                     name: sx.name,
                     sets: sx.sets.count,
                     reps: sx.targetReps,
-                    muscleGroup: sx.muscleGroup
+                    muscleGroup: sx.muscleGroup,
+                    supersetGroup: sx.supersetGroup
                 )
             },
             defaultRestSeconds: defaultRestSeconds
@@ -1043,16 +1459,21 @@ struct ActiveSessionView: View {
         }
 
         // PR check on the heaviest one (they're all the same here).
-        let isPR = logService.checkForNewPR(
+        let prs = logService.detectPRs(
             exerciseName: sessionExercises[exIdx].name,
             weight: weight,
             reps: reps
         )
-        if isPR {
-            prCount += 1
-            if !prExerciseNames.contains(sessionExercises[exIdx].name) {
-                prExerciseNames.append(sessionExercises[exIdx].name)
+        let exName = sessionExercises[exIdx].name
+        for pr in prs {
+            let key = "\(exName)|\(pr.rawValue)"
+            if !sessionPRKeys.contains(key) {
+                sessionPRKeys.insert(key)
+                prCount += 1
             }
+        }
+        if !prs.isEmpty, !prExerciseNames.contains(exName) {
+            prExerciseNames.append(exName)
         }
         // Start a single rest timer (post-final-set) instead of one per
         // set, since we just batch-logged.
@@ -1125,7 +1546,9 @@ struct ActiveSessionView: View {
             reps: lastSet?.reps ?? 0,
             tag: tag ?? .normal,
             isCompleted: false,
-            restSeconds: lastSet?.restSeconds ?? defaultRestSeconds
+            restSeconds: lastSet?.restSeconds ?? defaultRestSeconds,
+            rpe: nil,
+            isBodyweight: lastSet?.isBodyweight ?? BodyweightDetector.isBodyweightExercise(sessionExercises[exIdx].name)
         )
         sessionExercises[exIdx].sets.append(new)
     }
@@ -1291,6 +1714,10 @@ struct SessionExercise: Identifiable, Equatable {
     var muscleGroup: String
     var targetReps: String
     var sets: [SessionSet]
+    /// Superset group number. Exercises sharing a group are performed
+    /// back-to-back, with rest only firing after the last exercise in
+    /// the round. nil = solo exercise.
+    var supersetGroup: Int?
 
     static func fromRoutineExercise(_ ex: RoutineExercise, defaultRest: Int) -> SessionExercise {
         let lastSession = ExerciseLogService.shared.lastSession(for: ex.name)
@@ -1312,7 +1739,8 @@ struct SessionExercise: Identifiable, Equatable {
                 reps: 0,
                 tag: .normal,
                 isCompleted: false,
-                restSeconds: ex.restSecondsOverride ?? defaultRest
+                restSeconds: ex.restSecondsOverride ?? defaultRest,
+                isBodyweight: BodyweightDetector.isBodyweightExercise(ex.name)
             ))
         }
         return SessionExercise(
@@ -1320,7 +1748,8 @@ struct SessionExercise: Identifiable, Equatable {
             name: ex.name,
             muscleGroup: ex.muscleGroup,
             targetReps: ex.reps,
-            sets: rows
+            sets: rows,
+            supersetGroup: ex.supersetGroup
         )
     }
 
@@ -1344,7 +1773,8 @@ struct SessionExercise: Identifiable, Equatable {
                 reps: 0,
                 tag: .normal,
                 isCompleted: false,
-                restSeconds: defaultRest
+                restSeconds: defaultRest,
+                isBodyweight: BodyweightDetector.isBodyweightExercise(ex.name)
             ))
         }
         return SessionExercise(
@@ -1368,6 +1798,14 @@ struct SessionSet: Identifiable, Equatable {
     var tag: SetType
     var isCompleted: Bool
     var restSeconds: Int?
+    /// Optional Rate of Perceived Exertion (5-10). Long-press the ✓ to set.
+    /// Persists into the SetLog so it surfaces in history + analytics.
+    var rpe: Double?
+    /// Whether the set should be treated as bodyweight + assistance.
+    /// When true, `weight` is the assistance delta (positive = added,
+    /// negative = assisted). Auto-derived from exercise classification
+    /// when the set is created; user can override per-set.
+    var isBodyweight: Bool
 
     init(
         id: String = UUID().uuidString,
@@ -1378,7 +1816,9 @@ struct SessionSet: Identifiable, Equatable {
         reps: Int = 0,
         tag: SetType = .normal,
         isCompleted: Bool = false,
-        restSeconds: Int? = nil
+        restSeconds: Int? = nil,
+        rpe: Double? = nil,
+        isBodyweight: Bool = false
     ) {
         self.id = id
         self.index = index
@@ -1389,6 +1829,8 @@ struct SessionSet: Identifiable, Equatable {
         self.tag = tag
         self.isCompleted = isCompleted
         self.restSeconds = restSeconds
+        self.rpe = rpe
+        self.isBodyweight = isBodyweight
     }
 
     func toSetLog() -> SetLog {
@@ -1398,9 +1840,10 @@ struct SessionSet: Identifiable, Equatable {
             isCompleted: isCompleted,
             isFailure: tag == .failure,
             isDropSet: tag == .dropSet,
+            isBodyweight: isBodyweight,
             timestamp: Date(),
             setType: tag,
-            rpe: nil,
+            rpe: rpe,
             restSeconds: restSeconds
         )
     }
@@ -1415,4 +1858,33 @@ struct SetTagTarget: Identifiable {
 enum RestTimerState: Equatable {
     case idle
     case running(endsAt: Date, total: Int)
+}
+
+/// Liquid Glass background for the active session toolbar icon buttons.
+/// On iOS 26 picks up real material with a subtle tint per action; on
+/// older OSes uses a thin material with the same shape so the layout
+/// stays identical across the deployment range.
+private struct SessionToolbarGlass: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(tint.opacity(0.20)).interactive(), in: .rect(cornerRadius: 10))
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(tint.opacity(0.18))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(tint.opacity(0.30), lineWidth: 0.5)
+                )
+        }
+    }
 }

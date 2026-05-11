@@ -10,7 +10,7 @@ struct RatingsCardSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                ShareCardView(result: result)
+                ShareCardView(result: result, gender: appState.profile.gender)
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     .padding(.bottom, 40)

@@ -62,4 +62,81 @@ class ExerciseLogService {
         let best = personalBestWeight(for: exerciseName)
         return weight > best && best > 0
     }
+
+    /// Detect every kind of PR a single set might have hit. Caller
+    /// passes the set in question; this compares against history that
+    /// excludes the current session (so a set isn't its own PR baseline).
+    /// Returns an empty set if the lifter has no prior history or this
+    /// is the first time touching the exercise.
+    ///
+    /// `excludingLogId` is the in-progress session log; we skip it when
+    /// building the comparison baseline so the lifter sees PRs land on
+    /// the exact set that broke their record, not retroactively.
+    func detectPRs(
+        exerciseName: String,
+        weight: Double,
+        reps: Int,
+        excludingLogId: String? = nil
+    ) -> Set<PRType> {
+        let logs = loadAll().filter {
+            $0.exerciseName == exerciseName && $0.id != excludingLogId
+        }
+        guard !logs.isEmpty else { return [] }
+        let history = ExerciseHistory(exerciseName: exerciseName, logs: logs)
+
+        var prs: Set<PRType> = []
+
+        if weight > 0, weight > history.personalBestWeight {
+            prs.insert(.weight)
+        }
+        if weight > 0, reps > 0 {
+            let priorBestReps = history.personalBestReps(at: weight)
+            if priorBestReps > 0, reps > priorBestReps {
+                prs.insert(.reps)
+            }
+        }
+        let estOneRM = StrengthMath.estimatedOneRM(weight: weight, reps: reps)
+        if estOneRM > 0, estOneRM > history.personalBestEstimatedOneRM * 1.005 {
+            // Tiny epsilon so floating-point ties don't false-positive.
+            prs.insert(.estimatedOneRM)
+        }
+
+        return prs
+    }
+}
+
+/// The four kinds of personal record we surface. A single set can
+/// trigger more than one (e.g. heaviest weight is also a new est-1RM).
+nonisolated enum PRType: String, Codable, Sendable, CaseIterable {
+    case weight
+    case reps
+    case volume
+    case estimatedOneRM
+
+    var label: String {
+        switch self {
+        case .weight: return "Weight PR"
+        case .reps: return "Rep PR"
+        case .volume: return "Volume PR"
+        case .estimatedOneRM: return "1RM PR"
+        }
+    }
+
+    var shortLabel: String {
+        switch self {
+        case .weight: return "WT"
+        case .reps: return "REPS"
+        case .volume: return "VOL"
+        case .estimatedOneRM: return "1RM"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .weight: return "scalemass.fill"
+        case .reps: return "repeat"
+        case .volume: return "chart.bar.fill"
+        case .estimatedOneRM: return "flame.fill"
+        }
+    }
 }

@@ -81,6 +81,68 @@ final class RoutineService {
         routines.first { $0.id == id } ?? examples.first { $0.id == id }
     }
 
+    /// All distinct folder names currently in use, alphabetized.
+    /// Uncategorized routines (folder == nil) are excluded.
+    var allFolders: [String] {
+        Array(Set(routines.compactMap(\.folder))).sorted()
+    }
+
+    /// Routines grouped by folder. Uncategorized routines come back
+    /// under the special key `nil` so the hub can render them in a
+    /// "Routines" section above the named folders. Order within each
+    /// group preserves the user's existing routine order.
+    func groupedByFolder() -> (uncategorized: [Routine], folders: [(String, [Routine])]) {
+        var uncategorized: [Routine] = []
+        var dict: [String: [Routine]] = [:]
+        for r in routines {
+            if let folder = r.folder {
+                dict[folder, default: []].append(r)
+            } else {
+                uncategorized.append(r)
+            }
+        }
+        let sortedFolders = dict.keys.sorted().map { ($0, dict[$0] ?? []) }
+        return (uncategorized, sortedFolders)
+    }
+
+    /// Move a routine to a folder. Pass nil to make it uncategorized.
+    /// Renames also flow through this since folders are string-based.
+    func setFolder(_ folder: String?, forRoutineId id: String) {
+        guard let idx = routines.firstIndex(where: { $0.id == id }) else { return }
+        let trimmed = folder?.trimmingCharacters(in: .whitespaces)
+        routines[idx].folder = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        routines[idx].updatedAt = Date()
+        persist()
+        if let userId = currentUserId {
+            let copy = routines[idx]
+            Task.detached {
+                await SupabaseSyncService.shared.upsertRoutine(userId: userId, routine: copy)
+            }
+        }
+    }
+
+    /// Rename a folder for every routine that's in it. Folder is just a
+    /// string so the operation is a bulk find-and-replace.
+    func renameFolder(from oldName: String, to newName: String) {
+        let trimmed = newName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        for idx in routines.indices where routines[idx].folder == oldName {
+            routines[idx].folder = trimmed
+            routines[idx].updatedAt = Date()
+        }
+        persist()
+    }
+
+    /// Delete a folder by uncategorizing every routine in it. The
+    /// routines themselves are kept; only the folder name is cleared.
+    func deleteFolder(_ name: String) {
+        for idx in routines.indices where routines[idx].folder == name {
+            routines[idx].folder = nil
+            routines[idx].updatedAt = Date()
+        }
+        persist()
+    }
+
     /// Replace the entire local cache — used by `AppState.restoreFromCloud`
     /// to hydrate after a fresh sign-in. Skips cloud push since the source
     /// of truth is already cloud.

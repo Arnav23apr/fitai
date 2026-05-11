@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import RevenueCat
 import RevenueCatUI
 
 struct ProfileView: View {
@@ -7,6 +8,9 @@ struct ProfileView: View {
     @Environment(TourManager.self) private var tourManager
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
+    /// Debug — temporary RC diagnostic report. Remove once paywall is healthy.
+    @State private var showDebugReport: Bool = false
+    @State private var debugReport: String = ""
     @State private var showLanguagePicker: Bool = false
     @State private var showAppleHealth: Bool = false
     @State private var showNotificationSettings: Bool = false
@@ -23,6 +27,7 @@ struct ProfileView: View {
     @State private var showPhotosAndData: Bool = false
     @State private var showWorkoutModePicker: Bool = false
     @State private var showWorkoutPlanReview: Bool = false
+    @State private var showLegal: Bool = false
 
     private var lang: String { appState.profile.selectedLanguage }
 
@@ -44,6 +49,7 @@ struct ProfileView: View {
                         WorkoutCalendarHeatmap(logs: appState.profile.workoutLogs)
                         scanHistorySection
                         settingsSection
+                        debugRCButton
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -76,7 +82,12 @@ struct ProfileView: View {
                 }
             }
             .sheet(isPresented: $showEditProfile) { EditProfileSheet() }
-            .sheet(isPresented: $showPaywall) { PaywallSheet() }
+            .sheet(isPresented: $showPaywall) { PaywallSheet(context: .profile) }
+            .alert("RC Debug Report", isPresented: $showDebugReport) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Printed to console + copied to clipboard. Length: \(debugReport.count) chars.")
+            }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
                     .presentationDetents([.fraction(0.75)])
@@ -119,6 +130,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showWorkoutPlanReview) {
                 PlanReviewView { /* templates saved by view */ }
+            }
+            .sheet(isPresented: $showLegal) {
+                LegalSheet()
             }
             .sheet(isPresented: $showPreCancelIntercept) {
                 GoalProjectionCard(
@@ -420,6 +434,8 @@ struct ProfileView: View {
                 Divider().padding(.leading, 52)
                 appleHealthRow
                 Divider().padding(.leading, 52)
+                exportDataRow
+                Divider().padding(.leading, 52)
                 settingsRow(title: L.t("restorePurchases", lang), icon: "arrow.clockwise") {
                     Task {
                         await StoreViewModel.shared.restore()
@@ -461,12 +477,10 @@ struct ProfileView: View {
                 }
                 Divider().padding(.leading, 52)
                 settingsRow(title: L.t("termsPrivacy", lang), icon: "doc.text") {
-                    UIApplication.shared.open(LegalLinks.terms)
+                    showLegal = true
                 }
                 Divider().padding(.leading, 52)
                 workoutModeResetRow
-                Divider().padding(.leading, 52)
-                exerciseDataAttributionRow
                 Divider().padding(.leading, 52)
                 restartTourRow
             }
@@ -656,38 +670,6 @@ struct ProfileView: View {
         .buttonStyle(.plain)
     }
 
-    /// Attribution for the open-source exercise databases bundled with FitAI.
-    /// Required by their licenses (MIT for free-exercise-db, CC-BY-SA 4.0 for
-    /// wger.de). Tap opens wger.de's site so users can verify the upstream.
-    private var exerciseDataAttributionRow: some View {
-        Button {
-            if let url = URL(string: "https://wger.de/") {
-                UIApplication.shared.open(url)
-            }
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: "books.vertical.fill")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.purple)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Exercise Database Credits")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.primary)
-                    Text("free-exercise-db (MIT) · wger.de (CC-BY-SA 4.0)")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Image(systemName: "arrow.up.right.square")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-    }
 
     private var restartTourRow: some View {
         Button { tourManager.restartTour() } label: {
@@ -728,6 +710,52 @@ struct ProfileView: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
                 Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    /// Strong-format CSV export. Materialized to a temp file then handed
+    /// to the system share sheet via ShareLink, so the user can email,
+    /// AirDrop, or save to Files. Format is column-compatible with what
+    /// Hevy and Strong both consume on import, so users can move freely.
+    @ViewBuilder
+    private var exportDataRow: some View {
+        if let url = CSVExportService.exportToTemporaryFile(usesMetric: appState.profile.usesMetric) {
+            ShareLink(item: url) {
+                HStack(spacing: 14) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.green)
+                        .frame(width: 28)
+                    Text("Export workout data (CSV)")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .buttonStyle(.plain)
+        } else {
+            // No logs to export yet. Show as a disabled row so the user
+            // sees the feature exists but understands why it's inert.
+            HStack(spacing: 14) {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28)
+                Text("Export workout data (CSV)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("No logs yet")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -777,6 +805,172 @@ struct ProfileView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+    }
+
+    // MARK: - Debug — RC diagnostic report (temporary)
+
+    /// Tap → fetches live offerings + customer info + StoreViewModel state,
+    /// prints to console, copies to clipboard, shows confirm alert. Remove
+    /// this block once the RC config issue is resolved.
+    private var debugRCButton: some View {
+        VStack(spacing: 6) {
+            Button {
+                Task {
+                    let report = await generateRCDebugReport()
+                    print(report)
+                    UIPasteboard.general.string = report
+                    debugReport = report
+                    showDebugReport = true
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "stethoscope")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("Generate RC Debug Report")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 40)
+                .background(Color.primary.opacity(0.06))
+                .clipShape(.rect(cornerRadius: 10))
+            }
+            Text("Temporary debug button — prints to console + clipboard")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+    }
+
+    @MainActor
+    private func generateRCDebugReport() async -> String {
+        var lines: [String] = []
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        lines.append("=== RC DEBUG REPORT ===")
+        lines.append("Timestamp: \(stamp)")
+        lines.append("Bundle: \(Bundle.main.bundleIdentifier ?? "nil")")
+        #if DEBUG
+        lines.append("Build config: DEBUG")
+        #else
+        lines.append("Build config: RELEASE")
+        #endif
+        lines.append("")
+
+        lines.append("--- SDK State ---")
+        lines.append("Purchases.isConfigured: \(Purchases.isConfigured)")
+        if Purchases.isConfigured {
+            lines.append("logLevel: \(Purchases.logLevel)")
+            lines.append("appUserID: \(Purchases.shared.appUserID)")
+            lines.append("isAnonymous: \(Purchases.shared.isAnonymous)")
+        }
+        lines.append("")
+
+        guard Purchases.isConfigured else {
+            lines.append("ABORT: Purchases SDK is not configured. Check Secrets.swift + FitAIPremiumFitnessAppApp.init().")
+            return lines.joined(separator: "\n")
+        }
+
+        lines.append("--- Customer Info ---")
+        do {
+            let info = try await Purchases.shared.customerInfo()
+            lines.append("originalAppUserID: \(info.originalAppUserId)")
+            lines.append("firstSeen: \(info.firstSeen)")
+            lines.append("originalPurchaseDate: \(info.originalPurchaseDate?.description ?? "nil")")
+            lines.append("activeSubscriptions (\(info.activeSubscriptions.count)):")
+            for sub in info.activeSubscriptions {
+                lines.append("  - \(sub)")
+            }
+            lines.append("allPurchasedProductIdentifiers (\(info.allPurchasedProductIdentifiers.count)):")
+            for prod in info.allPurchasedProductIdentifiers {
+                lines.append("  - \(prod)")
+            }
+            lines.append("entitlements.all (\(info.entitlements.all.count)):")
+            for (key, ent) in info.entitlements.all {
+                lines.append("  '\(key)':")
+                lines.append("    isActive: \(ent.isActive)")
+                lines.append("    productIdentifier: '\(ent.productIdentifier)'")
+                lines.append("    expirationDate: \(ent.expirationDate?.description ?? "nil")")
+                lines.append("    willRenew: \(ent.willRenew)")
+                lines.append("    periodType: \(ent.periodType)")
+                lines.append("    store: \(ent.store)")
+            }
+        } catch {
+            let nsErr = error as NSError
+            lines.append("ERROR fetching customerInfo:")
+            lines.append("  message: \(error.localizedDescription)")
+            lines.append("  domain: \(nsErr.domain)")
+            lines.append("  code: \(nsErr.code)")
+            lines.append("  userInfo: \(nsErr.userInfo)")
+        }
+        lines.append("")
+
+        lines.append("--- Offerings ---")
+        do {
+            let offerings = try await Purchases.shared.offerings()
+            lines.append("current offering: \(offerings.current?.identifier ?? "nil")")
+            lines.append("all offerings count: \(offerings.all.count)")
+            for (key, offering) in offerings.all {
+                lines.append("  Offering '\(key)':")
+                lines.append("    serverDescription: \(offering.serverDescription)")
+                lines.append("    availablePackages count: \(offering.availablePackages.count)")
+                for pkg in offering.availablePackages {
+                    let prod = pkg.storeProduct
+                    lines.append("      Package:")
+                    lines.append("        identifier: '\(pkg.identifier)'")
+                    lines.append("        packageType: \(pkg.packageType)")
+                    lines.append("        product.productIdentifier: '\(prod.productIdentifier)'")
+                    lines.append("        product.localizedTitle: '\(prod.localizedTitle)'")
+                    lines.append("        product.localizedPriceString: '\(prod.localizedPriceString)'")
+                    lines.append("        product.price: \(prod.price)")
+                    lines.append("        product.currencyCode: '\(prod.currencyCode ?? "nil")'")
+                    lines.append("        product.subscriptionPeriod: \(String(describing: prod.subscriptionPeriod))")
+                }
+            }
+            if let current = offerings.current {
+                lines.append("Current offering '\(current.identifier)' lookup probes:")
+                let probes = ["weekly", "monthly", "yearly", "lifetime",
+                              "$rc_weekly", "$rc_monthly", "$rc_annual", "$rc_lifetime"]
+                for probe in probes {
+                    let pkg = current.package(identifier: probe)
+                    lines.append("  '\(probe)' -> \(pkg?.storeProduct.productIdentifier ?? "nil")")
+                }
+            }
+        } catch {
+            let nsErr = error as NSError
+            lines.append("ERROR fetching offerings:")
+            lines.append("  message: \(error.localizedDescription)")
+            lines.append("  domain: \(nsErr.domain)")
+            lines.append("  code: \(nsErr.code)")
+            lines.append("  userInfo: \(nsErr.userInfo)")
+        }
+        lines.append("")
+
+        lines.append("--- StoreViewModel state ---")
+        let svm = StoreViewModel.shared
+        lines.append("isPremium: \(svm.isPremium)")
+        lines.append("isLoading: \(svm.isLoading)")
+        lines.append("isPurchasing: \(svm.isPurchasing)")
+        lines.append("error: \(svm.error ?? "nil")")
+        lines.append("offerings.current.identifier: \(svm.offerings?.current?.identifier ?? "nil")")
+        lines.append("weeklyPackage: \(svm.weeklyPackage?.identifier ?? "nil") (product: \(svm.weeklyPackage?.storeProduct.productIdentifier ?? "nil"))")
+        lines.append("monthlyPackage: \(svm.monthlyPackage?.identifier ?? "nil") (product: \(svm.monthlyPackage?.storeProduct.productIdentifier ?? "nil"))")
+        lines.append("annualPackage: \(svm.annualPackage?.identifier ?? "nil") (product: \(svm.annualPackage?.storeProduct.productIdentifier ?? "nil"))")
+        lines.append("lifetimePackage: \(svm.lifetimePackage?.identifier ?? "nil") (product: \(svm.lifetimePackage?.storeProduct.productIdentifier ?? "nil"))")
+        lines.append("weeklyPriceString: '\(svm.weeklyPriceString)'")
+        lines.append("monthlyPriceString: '\(svm.monthlyPriceString)'")
+        lines.append("annualPriceString: '\(svm.annualPriceString)'")
+        lines.append("lifetimePriceString: '\(svm.lifetimePriceString)'")
+        lines.append("annualVsWeeklySavingsPercent: \(svm.annualVsWeeklySavingsPercent)")
+        lines.append("")
+
+        lines.append("--- AppState.profile ---")
+        lines.append("isPremium: \(appState.profile.isPremium)")
+        lines.append("name: '\(appState.profile.name)'")
+        lines.append("selectedLanguage: '\(appState.profile.selectedLanguage)'")
+        lines.append("referralCode: '\(appState.profile.referralCode)'")
+        lines.append("")
+
+        lines.append("=== END REPORT ===")
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -1177,6 +1371,81 @@ struct AppleHealthIconMark: View {
                     .frame(width: size * 0.84, height: size * 0.84)
             }
             .frame(width: size, height: size)
+        }
+    }
+}
+
+/// Combined Terms / Privacy / Acknowledgments screen. Replaces the
+/// previous "Terms & Privacy" row that opened the hosted page directly,
+/// and absorbs the standalone exercise-database credit row that used to
+/// sit in Profile. One settings entry, three things behind it.
+struct LegalSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
+
+    private var lang: String { appState.profile.selectedLanguage }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text(L.t("termsPrivacy", lang))) {
+                    legalRow(
+                        title: L.t("terms", lang),
+                        subtitle: nil,
+                        icon: "doc.text",
+                        url: LegalLinks.terms
+                    )
+                    legalRow(
+                        title: L.t("privacy", lang),
+                        subtitle: nil,
+                        icon: "lock.shield",
+                        url: LegalLinks.privacy
+                    )
+                }
+
+                Section(header: Text("Acknowledgments")) {
+                    legalRow(
+                        title: "Exercise Database",
+                        subtitle: "free-exercise-db (MIT) — yuhonas",
+                        icon: "books.vertical.fill",
+                        url: URL(string: "https://github.com/yuhonas/free-exercise-db")!
+                    )
+                }
+            }
+            .navigationTitle(L.t("termsPrivacy", lang))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L.t("done", lang)) { dismiss() }
+                        .fontWeight(.medium)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func legalRow(title: String, subtitle: String?, icon: String, url: URL) -> some View {
+        Link(destination: url) {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 24)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 }

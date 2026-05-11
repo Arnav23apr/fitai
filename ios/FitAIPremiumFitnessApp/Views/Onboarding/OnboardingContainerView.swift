@@ -16,7 +16,7 @@ struct OnboardingContainerView: View {
     // not progress moments, and showing the bar there would imply more steps
     // than there really are.
     private let progressSteps: [OnboardingStep] = [
-        .name, .gender, .workoutsPerWeek, .trainingExperience, .trainingLocation,
+        .name, .gender, .workoutsPerWeek, .preferredTrainingDays, .trainingExperience, .trainingLocation,
         .primaryGoal, .hardTruth, .trustUs, .dateOfBirth, .heightWeight,
         .holdingBack, .physiqueReward, .goals, .confidence,
         .onePercent, .resultsGraph, .commitment, .planLoading,
@@ -51,6 +51,8 @@ struct OnboardingContainerView: View {
                     GenderView(onContinue: { advance() })
                 case .workoutsPerWeek:
                     WorkoutsPerWeekView(onContinue: { advance() })
+                case .preferredTrainingDays:
+                    PreferredTrainingDaysView(onContinue: { advance() })
                 case .trainingExperience:
                     TrainingExperienceView(onContinue: { advance() })
                 case .trainingLocation:
@@ -105,6 +107,7 @@ struct OnboardingContainerView: View {
                     )
                 case .paywall:
                     PaywallView(
+                        context: .onboarding,
                         onSubscribe: {
                             appState.profile.isPremium = true
                             isGoingBack = false

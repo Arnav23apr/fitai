@@ -49,8 +49,9 @@ nonisolated struct Exercise: Identifiable, Sendable {
 nonisolated enum ExerciseTrackingMode: Sendable, Equatable {
     case weighted    // weight + reps (default for strength)
     case bodyweight  // reps + bodyweight toggle
-    case timed       // duration in seconds (cardio, mobility, holds)
+    case timed       // duration in seconds (mobility, holds, plank)
     case repsOnly    // reps only, no weight (stretches with rep counts)
+    case distance    // distance + duration (running, cycling, rowing, walking pace)
 }
 
 extension Exercise {
@@ -78,12 +79,25 @@ extension Exercise {
             r.range(of: #"^\d+s(\s*/.+)?$"#, options: .regularExpression) != nil
         if isTimeReps { return .timed }
 
-        // 3. Cardio is always timed (covers walking, running, cycling,
-        // rowing, ellipticals — the muscle-group bucket is the source of
-        // truth here, not the name).
+        // 3. Cardio with a distance dimension. Running, cycling,
+        // rowing, swimming, walking are all distance-tracked first; if
+        // the user just wants pure-time cardio (jumping rope), the
+        // muscle-group fallback below catches that as `.timed`.
+        let isDistanceCardio = n.contains("run") || n.contains("running") ||
+            n.contains("jog") || n.contains("treadmill") ||
+            n.contains("cycling") || n.contains("biking") || n.contains("bike") ||
+            n.contains("rowing") || n.contains("rower") ||
+            n.contains("walk") && !Self.repBasedExerciseOverrides.contains(n) ||
+            n.contains("swim") || n.contains("elliptical") ||
+            n.contains("stair") || n.contains("ski erg")
+        if isDistanceCardio { return .distance }
+
+        // 4. Cardio bucket as final fallback for any cardio-tagged
+        // exercise that didn't match the distance keyword list (e.g.
+        // jump rope, battle ropes, burpees-as-cardio).
         if group == "cardio" { return .timed }
 
-        // 4. Mobility / recovery / stretches / holds. Note: "walk" is NOT
+        // 5. Mobility / recovery / stretches / holds. Note: "walk" is NOT
         // in this list — it falsely matched Walking Lunges, Farmer's Walk,
         // Walking Plank, etc. Those are handled by the override list above
         // or by the bodyweight detector below; cardio walks are caught by

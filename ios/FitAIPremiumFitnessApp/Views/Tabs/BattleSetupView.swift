@@ -17,19 +17,13 @@ struct BattleSetupView: View {
                 VStack(spacing: 28) {
                     headerSection
 
-                    HStack(spacing: 16) {
+                    HStack(alignment: .top, spacing: 16) {
                         playerPhotoCard
 
                         vsLabel
 
-                        photoCard(
-                            title: L.t("opponentTitle", lang),
-                            image: viewModel.opponentPhoto,
-                            pickerItem: $viewModel.opponentPickerItem
-                        )
+                        opponentColumn
                     }
-
-                    nameField
 
                     if let error = viewModel.errorMessage {
                         Text(error)
@@ -38,17 +32,22 @@ struct BattleSetupView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
                     }
-
-                    battleButton
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
-                .padding(.bottom, 40)
+                .padding(.bottom, 20)
             }
             .background(Color(.systemBackground))
             .navigationTitle(L.t("physiqueBattle", lang))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+            .safeAreaInset(edge: .bottom) {
+                battleButton
+                    .padding(.horizontal, 20)
+                    .padding(.top, 10)
+                    .padding(.bottom, 8)
+                    .background(.regularMaterial)
+            }
             .sheet(isPresented: $showFriendPicker) { friendPickerSheet }
             .task {
                 friendViewModel.attach(appState)
@@ -68,6 +67,31 @@ struct BattleSetupView: View {
                     profileData: appState.profile.customPhotoData,
                     name: appState.profile.name
                 )
+                // Reuse the player's most recent scan analysis if it's fresh
+                // (within 7 days). Cuts battle AI cost in half by skipping
+                // re-analysis of the player's photo, and the scan data is
+                // strictly more authoritative than re-analyzing a battle photo.
+                if let recent = appState.scanHistory.first {
+                    let isFresh = Date().timeIntervalSince(recent.date) < 7 * 24 * 3600
+                    if isFresh {
+                        viewModel.cachedPlayerAnalysis = AnalysisResult(
+                            overallScore: recent.overallScore,
+                            muscleScores: MuscleScores(
+                                chest: recent.muscleScores.chest,
+                                shoulders: recent.muscleScores.shoulders,
+                                back: recent.muscleScores.back,
+                                arms: recent.muscleScores.arms,
+                                legs: recent.muscleScores.legs,
+                                core: recent.muscleScores.core,
+                                glutes: recent.muscleScores.glutes ?? 0
+                            ),
+                            potentialRating: recent.potentialRating,
+                            visibleMuscleGroups: recent.strongPoints + recent.weakPoints,
+                            strongPoints: recent.strongPoints,
+                            weakPoints: recent.weakPoints
+                        )
+                    }
+                }
             }
             .onChange(of: viewModel.playerPickerItem) { _, _ in
                 Task {
@@ -135,10 +159,6 @@ struct BattleSetupView: View {
                     .font(.system(size: 40))
                     .foregroundStyle(.red)
             }
-
-            Text(L.t("physiqueBattle", lang))
-                .font(.system(.title2, design: .rounded, weight: .bold))
-                .foregroundStyle(.primary)
 
             Text(L.t("physiqueBattleDesc", lang))
                 .font(.subheadline)
@@ -221,10 +241,10 @@ struct BattleSetupView: View {
         .animation(.snappy(duration: 0.25), value: viewModel.playerPhotoIsDefault)
     }
 
-    private func photoCard(title: String, image: UIImage?, pickerItem: Binding<PhotosPickerItem?>) -> some View {
+    private var opponentColumn: some View {
         VStack(spacing: 10) {
-            PhotosPicker(selection: pickerItem, matching: .images) {
-                if let img = image {
+            PhotosPicker(selection: $viewModel.opponentPickerItem, matching: .images) {
+                if let img = viewModel.opponentPhoto {
                     Image(uiImage: img)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -249,9 +269,23 @@ struct BattleSetupView: View {
                 }
             }
 
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
+            TextField(
+                "",
+                text: $viewModel.opponentName,
+                prompt: Text(L.t("enterName", lang)).foregroundStyle(.tertiary)
+            )
+            .font(.subheadline.weight(.semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.primary)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .frame(width: 140)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(.rect(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
+            )
         }
     }
 
@@ -259,26 +293,7 @@ struct BattleSetupView: View {
         Text("VS")
             .font(.system(.title3, design: .rounded, weight: .black))
             .foregroundStyle(.red)
-            .padding(.top, 20)
-    }
-
-    private var nameField: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L.t("opponentNameLabel", lang))
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-
-            TextField("", text: $viewModel.opponentName, prompt: Text(L.t("enterName", lang)).foregroundStyle(.tertiary))
-                .font(.body)
-                .foregroundStyle(.primary)
-                .padding(14)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(.rect(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                )
-        }
+            .frame(height: 190)
     }
 
     private var battleButton: some View {

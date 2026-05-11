@@ -20,6 +20,29 @@ struct WorkoutCalendarView: View {
         Dictionary(grouping: logs) { calendar.startOfDay(for: $0.date) }
     }
 
+    /// Per-day total working-set volume drawn from the canonical
+    /// `ExerciseLogService` history. Used to drive the GitHub-style heat
+    /// background. Computed once per render so the calendar's day cells
+    /// don't each re-scan the full log list.
+    private var volumeByDay: [Date: Double] {
+        var dict: [Date: Double] = [:]
+        for log in ExerciseLogService.shared.loadAll() {
+            let day = calendar.startOfDay(for: log.date)
+            dict[day, default: 0] += log.computedVolume
+        }
+        return dict
+    }
+
+    /// Highest daily volume in the displayed month. Anchors the heat
+    /// scale so a high-volume month doesn't wash out an off-month and
+    /// vice versa. Falls back to 1 to avoid divide-by-zero.
+    private var monthMaxVolume: Double {
+        let days = daysInMonth.compactMap { $0 }
+        let vbd = volumeByDay
+        let max = days.map { vbd[calendar.startOfDay(for: $0)] ?? 0 }.max() ?? 0
+        return max > 0 ? max : 1
+    }
+
     private var monthTitle: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM yyyy"
@@ -168,6 +191,31 @@ struct WorkoutCalendarView: View {
 
         let isFullyCompleted = dayLogs?.allSatisfy { $0.exercisesCompleted == $0.totalExercises } ?? false
 
+        // GitHub-style heat. Buckets the day's working-set volume into
+        // 5 tiers (0/none, 1, 2, 3, 4) so adjacent low-volume days are
+        // visually distinguishable instead of all rendering as a single
+        // muted shade. Future / no-data days render a clear background.
+        let dayVolume = volumeByDay[dayStart] ?? 0
+        let heatTier: Int = {
+            guard dayVolume > 0 else { return 0 }
+            let ratio = dayVolume / monthMaxVolume
+            switch ratio {
+            case ..<0.25: return 1
+            case ..<0.50: return 2
+            case ..<0.75: return 3
+            default: return 4
+            }
+        }()
+        let heatOpacity: Double = {
+            switch heatTier {
+            case 1: return 0.18
+            case 2: return 0.35
+            case 3: return 0.55
+            case 4: return 0.85
+            default: return 0
+            }
+        }()
+
         return Button {
             if let logs = dayLogs, let first = logs.first {
                 selectedLog = first
@@ -176,7 +224,7 @@ struct WorkoutCalendarView: View {
             VStack(spacing: 3) {
                 Text("\(calendar.component(.day, from: date))")
                     .font(.system(size: 14, weight: isToday ? .bold : .regular))
-                    .foregroundStyle(isFuture ? .quaternary : .primary)
+                    .foregroundStyle(textColor(isFuture: isFuture, heatTier: heatTier))
 
                 if hasWorkout {
                     Circle()
@@ -191,7 +239,12 @@ struct WorkoutCalendarView: View {
             .frame(maxWidth: .infinity)
             .frame(height: 48)
             .background(
-                Group {
+                ZStack {
+                    if heatTier > 0 {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .fill(Color.green.opacity(heatOpacity))
+                            .frame(width: 40, height: 40)
+                    }
                     if isToday {
                         Circle()
                             .strokeBorder(Color.primary.opacity(0.15), lineWidth: 1.5)
@@ -202,6 +255,14 @@ struct WorkoutCalendarView: View {
         }
         .disabled(!hasWorkout)
         .buttonStyle(.plain)
+    }
+
+    /// Day-number color picks a high-contrast fill against the heat
+    /// background so the date stays readable at every tier.
+    private func textColor(isFuture: Bool, heatTier: Int) -> Color {
+        if isFuture { return Color.secondary.opacity(0.4) }
+        if heatTier >= 3 { return .white }
+        return .primary
     }
 
     // MARK: - Month Stats

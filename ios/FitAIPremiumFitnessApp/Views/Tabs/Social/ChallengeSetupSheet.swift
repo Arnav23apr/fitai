@@ -80,7 +80,7 @@ struct ChallengeSetupSheet: View {
                     Button(L.t("cancel", lang)) { dismiss() }
                 }
             }
-            .sheet(isPresented: $showPaywall) { PaywallSheet() }
+            .sheet(isPresented: $showPaywall) { PaywallSheet(context: .battle) }
         }
     }
 

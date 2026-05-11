@@ -39,7 +39,7 @@ class BattleViewModel {
     private let aiService = AIService()
 
     var canStartBattle: Bool {
-        playerPhoto != nil && opponentPhoto != nil && !opponentName.trimmingCharacters(in: .whitespaces).isEmpty
+        playerPhoto != nil && opponentPhoto != nil
     }
 
     func loadPlayerPhoto() async {
@@ -58,6 +58,12 @@ class BattleViewModel {
         }
     }
 
+    /// Optional fast-path for the player side. When set, we reuse this
+    /// AnalysisResult instead of re-running AI on the player photo. Saves
+    /// ~$0.01 per battle and ~3 seconds of latency. Caller (BattleSetupView)
+    /// builds this from the user's most recent scan if it's <7 days old.
+    var cachedPlayerAnalysis: AnalysisResult? = nil
+
     func startBattle(profile: UserProfile? = nil) async {
         guard let pPhoto = playerPhoto, let oPhoto = opponentPhoto else { return }
         isAnalyzing = true
@@ -66,12 +72,22 @@ class BattleViewModel {
         analyzeProgress = L.t("analyzingYourPhysique", lang)
 
         // Hold the analyzing overlay for at least this long so the rotating
-        // phrases get to play out — see the same pattern in ScanViewModel.
+        // phrases get to play out, see the same pattern in ScanViewModel.
         let analyzeStart = Date()
         let minimumDuration: TimeInterval = 7.0
 
         do {
-            let playerResult = try await analyzePhoto(pPhoto, profile: profile)
+            // Player side: reuse the user's cached scan analysis when available
+            // (cuts battle cost in half, scan results are good for 7 days).
+            let playerResult: AnalysisResult
+            if let cached = cachedPlayerAnalysis {
+                playerResult = cached
+                // small visible delay so the user still sees the "analyzing
+                // your physique" phrase rotate; the actual work was zero.
+                try? await Task.sleep(for: .seconds(1.5))
+            } else {
+                playerResult = try await analyzePhoto(pPhoto, profile: profile)
+            }
             let opponentDisplay = opponentName.isEmpty ? L.t("opponentTitle", lang) : opponentName
             analyzeProgress = L.t("analyzingOpponentPhysiqueFmt", lang)
                 .replacingOccurrences(of: "%@", with: opponentDisplay)
@@ -88,8 +104,9 @@ class BattleViewModel {
                 weakPoints: playerResult.weakPoints
             )
 
+            let trimmedOpponent = opponentName.trimmingCharacters(in: .whitespaces)
             let opponent = BattleContestant(
-                name: opponentName.trimmingCharacters(in: .whitespaces),
+                name: trimmedOpponent.isEmpty ? L.t("opponentTitle", lang) : trimmedOpponent,
                 photo: oPhoto,
                 overallScore: opponentResult.overallScore,
                 muscleScores: opponentResult.muscleScores,
@@ -99,7 +116,12 @@ class BattleViewModel {
                 weakPoints: opponentResult.weakPoints
             )
 
-            battleResult = PhysiqueBattle(player: player, opponent: opponent)
+            var battle = PhysiqueBattle(player: player, opponent: opponent)
+            // Best-effort AI verdict — keep the existing analyze progress
+            // message visible during the call. If the verdict fails or times
+            // out, the result screen omits the block.
+            battle.verdict = await generateVerdict(player: player, opponent: opponent, lang: lang)
+            battleResult = battle
 
             await pauseUntilMinimumElapsed(start: analyzeStart, minimum: minimumDuration)
 
@@ -134,6 +156,41 @@ class BattleViewModel {
         analyzeProgress = ""
     }
 
+    /// One-line AI commentary on who won and why. Returns nil on any failure
+    /// so the result screen can gracefully omit the section.
+    private func generateVerdict(player: BattleContestant, opponent: BattleContestant, lang: String) async -> String? {
+        let langInstr = lang.lowercased() == "english" ? "" : "Respond in \(lang)."
+        let system = """
+        You are a physique battle commentator. Write a single sharp sentence (under 25 words) explaining who won and why. Cite the specific muscle group or quality that decided it. Tone: confident, neutral, factual, not mean. Never use em dashes; use commas, periods, or parentheses instead. \(langInstr)
+        """
+
+        func scoreList(_ s: MuscleScores) -> String {
+            "chest \(fmt(s.chest)), shoulders \(fmt(s.shoulders)), back \(fmt(s.back)), arms \(fmt(s.arms)), legs \(fmt(s.legs)), core \(fmt(s.core)), glutes \(fmt(s.glutes))"
+        }
+
+        let user = """
+        \(player.name): overall \(fmt(player.overallScore))/10, scores [\(scoreList(player.muscleScores))], strong [\(player.strongPoints.joined(separator: ", "))].
+        \(opponent.name): overall \(fmt(opponent.overallScore))/10, scores [\(scoreList(opponent.muscleScores))], strong [\(opponent.strongPoints.joined(separator: ", "))].
+
+        Write the verdict in one sentence.
+        """
+
+        let messages: [ChatAPIMessage] = [
+            ChatAPIMessage(role: "system", text: system),
+            ChatAPIMessage(role: "user", text: user)
+        ]
+
+        do {
+            let result = try await aiService.chat(messages: messages)
+            let trimmed = result.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        } catch {
+            return nil
+        }
+    }
+
+    private func fmt(_ d: Double) -> String { String(format: "%.1f", d) }
+
     private func analyzePhoto(_ image: UIImage, profile: UserProfile? = nil) async throws -> AnalysisResult {
         guard let base64 = AIService.imageToBase64(image) else {
             throw AIError.decodingError
@@ -145,10 +202,12 @@ class BattleViewModel {
         You are a professional fitness physique analyzer. Analyze the user's physique photo and provide a detailed assessment. \
         Score from 1-10. Be honest. Consider muscle development, symmetry, proportions, and overall conditioning. \
         Most average gym-goers score 4-6. Only elite physiques score 8+. \
-        IMPORTANT: Determine which muscle groups are actually VISIBLE in the photo. Only include groups you can clearly see. \
+        VISIBILITY RULES (mandatory — read carefully):
         For visibleMuscleGroups, use these exact values: "chest", "shoulders", "back", "arms", "legs", "core", "glutes". \
-        For female users, "glutes" is the highest-priority muscle group — always include it when any lower body or back view is visible, and always provide a muscleScores.glutes value. \
-        Only include a muscle group if it is clearly visible. Set muscleScores to 0 for non-visible groups. \
+        A muscle group is VISIBLE only if you can clearly identify the muscle itself in the photo — not inferred from the rest of the body. \
+        Examples: a front-facing torso shot does NOT show back or glutes; a clothed lower body does NOT show legs; a shirt covering the abdomen does NOT show core. \
+        For ANY muscle group that is not visible, you MUST omit it from visibleMuscleGroups AND set muscleScores.<group> to exactly 0. Do not guess, do not infer, do not estimate from the rest of the physique. Returning a non-zero score for a muscle you cannot see is a failure. \
+        For female users, "glutes" is the highest-priority muscle group — always include it when any lower body or back view actually shows the glutes, and always provide a muscleScores.glutes value. If glutes are not in frame, score 0 like any other invisible group. \
         Score visible muscle groups from 1-10 each. \
         For potentialRating, rate from 1-10 how much genetic/frame potential this person has. \
         Consider bone structure, proportions, and muscle insertions relevant to the user's goals. Be generous — most people score 7+.

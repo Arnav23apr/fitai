@@ -100,6 +100,21 @@ struct SetLoggingSheet: View {
                     let (defWeight, defReps) = Self.experienceDefaults()
                     initialSets.append(SetLog(weight: defWeight, reps: defReps, isBodyweight: false))
                 }
+            case .distance:
+                // Cardio distance + duration. Pre-fill from last session
+                // when available, otherwise leave empty for the user to
+                // type during the session. The legacy SetLoggingSheet
+                // doesn't have a dedicated cardio UI yet, so this just
+                // produces an editable empty row that the user fills in.
+                let prevDist = lastSession?.sets[safe: i]?.distanceMeters ?? 0
+                let prevDur = lastSession?.sets[safe: i]?.durationSeconds ?? 0
+                initialSets.append(SetLog(
+                    weight: 0,
+                    reps: 0,
+                    isBodyweight: false,
+                    distanceMeters: prevDist > 0 ? prevDist : nil,
+                    durationSeconds: prevDur > 0 ? prevDur : nil
+                ))
             }
         }
         _sets = State(initialValue: initialSets)
@@ -482,6 +497,13 @@ struct SetLoggingSheet: View {
                             Text("×\(set.reps)")
                                 .font(.system(size: 9))
                                 .foregroundStyle(.secondary)
+                        case .distance:
+                            Text(set.durationSeconds.map { formatDuration($0) } ?? "-")
+                                .font(.system(.caption2, design: .rounded, weight: .bold))
+                                .foregroundStyle(.primary)
+                            Text("dist")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
                         }
                     }
                     .frame(maxWidth: .infinity)
@@ -703,6 +725,12 @@ struct SetLoggingSheet: View {
             repsOnlyInputField(index: index, isDisabled: isDisabled)
         case .weighted, .bodyweight:
             weightedInputFields(index: index, isDisabled: isDisabled)
+        case .distance:
+            // Cardio distance + duration. Legacy SetLoggingSheet falls
+            // back to the timed input for now; the active session UI
+            // (ActiveSessionView + ExerciseCard) is the canonical
+            // logging surface for cardio.
+            timedInputField(index: index, isDisabled: isDisabled)
         }
     }
 

@@ -34,6 +34,11 @@ struct ScanView: View {
     /// Set when the user taps a photo card before granting consent. The
     /// consent sheet's onResult opens this camera once the user accepts.
     @State private var pendingCameraIsFront: Bool? = nil
+    /// Surfaced when a free user upgrades but their original scan photo
+    /// is no longer in memory (e.g. they killed the app between the fake
+    /// scan and completing the paywall). The locked results sheet
+    /// dismisses and this alert tells them to retake the photo.
+    @State private var showRescanRequiredAlert: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -63,7 +68,7 @@ struct ScanView: View {
                     .presentationBackground(.black)
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallSheet()
+                PaywallSheet(context: .profile)
             }
             .sheet(isPresented: $showPhotoConsent) {
                 PhotoConsentSheet { accepted in
@@ -118,6 +123,48 @@ struct ScanView: View {
                     )
                 }
             }
+            .onChange(of: appState.profile.isPremium) { _, isPremium in
+                handlePremiumUpgradeWhileLocked(isPremium: isPremium)
+            }
+            .alert("Take a fresh photo", isPresented: $showRescanRequiredAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Your photo was cleared. Take it again and we'll show your real results.")
+            }
+        }
+    }
+
+    /// When the user upgrades to Pro from the locked results sheet, swap
+    /// the blurred placeholder for a real AI scan using the photo they
+    /// already captured. The existing `AnalyzingOverlayView` fullScreenCover
+    /// surfaces automatically because `viewModel.analyzeScan` flips
+    /// `isAnalyzing` to true; once it returns, `viewModel.analysisResult`
+    /// is replaced with the unlocked result and the open results sheet
+    /// re-renders without blur.
+    ///
+    /// Photo-missing case: if the user killed the app between the fake
+    /// scan and the purchase, `viewModel.frontImage` is nil and we can't
+    /// re-run the scan silently. Dismiss the locked results sheet and ask
+    /// them to retake the photo.
+    private func handlePremiumUpgradeWhileLocked(isPremium: Bool) {
+        guard isPremium,
+              viewModel.analysisResult?.isLocked == true
+        else { return }
+
+        if viewModel.frontImage != nil {
+            Task {
+                let result = await viewModel.analyzeScan(profile: appState.profile)
+                if let result, !result.isLocked {
+                    appState.saveScanResult(result)
+                    if let photo = result.frontPhoto,
+                       let data = photo.jpegData(compressionQuality: 0.85) {
+                        appState.saveBattlePhoto(data)
+                    }
+                }
+            }
+        } else {
+            showResultsSheet = false
+            showRescanRequiredAlert = true
         }
     }
 
@@ -235,11 +282,11 @@ struct ScanView: View {
             }
 
             Button(action: {
-                if appState.profile.canScanFree {
-                    Task { await performAnalysis() }
-                } else {
-                    showPaywall = true
-                }
+                // Everyone can run the scan now. Free users get a locked
+                // (blurred) result with an unlock CTA; we don't actually
+                // call the AI on their photo so there's no cost to letting
+                // them through.
+                Task { await performAnalysis() }
             }) {
                 HStack(spacing: 8) {
                     if viewModel.isAnalyzing {
@@ -247,17 +294,10 @@ struct ScanView: View {
                             .tint(.black)
                             .scaleEffect(0.8)
                     } else {
-                        if !appState.profile.canScanFree {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 14))
-                        }
                         Image(systemName: "sparkles")
                             .font(.system(size: 14))
                     }
                     Text(viewModel.isAnalyzing ? L.t("analyzing", lang) : L.t("analyzeWithAI", lang))
-                    if !appState.profile.canScanFree && !viewModel.isAnalyzing {
-                        Text(L.t("pro", lang))
-                    }
                 }
                 .font(.headline)
                 .foregroundStyle(viewModel.frontImage != nil ? Color(.systemBackground) : .secondary)
@@ -344,63 +384,88 @@ struct ScanView: View {
     }
 
     private func photoSourceCard(title: String, subtitle: String?, image: UIImage?, isFront: Bool) -> some View {
-        Button {
-            requestCamera(isFront: isFront)
-        } label: {
-            VStack(spacing: 0) {
-                if let image {
-                    Color.clear
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 140)
-                        .overlay {
-                            Image(uiImage: image)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .allowsHitTesting(false)
-                        }
-                        .clipShape(.rect(cornerRadius: 14))
-                        .overlay(alignment: .topTrailing) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundStyle(.green)
-                                .padding(8)
-                        }
-                        .overlay(alignment: .bottom) {
-                            Text(title)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(.black.opacity(0.6))
-                                .clipShape(.capsule)
-                                .padding(.bottom, 8)
-                        }
-                } else {
-                    VStack(spacing: 10) {
-                        Spacer()
-                        Image(systemName: "camera.fill")
-                            .font(.system(size: 24))
-                            .foregroundStyle(.tertiary)
-                        Text(title)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.primary.opacity(0.7))
-                        if let subtitle {
-                            Text(subtitle)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        Spacer()
-                    }
+        // Outer is a tap-gesture container instead of a Button so we can
+        // safely place a real Button (the remove-X) on top without nested-
+        // Button hit-testing weirdness. The X needs higher precedence so it
+        // takes the tap over the open-camera action of the surrounding card.
+        VStack(spacing: 0) {
+            if let image {
+                Color.clear
                     .frame(maxWidth: .infinity)
                     .frame(height: 140)
-                    .background(Color(.tertiarySystemGroupedBackground))
+                    .overlay {
+                        Image(uiImage: image)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .allowsHitTesting(false)
+                    }
                     .clipShape(.rect(cornerRadius: 14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
-                    )
+                    .overlay(alignment: .topLeading) {
+                        Button {
+                            withAnimation(.snappy(duration: 0.2)) {
+                                if isFront {
+                                    viewModel.frontImage = nil
+                                } else {
+                                    viewModel.backImage = nil
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 24, height: 24)
+                                .background(.black.opacity(0.65))
+                                .clipShape(Circle())
+                                .overlay(Circle().strokeBorder(.white.opacity(0.25), lineWidth: 0.5))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(8)
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.green)
+                            .padding(8)
+                    }
+                    .overlay(alignment: .bottom) {
+                        Text(title)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(.black.opacity(0.6))
+                            .clipShape(.capsule)
+                            .padding(.bottom, 8)
+                    }
+            } else {
+                VStack(spacing: 10) {
+                    Spacer()
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 24))
+                        .foregroundStyle(.tertiary)
+                    Text(title)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.primary.opacity(0.7))
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    Spacer()
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 140)
+                .background(Color(.tertiarySystemGroupedBackground))
+                .clipShape(.rect(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(Color(.separator), style: StrokeStyle(lineWidth: 1, dash: [6, 4]))
+                )
             }
+        }
+        .contentShape(.rect)
+        .onTapGesture {
+            requestCamera(isFront: isFront)
         }
         .fullScreenCover(isPresented: isFront ? $showFrontCamera : $showBackCamera) {
             ScanCameraView(label: title) { capturedImage in
@@ -559,12 +624,30 @@ struct ScanView: View {
     }
 
     private func performAnalysis() async {
-        let result = await viewModel.analyzeScan(profile: appState.profile)
-        if let result {
+        // Free users get the animation but no AI call. We show a locked
+        // placeholder that the results sheet renders blurred behind a paywall.
+        // Premium users get the real analysis.
+        let result: ScanResult?
+        if appState.profile.isPremium {
+            result = await viewModel.analyzeScan(profile: appState.profile)
+        } else {
+            result = await viewModel.analyzeScanLocked(profile: appState.profile)
+        }
+        guard let result else { return }
+
+        // Only save real (unlocked) scans to history. Locked placeholders are
+        // ephemeral; the user re-scans after upgrading.
+        if !result.isLocked {
             appState.saveScanResult(result)
-            showResultsSheet = true
+            // Stash the front photo as the battle default so when the user
+            // opens compete, their scan photo is already there. No need to
+            // upload a separate photo for battles.
+            if let photo = result.frontPhoto, let data = photo.jpegData(compressionQuality: 0.85) {
+                appState.saveBattlePhoto(data)
+            }
             requestReviewAfterFirstScan()
         }
+        showResultsSheet = true
     }
 
     /// Fire SKStoreReviewController after the user's first completed scan —
@@ -593,31 +676,43 @@ struct ScanResultsSheet: View {
     @State private var showShareSheet: Bool = false
     @State private var savedToPhotos: Bool = false
     @State private var showRatingsCard: Bool = false
+    @State private var showPaywall: Bool = false
 
     var body: some View {
         NavigationStack {
             ScrollView(showsIndicators: false) {
                 if let result {
-                    VStack(spacing: 20) {
-                        scoreSection(result)
+                    VStack(spacing: 22) {
+                        if result.visibleMuscleGroups.count < 3 && !result.isLocked {
+                            limitedScanBanner(visibleCount: result.visibleMuscleGroups.count)
+                        }
+                        ShareCardView(result: result,
+                                      gender: appState.profile.gender,
+                                      dateOfBirth: appState.profile.dateOfBirth)
+                        geneticCeilingCard(result)
+                        projectionCard(result)
+                        distributionCard(result)
+                        if !result.strongPoints.isEmpty || !result.weakPoints.isEmpty {
+                            strengthsWeaknessesCard(result)
+                        }
+                        actionPlanCard(result)
 
-                        if appState.scanHistory.count > 1 {
-                            ScanHistoryGraphView(entries: appState.scanHistory)
+                        if appState.scanHistory.count > 1 && !result.isLocked {
+                            historyMiniChart
                         }
 
-                        bodyCompositionSection(result)
-                        strengthsSection(result)
-                        weaknessesSection(result)
-                        summarySection(result)
-                        recommendationsSection(result)
-
-                        ratingsShareSection(result)
+                        footerActions(result)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
                     .padding(.bottom, 40)
                     .opacity(appeared ? 1 : 0)
                     .offset(y: appeared ? 0 : 20)
+                    // Locked results render with surgical blur on score
+                    // numbers + recommendations (handled inside ShareCardView
+                    // and actionPlanCard via result.isLocked). Photo, muscle
+                    // labels, and overall page structure stay visible. A
+                    // sticky CTA at the bottom drives the unlock.
                 }
             }
             .background(Color(.systemBackground))
@@ -629,10 +724,12 @@ struct ScanResultsSheet: View {
                         .foregroundStyle(.primary)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(action: { showShareSheet = true }) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
+                    if result?.isLocked != true {
+                        Button(action: { showShareSheet = true }) {
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -642,246 +739,494 @@ struct ScanResultsSheet: View {
                 }
             }
             .sheet(isPresented: $showShareSheet) {
-                if let result, let image = ShareCardRenderer.render(result: result) {
+                if let result, !result.isLocked,
+                   let image = ShareCardRenderer.render(result: result, gender: appState.profile.gender) {
                     ShareSheetView(image: image)
                 }
             }
             .sheet(isPresented: $showRatingsCard) {
-                if let result {
+                if let result, !result.isLocked {
                     RatingsCardSheet(result: result)
+                }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallSheet(context: .lockedScan)
+            }
+            .safeAreaInset(edge: .bottom) {
+                if result?.isLocked == true {
+                    lockedFooterCTA
                 }
             }
         }
         .presentationDetents([.large])
-        
+
     }
 
-    private func ratingsShareSection(_ result: ScanResult) -> some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 6) {
-                Image(systemName: "trophy.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.yellow)
-                Text(L.t("ratings", lang))
+    // MARK: - Locked-result sticky footer CTA (free-tier)
+
+    private var lockedFooterCTA: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Text("Pro unlocks your real score, weak points, and action plan.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            Button(action: { showPaywall = true }) {
+                Text("Unlock my results")
+                    .font(.headline)
+                    .foregroundStyle(Color(.systemBackground))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Color.primary)
+                    .clipShape(.rect(cornerRadius: 26))
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 18)
+        .frame(maxWidth: .infinity)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            // hairline divider so the footer reads as a separate surface
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(height: 0.5)
+        }
+    }
+
+
+    // MARK: - Limited-scan banner
+
+    /// Shown above the score card when the AI returned fewer than 3 visible
+    /// muscle groups. Gendered copy: shirtless + shorts for males, fitted
+    /// athletic top + leggings for females. The Retake button dismisses the
+    /// results sheet, returning the user to the scan upload UI where they
+    /// can take new photos.
+    private func limitedScanBanner(visibleCount: Int) -> some View {
+        let g = appState.profile.gender.lowercased()
+        let isFemale = g.contains("female") || g == "woman" || g == "f"
+        let attireGuidance = isFemale
+            ? "For accurate scoring, retake in a sports bra or fitted athletic top."
+            : "For accurate scoring, retake shirtless and in shorts."
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.orange)
+                Text("Limited scan")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
             }
 
-            ShareCardView(result: result)
+            Text("Only \(visibleCount) muscle group\(visibleCount == 1 ? "" : "s") visible in your photos. \(attireGuidance)")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 12) {
-                Button(action: {
-                    if let image = ShareCardRenderer.render(result: result) {
-                        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
-                        savedToPhotos = true
-                    }
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: savedToPhotos ? "checkmark" : "square.and.arrow.down")
-                            .font(.system(size: 14))
-                        Text(savedToPhotos ? L.t("saved", lang) : L.t("save", lang))
-                    }
-                    .font(.subheadline.weight(.semibold))
+            Button(action: onDismiss) {
+                HStack(spacing: 6) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Retake")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(Color.orange)
+                .clipShape(.capsule)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.orange.opacity(0.10))
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.orange.opacity(0.30), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Action plan
+
+    // MARK: - Genetic Ceiling card (potential delta with arrow)
+
+    private func geneticCeilingCard(_ result: ScanResult) -> some View {
+        let current = Int(round(result.overallScore * 10))
+        let ceiling = Int(round(result.potentialRating * 10))
+        let delta = max(0, ceiling - current)
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 6) {
+                Image(systemName: "chart.line.uptrend.xyaxis.circle.fill")
+                    .font(.system(size: 13))
                     .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color.primary.opacity(0.1))
-                    .clipShape(.rect(cornerRadius: 14))
-                }
-                .sensoryFeedback(.success, trigger: savedToPhotos)
+                Text("GENETIC CEILING")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundStyle(.primary)
+            }
 
-                Button(action: { showShareSheet = true }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "paperplane.fill")
-                            .font(.system(size: 14))
-                        Text(L.t("share", lang))
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color.primary)
-                    .clipShape(.rect(cornerRadius: 14))
+            HStack(alignment: .lastTextBaseline, spacing: 10) {
+                Text("\(current)")
+                    .font(.system(size: 44, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.primary.opacity(0.55))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.secondary)
+                Text("\(ceiling)")
+                    .font(.system(size: 60, weight: .heavy, design: .rounded))
+                    .foregroundStyle(
+                        LinearGradient(colors: [.green, .mint],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                Text("+\(delta)")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.green.opacity(0.15))
+                    .clipShape(.capsule)
+            }
+            .blur(radius: result.isLocked ? 10 : 0)
+
+            // Progress bar showing how far you are from your ceiling
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                    Capsule()
+                        .fill(LinearGradient(colors: [.green, .mint],
+                                             startPoint: .leading, endPoint: .trailing))
+                        .frame(width: max(8, geo.size.width * CGFloat(current) / 100))
                 }
+            }
+            .frame(height: 6)
+
+            Text("You're \(percentToCeiling(current: current, ceiling: ceiling))% of the way to your physical ceiling.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .blur(radius: result.isLocked ? 5 : 0)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private func percentToCeiling(current: Int, ceiling: Int) -> Int {
+        guard ceiling > 0 else { return 0 }
+        return Int(round(Double(current) / Double(ceiling) * 100))
+    }
+
+    // MARK: - 12-week Projection card
+
+    private func projectionCard(_ result: ScanResult) -> some View {
+        let current = result.overallScore
+        let ceiling = result.potentialRating
+        // Simple growth model: in 12 weeks of consistent training focused
+        // on weak points, a user can realistically close ~15% of the gap
+        // to their ceiling. Capped so the projection never claims more
+        // than +1.5 in 12 weeks (would be unrealistic).
+        let gap = max(0, ceiling - current)
+        let projected = min(ceiling, current + min(1.5, gap * 0.15 + 0.4))
+        let projectedScaled = Int(round(projected * 10))
+        let currentScaled = Int(round(current * 10))
+        let focusList = result.weakPoints.prefix(3).map { $0.capitalized }.joined(separator: ", ")
+        let focusText = focusList.isEmpty ? "consistent training" : focusList
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "calendar.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.primary)
+                Text("12-WEEK PROJECTION")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundStyle(.primary)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("If you focus on \(focusText), your physique score could reach")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .blur(radius: result.isLocked ? 5 : 0)
+                HStack(alignment: .lastTextBaseline, spacing: 6) {
+                    Text("\(projectedScaled)")
+                        .font(.system(size: 48, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text("/100  in 12 weeks")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .blur(radius: result.isLocked ? 10 : 0)
+                Text("That's +\(projectedScaled - currentScaled) from where you are today.")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                    .blur(radius: result.isLocked ? 6 : 0)
             }
         }
         .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.primary.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
+        .clipShape(.rect(cornerRadius: 16))
     }
 
-    private func scoreSection(_ result: ScanResult) -> some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .stroke(Color.primary.opacity(0.06), lineWidth: 10)
-                    .frame(width: 120, height: 120)
-                Circle()
-                    .trim(from: 0, to: result.overallScore / 10)
-                    .stroke(
-                        LinearGradient(colors: scoreGradient(result.overallScore), startPoint: .topLeading, endPoint: .bottomTrailing),
-                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
-                    )
-                    .frame(width: 120, height: 120)
-                    .rotationEffect(.degrees(-90))
-                VStack(spacing: 2) {
-                    Text(String(format: "%.1f", result.overallScore))
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text("/ 10")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+    // MARK: - Distribution / "where you stand" card
+
+    private func distributionCard(_ result: ScanResult) -> some View {
+        let pct = PercentileBenchmark.percentile(for: result.overallScore)
+        let topPct = PercentileBenchmark.topPercent(for: result.overallScore)
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 6) {
+                Image(systemName: "chart.bar.xaxis")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.primary)
+                Text("WHERE YOU STAND")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Text("top \(topPct)%")
+                    .font(.system(size: 11, weight: .heavy))
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.green.opacity(0.15))
+                    .clipShape(.capsule)
+                    .blur(radius: result.isLocked ? 7 : 0)
             }
-            Text(scoreLabel(result.overallScore))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(scoreColor(result.overallScore))
+
+            // Bell curve with marker
+            BellCurveView(percentile: pct)
+                .frame(height: 80)
+                .blur(radius: result.isLocked ? 10 : 0)
+
+            HStack {
+                Text("novice")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+                Text("average")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+                Text("elite")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 16))
     }
 
-    private func bodyCompositionSection(_ result: ScanResult) -> some View {
-        HStack(spacing: 12) {
-            statCard(title: L.t("potential", lang), value: String(format: "%.1f/10", result.potentialRating), icon: "star.fill", color: .cyan)
-            statCard(title: L.t("muscleMass", lang), value: result.muscleMassRating, icon: "figure.strengthtraining.traditional", color: .blue)
+    // MARK: - Strengths & Weaknesses card
+
+    private func strengthsWeaknessesCard(_ result: ScanResult) -> some View {
+        VStack(spacing: 14) {
+            if !result.strongPoints.isEmpty {
+                pointsSection(
+                    title: "STRENGTHS",
+                    points: result.strongPoints,
+                    accent: .green,
+                    icon: "checkmark.circle.fill",
+                    isLocked: result.isLocked
+                )
+            }
+            if !result.weakPoints.isEmpty {
+                pointsSection(
+                    title: "WEAK POINTS",
+                    points: result.weakPoints,
+                    accent: .orange,
+                    icon: "exclamationmark.triangle.fill",
+                    isLocked: result.isLocked
+                )
+            }
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(.rect(cornerRadius: 16))
     }
 
-    private func statCard(title: String, value: String, icon: String, color: Color) -> some View {
+    private func pointsSection(title: String, points: [String], accent: Color,
+                               icon: String, isLocked: Bool) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundStyle(color)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(accent)
                 Text(title)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-            Text(value)
-                .font(.caption)
-                .foregroundStyle(.primary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(color.opacity(0.08))
-        .clipShape(.rect(cornerRadius: 14))
-    }
-
-    private func strengthsSection(_ result: ScanResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.green)
-                Text(L.t("strengths", lang))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
                     .foregroundStyle(.primary)
             }
+            // Wrapping pill row of muscle names. Pills stay visible when
+            // locked so structure reads, but the names themselves blur so
+            // a free user can't see whether THEIR weak point is legs vs back.
             FlowLayout(spacing: 8) {
-                ForEach(result.strongPoints, id: \.self) { point in
-                    Text(point)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.green)
-                        .lineLimit(2)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color.green.opacity(0.12))
-                        .clipShape(.rect(cornerRadius: 8))
+                ForEach(Array(points.enumerated()), id: \.offset) { _, point in
+                    pointPill(name: point, accent: accent)
+                        .blur(radius: isLocked ? 6 : 0)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func pointPill(name: String, accent: Color) -> some View {
+        Text(name.capitalized)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(accent.opacity(0.12))
+            .clipShape(.capsule)
+    }
+
+    private func actionPlanCard(_ result: ScanResult) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.up.right.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.primary)
+                Text("YOUR NEXT 3 MOVES")
+                    .font(.system(size: 11, weight: .heavy))
+                    .tracking(0.8)
+                    .foregroundStyle(.primary)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array(result.recommendations.prefix(3).enumerated()), id: \.offset) { _, rec in
+                    actionPlanRow(text: rec, isLocked: result.isLocked)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Color.primary.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
+        .clipShape(.rect(cornerRadius: 16))
     }
 
-    private func weaknessesSection(_ result: ScanResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "target")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.orange)
-                Text(L.t("areasToImprove", lang))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
+    private func actionPlanRow(text: String, isLocked: Bool = false) -> some View {
+        let accent = actionAccent(for: text)
+        return HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(0.14))
+                    .frame(width: 32, height: 32)
+                Image(systemName: actionIcon(for: text))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(accent)
             }
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(result.weakPoints, id: \.self) { point in
-                    HStack(alignment: .top, spacing: 8) {
-                        Circle()
-                            .fill(.orange)
-                            .frame(width: 6, height: 6)
-                            .padding(.top, 6)
-                        Text(point)
-                            .font(.subheadline)
-                            .foregroundStyle(.orange)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
-    }
-
-    private func summarySection(_ result: ScanResult) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "text.alignleft")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.blue)
-                Text(L.t("summary", lang))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            Text(result.summary)
+            Text(text)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.primary.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .blur(radius: isLocked ? 6 : 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
     }
 
-    private func recommendationsSection(_ result: ScanResult) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "lightbulb.fill")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.yellow)
-                Text(L.t("recommendations", lang))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-            }
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(Array(result.recommendations.enumerated()), id: \.offset) { index, rec in
-                    HStack(alignment: .top, spacing: 10) {
-                        Text("\(index + 1)")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(.primary)
-                            .frame(width: 20, height: 20)
-                            .background(Color.primary.opacity(0.1))
-                            .clipShape(Circle())
-                        Text(rec)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-            }
+    /// Auto-infer an SF Symbol icon for a recommendation based on keywords.
+    /// Cheap heuristic — matches the rough verb/topic of each rec line.
+    private func actionIcon(for text: String) -> String {
+        let s = text.lowercased()
+        if s.contains("protein") || s.contains("nutrition") || s.contains("diet") || s.contains("eat") || s.contains("calorie") || s.contains("food") || s.contains("meal") {
+            return "fork.knife"
+        }
+        if s.contains("sleep") || s.contains("rest") || s.contains("recover") {
+            return "bed.double.fill"
+        }
+        if s.contains("cardio") || s.contains("run") || s.contains("walk") {
+            return "figure.run"
+        }
+        if s.contains("water") || s.contains("hydrat") {
+            return "drop.fill"
+        }
+        if s.contains("form") || s.contains("posture") || s.contains("technique") {
+            return "figure.mind.and.body"
+        }
+        if s.contains("set") || s.contains("rep") || s.contains("volume") {
+            return "list.bullet.rectangle"
+        }
+        return "figure.strengthtraining.traditional"
+    }
+
+    private func actionAccent(for text: String) -> Color {
+        let s = text.lowercased()
+        if s.contains("protein") || s.contains("nutrition") || s.contains("diet") || s.contains("eat") || s.contains("calorie") || s.contains("food") || s.contains("meal") {
+            return .green
+        }
+        if s.contains("sleep") || s.contains("rest") || s.contains("recover") {
+            return .indigo
+        }
+        if s.contains("cardio") || s.contains("run") || s.contains("walk") {
+            return .red
+        }
+        if s.contains("water") || s.contains("hydrat") {
+            return .cyan
+        }
+        return .blue
+    }
+
+    // MARK: - History (demoted, inline)
+
+    private var historyMiniChart: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("SCORE OVER TIME")
+                .font(.system(size: 10, weight: .heavy))
+                .tracking(0.8)
+                .foregroundStyle(.secondary)
+            ScanHistoryGraphView(entries: appState.scanHistory)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.primary.opacity(0.04))
-        .clipShape(.rect(cornerRadius: 14))
+    }
+
+    // MARK: - Footer actions
+
+    private func footerActions(_ result: ScanResult) -> some View {
+        HStack(spacing: 12) {
+            Button(action: {
+                if let image = ShareCardRenderer.render(result: result, gender: appState.profile.gender) {
+                    UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+                    savedToPhotos = true
+                }
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: savedToPhotos ? "checkmark" : "square.and.arrow.down")
+                        .font(.system(size: 14))
+                    Text(savedToPhotos ? L.t("saved", lang) : L.t("save", lang))
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.primary)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(Color.primary.opacity(0.08))
+                .clipShape(.rect(cornerRadius: 14))
+            }
+            .sensoryFeedback(.success, trigger: savedToPhotos)
+
+            Button(action: { showShareSheet = true }) {
+                HStack(spacing: 8) {
+                    Image(systemName: "paperplane.fill")
+                        .font(.system(size: 14))
+                    Text(L.t("share", lang))
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(Color.primary)
+                .clipShape(.rect(cornerRadius: 14))
+            }
+        }
     }
 
     private func scoreGradient(_ score: Double) -> [Color] {
@@ -902,6 +1247,85 @@ struct ScanResultsSheet: View {
         if score >= 7 { return .green }
         if score >= 5 { return .yellow }
         return .orange
+    }
+}
+
+// MARK: - Bell curve visualization for the distribution card.
+
+/// Simple bell curve drawn as a stylized normal-ish path. The user's
+/// percentile (0-100) maps to a marker x-position. Not a real PDF, just
+/// a visual cue, "where do I stand vs. the bell".
+struct BellCurveView: View {
+    let percentile: Int
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            // Bell shape via a quadratic curve. Sample N points.
+            let path = Path { p in
+                let steps = 60
+                p.move(to: CGPoint(x: 0, y: h))
+                for i in 0...steps {
+                    let x = CGFloat(i) / CGFloat(steps) * w
+                    // Bell: y = h * (1 - exp(-((x - cx)/sigma)^2))
+                    let cx = w / 2
+                    let sigma = w / 4
+                    let dx = (x - cx) / sigma
+                    let y = h - h * 0.85 * exp(-dx * dx)
+                    p.addLine(to: CGPoint(x: x, y: y))
+                }
+                p.addLine(to: CGPoint(x: w, y: h))
+                p.closeSubpath()
+            }
+
+            let markerX = CGFloat(percentile) / 100 * w
+            // Marker height: track the curve at this x so the dot sits on
+            // the curve, not floating above it.
+            let cx = w / 2
+            let sigma = w / 4
+            let dx = (markerX - cx) / sigma
+            let curveY = h - h * 0.85 * exp(-dx * dx)
+
+            ZStack {
+                path
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.primary.opacity(0.18),
+                                     Color.primary.opacity(0.06)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                path
+                    .stroke(Color.primary.opacity(0.30), lineWidth: 1)
+
+                // Vertical reference line at the marker
+                Path { p in
+                    p.move(to: CGPoint(x: markerX, y: curveY))
+                    p.addLine(to: CGPoint(x: markerX, y: h))
+                }
+                .stroke(Color.green, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+
+                // Marker dot
+                Circle()
+                    .fill(Color.green)
+                    .frame(width: 12, height: 12)
+                    .overlay(Circle().strokeBorder(.white, lineWidth: 2))
+                    .position(x: markerX, y: curveY)
+
+                // "you" label above marker
+                Text("you")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.green)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(.systemBackground))
+                    .clipShape(.capsule)
+                    .position(x: markerX,
+                              y: max(8, curveY - 14))
+            }
+        }
     }
 }
 
@@ -1077,550 +1501,4 @@ private struct ActivityShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
-}
-
-struct PaywallSheet: View {
-    enum SelectedPlan { case weekly, yearly }
-
-    @Environment(\.dismiss) private var dismiss
-    @Environment(AppState.self) private var appState
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var appeared: Bool = false
-    @State private var crownScale: CGFloat = 0.6
-    @State private var selectedPlan: SelectedPlan = .weekly
-    @State private var store = StoreViewModel.shared
-
-    private var lang: String { appState.profile.selectedLanguage }
-    private var isYearly: Bool { selectedPlan == .yearly }
-
-    private let features: [(icon: String, title: String)] = [
-        ("camera.viewfinder", "Unlimited Scans"),
-        ("figure.strengthtraining.traditional", "AI Workouts"),
-        ("chart.line.uptrend.xyaxis", "Analytics"),
-        ("trophy.fill", "Leaderboards"),
-        ("bolt.fill", "AI Coach"),
-        ("sparkles", "All Features"),
-    ]
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(Color(.tertiaryLabel))
-                .frame(width: 36, height: 5)
-                .padding(.top, 10)
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 24) {
-                    heroSection
-                    featuresCard
-                    planSelector
-                    ctaButton
-                    moneyBackLine
-                    orDivider
-                    freeEarnCard
-                    lifetimeCard
-                    footer
-                }
-                .padding(.top, 8)
-                .padding(.bottom, 32)
-            }
-        }
-        .presentationDetents([.large])
-        .presentationDragIndicator(.hidden)
-        .onAppear {
-            withAnimation(.spring(duration: 0.6, bounce: 0.3)) { appeared = true }
-            withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true)) {
-                crownScale = 1.0
-            }
-        }
-        .onChange(of: store.isPremium) { _, isPremium in
-            if isPremium {
-                appState.profile.isPremium = true
-                appState.saveProfile()
-                dismiss()
-            }
-        }
-        .alert("Error", isPresented: .init(
-            get:  { store.error != nil },
-            set:  { if !$0 { store.error = nil } }
-        )) {
-            Button("OK") { store.error = nil }
-        } message: { Text(store.error ?? "") }
-    }
-
-    // MARK: - Hero
-
-    private var heroSection: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [.yellow.opacity(0.25), .orange.opacity(0.1), .clear],
-                            center: .center,
-                            startRadius: 10,
-                            endRadius: 60
-                        )
-                    )
-                    .frame(width: 120, height: 120)
-                    .scaleEffect(crownScale)
-
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.yellow, .orange],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .scaleEffect(appeared ? 1 : 0.6)
-            }
-
-            Text("FitAI Pro")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Text("Reach your dream physique faster.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 20)
-    }
-
-    // MARK: - Features
-
-    private var featuresCard: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            ForEach(features, id: \.icon) { feature in
-                VStack(spacing: 8) {
-                    Image(systemName: feature.icon)
-                        .font(.system(size: 16))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.yellow, .orange],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .frame(width: 36, height: 36)
-                        .background(Color.orange.opacity(colorScheme == .dark ? 0.12 : 0.08))
-                        .clipShape(.rect(cornerRadius: 10))
-
-                    Text(feature.title)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
-            }
-        }
-        .padding(16)
-        .background(Color(.secondarySystemGroupedBackground))
-        .clipShape(.rect(cornerRadius: 16))
-        .padding(.horizontal, 20)
-        .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - Plan Selector — stacked cards (weekly default, yearly with dynamic SAVE % badge)
-
-    private var planSelector: some View {
-        VStack(spacing: 10) {
-            planCard(
-                isSelected: selectedPlan == .weekly,
-                title: "Weekly",
-                subtitle: "Billed weekly",
-                price: store.weeklyPriceString,
-                priceUnit: "/wk",
-                badge: nil
-            )
-            .onTapGesture {
-                withAnimation(.spring(duration: 0.25)) { selectedPlan = .weekly }
-            }
-
-            planCard(
-                isSelected: selectedPlan == .yearly,
-                title: "Yearly",
-                subtitle: "Billed annually as \(store.annualPriceString)",
-                price: store.annualPriceWeeklyString,
-                priceUnit: "/wk",
-                badge: "SAVE \(store.annualVsWeeklySavingsPercent)%"
-            )
-            .onTapGesture {
-                withAnimation(.spring(duration: 0.25)) { selectedPlan = .yearly }
-            }
-        }
-        .padding(.horizontal, 20)
-        .opacity(appeared ? 1 : 0)
-    }
-
-    private func planCard(
-        isSelected: Bool,
-        title: String,
-        subtitle: String,
-        price: String,
-        priceUnit: String,
-        badge: String?
-    ) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .strokeBorder(isSelected ? Color.primary : Color.secondary.opacity(0.40), lineWidth: 1.6)
-                    .frame(width: 22, height: 22)
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.primary)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundStyle(.primary)
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 2) {
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 9, weight: .black))
-                        .foregroundStyle(Color(.systemBackground))
-                        .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.green)
-                        .clipShape(.capsule)
-                }
-                HStack(alignment: .lastTextBaseline, spacing: 2) {
-                    Text(price)
-                        .font(.system(.title3, design: .rounded, weight: .heavy))
-                        .foregroundStyle(.primary)
-                    Text(priceUnit)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(
-                    isSelected
-                        ? LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        : LinearGradient(colors: [Color.primary.opacity(0.10)], startPoint: .top, endPoint: .bottom),
-                    lineWidth: isSelected ? 2 : 1
-                )
-        )
-        .contentShape(Rectangle())
-    }
-
-    // MARK: - CTA
-
-    private var ctaButton: some View {
-        Button(action: purchase) {
-            Group {
-                if store.isPurchasing {
-                    ProgressView()
-                        .tint(Color(.systemBackground))
-                        .scaleEffect(0.9)
-                } else {
-                    Text("Get Pro Access")
-                        .font(.headline)
-                }
-            }
-            .foregroundStyle(Color(.systemBackground))
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(Color.primary)
-            .clipShape(.rect(cornerRadius: 28))
-        }
-        .disabled(store.isPurchasing)
-        .padding(.horizontal, 20)
-        .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - Money-back guarantee line (replaces price restating caption)
-
-    private var moneyBackLine: some View {
-        Text("Cancel anytime · 30-day money-back guarantee")
-            .font(.caption)
-            .foregroundStyle(.tertiary)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 32)
-            .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - "or" divider — separates subscribe from invite-friends path
-
-    private var orDivider: some View {
-        HStack(spacing: 10) {
-            Rectangle()
-                .fill(Color.secondary.opacity(0.20))
-                .frame(height: 1)
-            Text("OR")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.tertiary)
-                .tracking(0.6)
-            Rectangle()
-                .fill(Color.secondary.opacity(0.20))
-                .frame(height: 1)
-        }
-        .padding(.horizontal, 36)
-        .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - Lifetime
-
-    private var lifetimeCard: some View {
-        Button(action: purchaseLifetime) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.yellow.opacity(0.18), Color.orange.opacity(0.10)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 48, height: 48)
-                    Image(systemName: "infinity")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundStyle(
-                            LinearGradient(colors: [.yellow, .orange], startPoint: .top, endPoint: .bottom)
-                        )
-                }
-
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text("Lifetime")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Text("BEST VALUE")
-                            .font(.system(size: 8, weight: .black))
-                            .foregroundStyle(Color(.systemBackground))
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(Color.orange)
-                            .clipShape(.capsule)
-                    }
-                    Text("One payment. Train forever.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(store.lifetimePriceString)
-                        .font(.system(.subheadline, design: .rounded, weight: .bold))
-                        .foregroundStyle(.primary)
-                    Text("one-time")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(.rect(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.yellow.opacity(0.30), Color.orange.opacity(0.12)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(store.isPurchasing)
-        .padding(.horizontal, 20)
-        .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - Free Earn — share-with-3-friends → 1 free scan
-
-    private var friendsJoined: Int { appState.profile.friendsReferredCount }
-    private var unlockReady: Bool { friendsJoined >= 3 }
-
-    private var shareMessage: String {
-        let code = appState.profile.referralCode
-        if code.isEmpty {
-            return "I've been using FitAI to scan my physique with AI. You should try it!"
-        }
-        return "I've been using FitAI to scan my physique with AI. Use my code \(code) when you sign up — try it!"
-    }
-
-    private var shareURL: URL {
-        let code = appState.profile.referralCode
-        let base = "https://apps.apple.com/app/id6744284188"
-        return URL(string: code.isEmpty ? base : "\(base)?ref=\(code)")!
-    }
-
-    private var freeEarnCard: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Text("Earn a free scan")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .tracking(0.4)
-                Spacer()
-            }
-
-            VStack(spacing: 14) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(unlockReady ? Color.green.opacity(0.15) : Color.primary.opacity(0.06))
-                            .frame(width: 40, height: 40)
-                        Image(systemName: unlockReady ? "checkmark" : "person.2.fill")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(unlockReady ? .green : .secondary)
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Share with 3 friends")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.primary)
-                        Text(unlockReady
-                             ? "Done — claim your free scan"
-                             : "\(friendsJoined)/3 friends joined")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    if !unlockReady {
-                        ShareLink(
-                            item: shareURL,
-                            subject: Text("Check out FitAI"),
-                            message: Text(shareMessage)
-                        ) {
-                            Text("Share")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(Color(.systemBackground))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 6)
-                                .background(Color.primary)
-                                .clipShape(.capsule)
-                        }
-                    }
-                }
-
-                if !unlockReady {
-                    GeometryReader { geo in
-                        let progress = min(1, CGFloat(friendsJoined) / 3)
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(Color.primary.opacity(0.08))
-                            Capsule().fill(Color.primary.opacity(0.85))
-                                .frame(width: geo.size.width * progress)
-                                .animation(.spring(duration: 0.4), value: friendsJoined)
-                        }
-                    }
-                    .frame(height: 4)
-                }
-            }
-            .padding(16)
-            .background(Color(.secondarySystemGroupedBackground))
-            .clipShape(.rect(cornerRadius: 16))
-
-            if unlockReady {
-                Button {
-                    appState.profile.freeScansEarned += 1
-                    appState.profile.friendsReferredCount = 0
-                    appState.saveProfile()
-                    dismiss()
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "camera.viewfinder")
-                            .font(.system(size: 15, weight: .semibold))
-                        Text("Claim 1 Free Scan")
-                            .font(.system(.subheadline, weight: .bold))
-                    }
-                    .foregroundStyle(Color(.systemBackground))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 48)
-                    .background(Color.green)
-                    .clipShape(.rect(cornerRadius: 24))
-                }
-                .transition(.scale(scale: 0.95).combined(with: .opacity))
-            }
-        }
-        .padding(.horizontal, 20)
-        .animation(.spring(duration: 0.35), value: unlockReady)
-        .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - Footer
-
-    private var footer: some View {
-        VStack(spacing: 12) {
-            Button {
-                Task { await store.restore() }
-            } label: {
-                Text("Restore Purchases")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 4) {
-                Button("Terms") {}
-                Text("·").foregroundStyle(.tertiary)
-                Button("Privacy") {}
-            }
-            .font(.system(size: 11))
-            .foregroundStyle(.tertiary)
-        }
-        .opacity(appeared ? 1 : 0)
-    }
-
-    // MARK: - Actions
-
-    private func purchase() {
-        Task {
-            let pkg: Package? = {
-                switch selectedPlan {
-                case .weekly: return store.weeklyPackage
-                case .yearly: return store.annualPackage
-                }
-            }()
-            guard let pkg else {
-                appState.profile.isPremium = true
-                appState.saveProfile()
-                dismiss()
-                return
-            }
-            if await store.purchase(package: pkg) {
-                appState.profile.isPremium = true
-                appState.saveProfile()
-                dismiss()
-            }
-        }
-    }
-
-    private func purchaseLifetime() {
-        Task {
-            guard let pkg = store.lifetimePackage else {
-                appState.profile.isPremium = true
-                appState.saveProfile()
-                dismiss()
-                return
-            }
-            if await store.purchase(package: pkg) {
-                appState.profile.isPremium = true
-                appState.saveProfile()
-                dismiss()
-            }
-        }
-    }
 }

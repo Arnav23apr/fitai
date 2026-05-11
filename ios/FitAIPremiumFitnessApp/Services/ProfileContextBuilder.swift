@@ -37,6 +37,9 @@ struct ProfileContextBuilder {
             lines.append("Training location: \(profile.trainingLocation)")
         }
         lines.append("Workouts per week: \(profile.workoutsPerWeek)")
+        if let days = profile.preferredTrainingDays, !days.isEmpty {
+            lines.append("Preferred training days: \(days.joined(separator: ", "))")
+        }
         lines.append("Training confidence: \(profile.trainingConfidence)/10")
 
         if !profile.holdingBack.isEmpty {

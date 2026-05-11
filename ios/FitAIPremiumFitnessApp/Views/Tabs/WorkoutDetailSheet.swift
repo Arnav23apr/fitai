@@ -1138,6 +1138,30 @@ struct WorkoutDetailSheet: View {
                     .background(Color.orange.opacity(0.12))
                     .clipShape(.capsule)
             }
+        case .distance:
+            // Cardio distance + duration history. We don't yet track
+            // distance PRs, so just show last-session totals as a hint.
+            if let last = history.lastSession {
+                let dist = last.sets.compactMap(\.distanceMeters).reduce(0, +)
+                let dur = last.sets.compactMap(\.durationSeconds).reduce(0, +)
+                if dist > 0 || dur > 0 {
+                    Text("Last: \(formatDistance(meters: dist)) · \(formatDuration(dur))")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    /// Format meters as km or mi based on profile preference.
+    private func formatDistance(meters: Double) -> String {
+        guard meters > 0 else { return "0" }
+        if appState.profile.usesMetric {
+            let km = meters / 1000.0
+            return String(format: "%.2f km", km)
+        } else {
+            let miles = meters / 1609.344
+            return String(format: "%.2f mi", miles)
         }
     }
 

@@ -30,6 +30,12 @@ nonisolated struct Routine: Identifiable, Codable, Sendable {
     /// Strong's is 2:00 — 90s sits in the strength-hypertrophy sweet spot
     /// the AI plan also generates against).
     var defaultRestSeconds: Int
+    /// Folder this routine belongs to. nil = uncategorized (top-level).
+    /// Hevy/Strong both use freeform folder names ("Hypertrophy block 1",
+    /// "Cut phase"); we follow the same string-based model so users can
+    /// rename folders without an id-based migration. Optional for
+    /// backwards compatibility with existing persisted blobs.
+    var folder: String?
     var createdAt: Date
     var updatedAt: Date
 
@@ -39,6 +45,7 @@ nonisolated struct Routine: Identifiable, Codable, Sendable {
         icon: String = "dumbbell.fill",
         exercises: [RoutineExercise] = [],
         defaultRestSeconds: Int = 90,
+        folder: String? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date()
     ) {
@@ -47,6 +54,7 @@ nonisolated struct Routine: Identifiable, Codable, Sendable {
         self.icon = icon
         self.exercises = exercises
         self.defaultRestSeconds = defaultRestSeconds
+        self.folder = folder
         self.createdAt = createdAt
         self.updatedAt = updatedAt
     }

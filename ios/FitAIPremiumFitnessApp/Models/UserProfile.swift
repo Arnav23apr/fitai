@@ -5,7 +5,7 @@ nonisolated struct UserProfile: Codable, Sendable {
     // customPhotoData is excluded from Codable — stored separately in FileManager
     enum CodingKeys: String, CodingKey {
         case name, username, email, avatarSystemName, bio, gender
-        case workoutsPerWeek, trainingExperience, trainingLocation, primaryGoal
+        case workoutsPerWeek, preferredTrainingDays, trainingExperience, trainingLocation, primaryGoal
         case holdingBack, goals, trainingConfidence, availableEquipment
         case heightCm, weightKg, usesMetric, dateOfBirth, selectedLanguage
         case referralCode, referredByCode, friendsReferredCount
@@ -49,6 +49,11 @@ nonisolated struct UserProfile: Codable, Sendable {
     var bio: String = ""
     var gender: String = ""
     var workoutsPerWeek: Int = 3
+    /// Days of the week the user prefers to train. Stored as uppercase
+    /// 3-letter labels ("MON", "TUE", …) to match the existing
+    /// `completedDaysThisWeek` convention. Optional so old profile blobs
+    /// without this key still decode cleanly via synthesized Codable.
+    var preferredTrainingDays: [String]? = nil
     var trainingExperience: String = ""
     var trainingLocation: String = ""
     var primaryGoal: String = ""

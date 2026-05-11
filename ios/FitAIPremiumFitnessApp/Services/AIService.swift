@@ -127,6 +127,10 @@ class AIService {
     private let apiKey: String
     private let baseURL = "https://generativelanguage.googleapis.com/v1beta/models"
     private let model = "gemini-2.5-flash-lite"
+    // Nano Banana Pro (gemini-3-pro-image-preview) is ~$0.12/image vs Nano Banana
+    // 2.5 at ~$0.039. We tested 2.5 and it failed to preserve the user's pose +
+    // likeness on transformations, so we're sticking with Pro for quality. Cost
+    // is controlled via per-user generation limits in TransformationLimiter.
     private let imageModel = "gemini-3-pro-image-preview"
 
     /// Simple per-day rate limiter to prevent runaway API costs.
@@ -185,6 +189,71 @@ class AIService {
     }
 
     // MARK: - Scan Analysis
+
+    /// Multi-image variant. Used by physique scan when the user has uploaded
+    /// both a front and back photo so the AI can see all muscle groups.
+    /// Pass images in display order (front first, back second). Empty array
+    /// throws — caller must guarantee at least one image.
+    func analyzeImagesWithSchema(imagesBase64: [String], systemPrompt: String, userPrompt: String) async throws -> [String: Any] {
+        guard !imagesBase64.isEmpty else { throw AIError.decodingError }
+
+        let schema: [String: AnyCodable] = [
+            "type": AnyCodable("object"),
+            "properties": AnyCodable([
+                "overallScore": ["type": "number"],
+                "strongPoints": ["type": "array", "items": ["type": "string"]],
+                "weakPoints": ["type": "array", "items": ["type": "string"]],
+                "summary": ["type": "string"],
+                "recommendations": ["type": "array", "items": ["type": "string"]],
+                "potentialRating": ["type": "number"],
+                "muscleMassRating": ["type": "string"],
+                "visibleMuscleGroups": ["type": "array", "items": ["type": "string"]],
+                "muscleScores": ["type": "object", "properties": [
+                    "chest": ["type": "number"],
+                    "shoulders": ["type": "number"],
+                    "back": ["type": "number"],
+                    "arms": ["type": "number"],
+                    "legs": ["type": "number"],
+                    "core": ["type": "number"],
+                    "glutes": ["type": "number"]
+                ] as [String: Any]]
+            ]),
+            "required": AnyCodable([
+                "overallScore", "strongPoints", "weakPoints", "summary",
+                "recommendations", "potentialRating", "muscleMassRating",
+                "visibleMuscleGroups", "muscleScores"
+            ])
+        ]
+
+        let systemContent = GeminiContent(role: nil, parts: [GeminiPart(text: systemPrompt)])
+
+        var userParts: [GeminiPart] = imagesBase64.map { GeminiPart(imageBase64: $0) }
+        userParts.append(GeminiPart(text: userPrompt))
+        let userContent = GeminiContent(role: "user", parts: userParts)
+
+        let genConfig = GeminiGenerationConfig(
+            temperature: 0.4,
+            maxOutputTokens: 2048,
+            responseMimeType: "application/json",
+            responseSchema: schema
+        )
+
+        let request = GeminiRequest(
+            contents: [userContent],
+            systemInstruction: systemContent,
+            generationConfig: genConfig
+        )
+
+        try checkRateLimit()
+        let responseText = try await withRetry { try await self.callGemini(request: request) }
+
+        guard let data = responseText.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw AIError.decodingError
+        }
+
+        return json
+    }
 
     func analyzeImageWithSchema(imageBase64: String, systemPrompt: String, userPrompt: String) async throws -> [String: Any] {
         let schema: [String: AnyCodable] = [

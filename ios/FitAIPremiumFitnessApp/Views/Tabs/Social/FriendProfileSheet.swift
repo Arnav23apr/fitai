@@ -121,7 +121,7 @@ struct FriendProfileSheet: View {
             }
             Button("Cancel", role: .cancel) { }
         }
-        .sheet(isPresented: $showPaywall) { PaywallSheet() }
+        .sheet(isPresented: $showPaywall) { PaywallSheet(context: .battle) }
     }
 
     // MARK: - Hero (avatar + name + handle + tier)

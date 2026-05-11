@@ -7,6 +7,7 @@ enum OnboardingStep: Int, CaseIterable {
     case name
     case gender
     case workoutsPerWeek
+    case preferredTrainingDays
     case trainingExperience
     case trainingLocation
     case primaryGoal

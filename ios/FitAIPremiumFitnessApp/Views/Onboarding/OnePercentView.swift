@@ -14,6 +14,7 @@ struct OnePercentView: View {
 
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
+    private var isFemale: Bool { appState.profile.gender.lowercased() == "female" }
 
     var body: some View {
         ZStack {
@@ -33,15 +34,15 @@ struct OnePercentView: View {
                 Spacer()
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(L.t("onePercentLine1", lang))
+                    Text(L.t(isFemale ? "onePercentLine1Female" : "onePercentLine1", lang))
                         .opacity(line1Appeared ? 1 : 0)
                         .blur(radius: line1Appeared ? 0 : 6)
                         .offset(y: line1Appeared ? 0 : 16)
-                    Text(L.t("onePercentLine2", lang))
+                    Text(L.t(isFemale ? "onePercentLine2Female" : "onePercentLine2", lang))
                         .opacity(line2Appeared ? 1 : 0)
                         .blur(radius: line2Appeared ? 0 : 6)
                         .offset(y: line2Appeared ? 0 : 16)
-                    Text(L.t("onePercentLine3", lang))
+                    Text(L.t(isFemale ? "onePercentLine3Female" : "onePercentLine3", lang))
                         .opacity(line3Appeared ? 1 : 0)
                         .blur(radius: line3Appeared ? 0 : 6)
                         .offset(y: line3Appeared ? 0 : 16)

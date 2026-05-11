@@ -323,6 +323,25 @@ struct ExerciseDetailSheet: View {
                 statBox(label: L.t("sessionsLabel", lang), value: "\(history.logs.count)", unit: nil, color: .green)
             }
 
+            // Epley-estimated 1RM headline, only shown when there's
+            // enough history to make the estimate meaningful (>= 1 log
+            // with a non-warmup set above zero).
+            if history.personalBestEstimatedOneRM > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                    Text("Est. 1RM")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text("\(Int(history.personalBestEstimatedOneRM)) \(appState.profile.usesMetric ? "kg" : "lbs")")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Spacer()
+                }
+                .padding(.top, 2)
+            }
+
             if history.isPRReady {
                 HStack(spacing: 8) {
                     Image(systemName: "bolt.fill")

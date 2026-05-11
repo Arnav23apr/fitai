@@ -1350,9 +1350,9 @@ struct CompeteView: View {
 
     private var comingSoonCard: some View {
         let features: [(icon: String, title: String, desc: String, color: Color)] = [
-            ("trophy.fill", "Weekly Tournaments", "Compete in ranked weekly events for exclusive badges", .orange),
-            ("globe.americas.fill", "Global Leaderboards", "See where you rank against users worldwide", .blue),
-            ("gift.fill", "Achievement Rewards", "Unlock custom themes, badges, and profile flair", .purple),
+            ("chart.line.uptrend.xyaxis", "Competitive Ranks", "Divisions, promotion matches, and seasonal placement", .orange),
+            ("trophy.fill", "Weekly Tournaments", "Bracketed events with exclusive badges and rewards", .blue),
+            ("person.3.fill", "Squads & Clans", "Team up with friends and climb the ladder together", .purple),
         ]
 
         return VStack(spacing: 16) {

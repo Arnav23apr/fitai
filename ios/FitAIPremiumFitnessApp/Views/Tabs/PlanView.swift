@@ -15,6 +15,11 @@ struct PlanView: View {
     @State private var showStreakSheet: Bool = false
     @State private var showHistory: Bool = false
     @State private var showCalendar: Bool = false
+    @State private var showVolumeDashboard: Bool = false
+    @State private var showExercisesBrowser: Bool = false
+    /// Set when the user taps a "Next PR" card; presents the per-exercise
+    /// progress chart so they can drill into momentum on that lift.
+    @State private var pendingInsightExercise: String? = nil
     @State private var planMode: PlanMode = .today
     @State private var showCreateRoutine: Bool = false
     @State private var routineToEdit: Routine? = nil
@@ -32,6 +37,21 @@ struct PlanView: View {
     /// the cover-on-cover bug where a fresh empty session would re-launch
     /// after Finish.
     @State private var pendingShareData: WorkoutShareCardData? = nil
+    /// Drives the slow breathing scale on the AI Coach FAB so it feels
+    /// alive without being distracting. Set to true on appear.
+    @State private var fabBreath: Bool = false
+    /// Folder names currently in collapsed state. Persists in-memory only;
+    /// re-expands on every app launch which keeps things simple.
+    @State private var collapsedFolders: Set<String> = []
+    /// Driver for the "rename folder" alert. Tied to a fileprivate sheet
+    /// because alerts in iOS 26 are simpler than a bespoke sheet here.
+    @State private var renamingFolder: String? = nil
+    @State private var renameFolderDraft: String = ""
+    /// Driver for the "move to folder" picker. When set, presents a
+    /// sheet that lets the user file the routine into an existing folder
+    /// or create a new one.
+    @State private var movingRoutine: Routine? = nil
+    @State private var clipboardImportError: String? = nil
 
     /// Computed view of the user's chosen workout-tab behavior.
     private var workoutMode: UserProfile.WorkoutMode { appState.profile.workoutMode }
@@ -92,17 +112,11 @@ struct PlanView: View {
             ScrollViewReader { scrollProxy in
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: 20) {
-                        quickStartButton
-                            .padding(.top, 4)
-
-                        // Mode-driven layout. AI-generated and unset both
-                        // get the segmented Plan/Templates toggle — `.unset`
-                        // collapses into AI-plan view so users who somehow
-                        // landed there without picking a mode (e.g. after
-                        // a sign-out/sign-in that didn't restore the mode
-                        // field) still get a functional layout. The other
-                        // two paths skip the AI plan entirely; templates
-                        // are the primary surface.
+                        // AI users get a [Plan | Templates] segmented control
+                        // so today's session and the templates list each
+                        // have a clear, dedicated surface. User-built and
+                        // pasted-plan users skip the segment because they
+                        // don't have an AI plan to switch to.
                         switch workoutMode {
                         case .aiGenerated, .unset:
                             modeSegmentedControl
@@ -113,15 +127,25 @@ struct PlanView: View {
                                 weeklyPlanSection
                             } else {
                                 routinesSection
+                                PowerUserInsightsSection(
+                                    usesMetric: appState.profile.usesMetric,
+                                    onTapExercise: { name in
+                                        pendingInsightExercise = name
+                                    }
+                                )
                                 exampleTemplatesSection
                             }
                         case .userBuilt, .userPlanReviewed:
                             generateAIPlanCTA
                             routinesSection
+                            PowerUserInsightsSection(
+                                usesMetric: appState.profile.usesMetric,
+                                onTapExercise: { name in
+                                    pendingInsightExercise = name
+                                }
+                            )
                             exampleTemplatesSection
                         }
-
-                        comingSoonStrip
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -142,26 +166,33 @@ struct PlanView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 12) {
-                        Button {
-                            showCalendar = true
-                        } label: {
-                            Image(systemName: "calendar")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                        Button {
-                            showHistory = true
-                        } label: {
-                            Image(systemName: "clock.arrow.circlepath")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(.secondary)
-                        }
-                    }
+                    toolbarGlassPill
                 }
             }
             .sheet(isPresented: $showCoach) {
                 CoachView()
+            }
+            .sheet(isPresented: $showVolumeDashboard) {
+                MuscleVolumeView()
+            }
+            .sheet(isPresented: $showExercisesBrowser) {
+                ExercisesBrowserSheet()
+            }
+            .sheet(item: Binding<InsightExercise?>(
+                get: { pendingInsightExercise.map { InsightExercise(name: $0) } },
+                set: { pendingInsightExercise = $0?.name }
+            )) { wrapper in
+                NavigationStack {
+                    ExerciseProgressChartView(
+                        exerciseName: wrapper.name,
+                        usesMetric: appState.profile.usesMetric
+                    )
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { pendingInsightExercise = nil }
+                        }
+                    }
+                }
             }
             .sheet(isPresented: $showHistory) {
                 WorkoutHistorySheet()
@@ -235,6 +266,39 @@ struct PlanView: View {
                         }
                     }
                 )
+            }
+            .alert("Import failed", isPresented: Binding(
+                get: { clipboardImportError != nil },
+                set: { if !$0 { clipboardImportError = nil } }
+            )) {
+                Button("OK") { clipboardImportError = nil }
+            } message: {
+                Text(clipboardImportError ?? "")
+            }
+            .alert("Rename folder", isPresented: Binding(
+                get: { renamingFolder != nil },
+                set: { if !$0 { renamingFolder = nil } }
+            )) {
+                TextField("Folder name", text: $renameFolderDraft)
+                Button("Cancel", role: .cancel) { renamingFolder = nil }
+                Button("Save") {
+                    if let old = renamingFolder {
+                        routines.renameFolder(from: old, to: renameFolderDraft)
+                    }
+                    renamingFolder = nil
+                }
+            }
+            .sheet(item: $movingRoutine) { routine in
+                FolderPickerSheet(
+                    currentFolder: routine.folder,
+                    existingFolders: routines.allFolders,
+                    onPick: { folder in
+                        routines.setFolder(folder, forRoutineId: routine.id)
+                        movingRoutine = nil
+                    },
+                    onCancel: { movingRoutine = nil }
+                )
+                .presentationDetents([.medium, .large])
             }
             .fullScreenCover(isPresented: $showEmptyWorkoutSession) {
                 ActiveSessionView(
@@ -316,43 +380,153 @@ struct PlanView: View {
 
     // MARK: - Quick Start
     //
-    // Monochrome primary CTA + a smaller "Log via Photo" affordance for
-    // users who want to start a session from a snap of their loaded
-    // equipment.
+    // Unified glass card: monochrome primary CTA stacked with two tinted
+    // glass-style secondary CTAs (Photo log + Ask Coach). iOS 26 Liquid
+    // Glass aesthetic — primary uses .glassProminent for the press +
+    // shimmer feedback; secondaries use .glassEffect with tint.
 
-    private var quickStartButton: some View {
-        HStack(spacing: 10) {
+    /// Combined Calendar + History pill in the nav bar. Single Liquid
+    /// Glass capsule with two icon buttons separated by a hairline so
+    /// the toolbar reads as one unified control instead of two loose
+    /// glyphs. Falls back to a thin material on older OSes.
+    private var toolbarGlassPill: some View {
+        HStack(spacing: 0) {
             Button {
-                showEmptyWorkoutSession = true
+                showCalendar = true
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .heavy))
-                    Text("Start Empty Workout")
-                        .font(.subheadline.weight(.bold))
-                }
-                .foregroundStyle(Color(.systemBackground))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(Color.primary)
-                .clipShape(.rect(cornerRadius: 14))
+                Image(systemName: "calendar")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 30)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .sensoryFeedback(.impact(weight: .medium), trigger: showEmptyWorkoutSession)
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.10))
+                .frame(width: 0.5, height: 16)
 
             Button {
-                showHubPhotoScanner = true
+                showExercisesBrowser = true
             } label: {
-                Image(systemName: "camera.fill")
-                    .font(.system(size: 18, weight: .heavy))
-                    .foregroundStyle(.white)
-                    .frame(width: 56, height: 50)
-                    .background(LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .clipShape(.rect(cornerRadius: 14))
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 30)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Log via Photo")
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.10))
+                .frame(width: 0.5, height: 16)
+
+            Button {
+                showVolumeDashboard = true
+            } label: {
+                Image(systemName: "chart.bar.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.10))
+                .frame(width: 0.5, height: 16)
+
+            Button {
+                showHistory = true
+            } label: {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 34, height: 30)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
+        .modifier(ToolbarPillGlass())
+    }
+
+    /// "Start empty workout" sits at the top of the templates list. It's
+    /// shaped like a routine card so the surface reads as a single spectrum
+    /// of tap-to-launch actions (ad-hoc → saved templates), and the green
+    /// icon tint differentiates it from saved templates' indigo/purple.
+    private var startEmptyWorkoutRow: some View {
+        Button {
+            showEmptyWorkoutSession = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.green.opacity(0.18),
+                                    Color.mint.opacity(0.10),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 46, height: 46)
+                    Image(systemName: "plus")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.green, Color.mint],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Start empty workout")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    Text("Log a one-off session without a template")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .modifier(RoutineCardGlass())
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .medium), trigger: showEmptyWorkoutSession)
+    }
+
+    /// Glass-styled secondary button used in the Quick Start row. Each
+    /// gets a subtle tint to color-code the action (purple = camera,
+    /// cyan = AI). Liquid Glass material in iOS 26 picks up the system
+    /// background so it adapts cleanly to dark mode.
+    private func quickStartSecondary(
+        icon: String,
+        label: String,
+        tint: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .heavy))
+                Text(label)
+                    .font(.subheadline.weight(.semibold))
+            }
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity)
+            .frame(height: 44)
+            .modifier(QuickStartGlass(tint: tint))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Example Templates (seeded)
@@ -471,13 +645,16 @@ struct PlanView: View {
                     .foregroundStyle(.tertiary)
                 Spacer()
             }
-            HStack(spacing: 10) {
-                // Voice + photo are LIVE now (mic + camera in active
-                // session, photo CTA in hub). Apple Watch is the only
-                // teaser left.
-                comingSoonCard(.appleWatch)
-                Spacer()
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    comingSoonCard(.voice)
+                    comingSoonCard(.photo)
+                    comingSoonCard(.appleWatch)
+                }
+                .padding(.horizontal, 1)
             }
+            .scrollClipDisabled()
         }
         .padding(.top, 12)
     }
@@ -486,51 +663,47 @@ struct PlanView: View {
         Button {
             showComingSoon = feature
         } label: {
-            VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 10) {
                 ZStack {
                     Circle()
                         .fill(
-                            LinearGradient(
-                                colors: [feature.tint.opacity(0.20), feature.tint.opacity(0.05)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                            RadialGradient(
+                                colors: [feature.tint.opacity(0.30), feature.tint.opacity(0.05), .clear],
+                                center: UnitPoint(x: 0.3, y: 0.3),
+                                startRadius: 4,
+                                endRadius: 36
                             )
                         )
-                        .frame(width: 38, height: 38)
+                        .frame(width: 44, height: 44)
                     Image(systemName: feature.icon)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.system(size: 20, weight: .medium))
                         .foregroundStyle(feature.tint)
+                        .shadow(color: feature.tint.opacity(0.4), radius: 6)
                 }
-                Text(feature.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(feature.title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text(feature.headline)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 Text("Soon")
-                    .font(.system(size: 9, weight: .heavy, design: .rounded))
+                    .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .tracking(0.5)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(Color.primary.opacity(0.08))
-                    .clipShape(.capsule)
+                    .foregroundStyle(feature.tint)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(feature.tint.opacity(0.14))
+                    )
             }
-            .frame(maxWidth: .infinity, minHeight: 118)
+            .frame(width: 170, alignment: .leading)
+            .padding(.horizontal, 14)
             .padding(.vertical, 14)
-            .padding(.horizontal, 8)
-            .background(
-                LinearGradient(
-                    colors: [feature.tint.opacity(0.08), .clear],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-            .clipShape(.rect(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(feature.tint.opacity(0.14), lineWidth: 0.6)
-            )
+            .modifier(ComingSoonRowGlass(tint: feature.tint))
         }
         .buttonStyle(.plain)
     }
@@ -565,33 +738,31 @@ struct PlanView: View {
                     .font(.title3.weight(.bold))
                 if !routines.routines.isEmpty {
                     Text("\(routines.routines.count)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule().fill(Color.primary.opacity(0.08))
+                        )
                 }
                 Spacer()
-                Button {
-                    showCreateWithCoach = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "sparkles")
-                            .font(.system(size: 10, weight: .heavy))
-                        Text("Coach")
-                            .font(.caption.weight(.bold))
+                Menu {
+                    Button {
+                        showCreateRoutine = true
+                    } label: {
+                        Label("Build manually", systemImage: "plus")
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 6)
-                    .background(
-                        LinearGradient(
-                            colors: [.purple, .indigo],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .clipShape(.capsule)
-                }
-                Button {
-                    showCreateRoutine = true
+                    Button {
+                        showCreateWithCoach = true
+                    } label: {
+                        Label("Build with Coach", systemImage: "sparkles")
+                    }
+                    Button {
+                        attemptClipboardImport()
+                    } label: {
+                        Label("Import from clipboard", systemImage: "doc.on.clipboard")
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "plus")
@@ -607,11 +778,85 @@ struct PlanView: View {
                 }
             }
 
+            startEmptyWorkoutRow
+
             if routines.routines.isEmpty {
                 routinesEmptyState
             } else {
                 aiCoachModifyCallout
-                ForEach(routines.routines) { routine in
+                routinesGroupedView
+            }
+        }
+    }
+
+    /// Groups routines by folder. Uncategorized routines render at the
+    /// top with no header (treated as the default "Routines" group);
+    /// folders below get a collapsible header with a count pill. Same
+    /// layout pattern as Strong's "Folders" section in templates.
+    @ViewBuilder
+    private var routinesGroupedView: some View {
+        let grouped = routines.groupedByFolder()
+        ForEach(grouped.uncategorized) { routine in
+            routineCard(routine)
+        }
+        ForEach(grouped.folders, id: \.0) { (folderName, items) in
+            folderSection(name: folderName, routines: items)
+        }
+    }
+
+    @ViewBuilder
+    private func folderSection(name: String, routines: [Routine]) -> some View {
+        let isExpanded = !collapsedFolders.contains(name)
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                if collapsedFolders.contains(name) {
+                    collapsedFolders.remove(name)
+                } else {
+                    collapsedFolders.insert(name)
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 11, weight: .heavy))
+                        .foregroundStyle(.secondary)
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.indigo)
+                    Text(name)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    Text("\(routines.count)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.primary.opacity(0.08)))
+                    Spacer()
+                    Menu {
+                        Button {
+                            renamingFolder = name
+                            renameFolderDraft = name
+                        } label: {
+                            Label("Rename folder", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            self.routines.deleteFolder(name)
+                        } label: {
+                            Label("Remove folder", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 32, height: 28)
+                    }
+                }
+                .padding(.top, 6)
+            }
+            .buttonStyle(.plain)
+
+            if isExpanded {
+                ForEach(routines) { routine in
                     routineCard(routine)
                 }
             }
@@ -753,28 +998,7 @@ struct PlanView: View {
         }
         .padding(.vertical, 28)
         .frame(maxWidth: .infinity)
-        .background(
-            ZStack {
-                Color.primary.opacity(0.04)
-                LinearGradient(
-                    colors: [Color.indigo.opacity(0.08), Color.purple.opacity(0.04), .clear],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            }
-        )
-        .clipShape(.rect(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Color.indigo.opacity(0.18), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 0.5
-                )
-        )
+        .modifier(EmptyStateGlass(tint: Color.indigo))
     }
 
     private func routineCard(_ routine: Routine) -> some View {
@@ -830,6 +1054,19 @@ struct PlanView: View {
                     Button { planModRoutine = routine } label: {
                         Label("Modify with Coach", systemImage: "sparkles")
                     }
+                    Button { movingRoutine = routine } label: {
+                        Label(routine.folder == nil ? "Move to folder" : "Change folder", systemImage: "folder")
+                    }
+                    ShareLink(item: RoutineShareService.makeShareText(routine)) {
+                        Label("Share template", systemImage: "square.and.arrow.up")
+                    }
+                    if routine.folder != nil {
+                        Button {
+                            routines.setFolder(nil, forRoutineId: routine.id)
+                        } label: {
+                            Label("Remove from folder", systemImage: "folder.badge.minus")
+                        }
+                    }
                     Button(role: .destructive) {
                         routines.delete(id: routine.id)
                     } label: {
@@ -844,30 +1081,34 @@ struct PlanView: View {
                 .buttonStyle(.plain)
             }
             .padding(14)
-            .background(
-                ZStack {
-                    Color.primary.opacity(0.04)
-                    LinearGradient(
-                        colors: [Color.indigo.opacity(0.06), Color.purple.opacity(0.03), .clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
-            )
-            .clipShape(.rect(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(
-                        LinearGradient(
-                            colors: [Color.indigo.opacity(0.12), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 0.5
-                    )
-            )
+            .modifier(RoutineCardGlass())
         }
         .buttonStyle(.plain)
+    }
+
+    /// Read the system pasteboard, look for a FitAI template payload,
+    /// and import it as a new routine. Shows an error alert when the
+    /// clipboard doesn't contain a valid template so the user knows
+    /// the action ran (and what to fix).
+    private func attemptClipboardImport() {
+        guard let pasted = UIPasteboard.general.string, !pasted.isEmpty else {
+            clipboardImportError = "Clipboard is empty. Copy a shared template first."
+            return
+        }
+        guard let routine = RoutineShareService.decode(pasted) else {
+            clipboardImportError = "We couldn't read this clipboard text as a FitAI template."
+            return
+        }
+        if routines.atFreeCap(isPremium: appState.profile.isPremium) {
+            clipboardImportError = "Free templates capped at \(RoutineService.freeTemplateCap). Upgrade or delete one to import."
+            return
+        }
+        let saved = routines.save(routine, isPremium: appState.profile.isPremium)
+        if saved {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } else {
+            clipboardImportError = "Couldn't save the imported template."
+        }
     }
 
     private func autoResumeIfNeeded() {
@@ -1046,18 +1287,7 @@ struct PlanView: View {
             }
         }
         .padding(16)
-        .background(
-            LinearGradient(
-                colors: [Color.cyan.opacity(0.05), Color.clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(.rect(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.cyan.opacity(0.08), lineWidth: 1)
-        )
+        .modifier(PlanSummaryGlass())
         .tourAnchor(.planSummaryCard)
     }
 
@@ -1275,23 +1505,10 @@ struct PlanView: View {
                 }
                 .padding(20)
                 .tourAnchor(.planTodayWorkout)
-                .background(
-                    LinearGradient(
-                        colors: isSessionActiveForToday
-                            ? [Color.green.opacity(0.1), Color.green.opacity(0.03)]
-                            : [accentColor.opacity(0.08), Color.clear],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .clipShape(.rect(cornerRadius: 20))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(
-                            isSessionActiveForToday ? Color.green.opacity(0.25) : accentColor.opacity(0.12),
-                            lineWidth: isSessionActiveForToday ? 1.5 : 1
-                        )
-                )
+                .modifier(TodayHeroGlass(
+                    accent: isSessionActiveForToday ? Color.green : accentColor,
+                    isActive: isSessionActiveForToday
+                ))
             }
         }
     }
@@ -1663,17 +1880,38 @@ struct PlanView: View {
     // MARK: - AI Coach Floating Button
 
     private var aiFloatingButton: some View {
-        Button(action: { showCoach = true }) {
+        Menu {
+            Button {
+                showCoach = true
+            } label: {
+                Label("Open Coach Chat", systemImage: "sparkles")
+            }
+            if let workout = todayWorkout, !workout.isRestDay {
+                Button {
+                    startWorkoutDay(workout)
+                } label: {
+                    Label("Start Today's Workout", systemImage: "play.fill")
+                }
+            }
+        } label: {
             Image(systemName: "sparkles")
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 60, height: 60)
                 .modifier(AICoachGlassBackground())
+                .scaleEffect(fabBreath ? 1.04 : 1.0)
+                .animation(
+                    .easeInOut(duration: 2.4).repeatForever(autoreverses: true),
+                    value: fabBreath
+                )
+        } primaryAction: {
+            showCoach = true
         }
         .padding(.trailing, 18)
         .padding(.bottom, session.isActive ? 76 : 20)
         .sensoryFeedback(.impact(weight: .light), trigger: showCoach)
         .animation(.spring(duration: 0.3), value: session.isActive)
+        .onAppear { fabBreath = true }
     }
 
     private var dailyCoachMessage: String {
@@ -2319,7 +2557,55 @@ struct PlanView: View {
             )
         }
 
+        // Re-slot workouts onto the user's preferred training days when
+        // they've picked them and the count matches their stated weekly
+        // volume. Otherwise the default Mon-first cadence above stays.
+        if let preferred = appState.profile.preferredTrainingDays,
+           !preferred.isEmpty,
+           preferred.count == perWeek {
+            days = reslotForPreferredDays(days, preferred: Set(preferred), labels: dayLabels)
+        }
+
         return days
+    }
+
+    /// Place the existing non-rest sessions onto the user's preferred
+    /// slots in their original order, fill the rest of the week with
+    /// "Rest" days. Keeps the planner's training-day sequence (push →
+    /// pull → legs etc.) intact while honoring the user's schedule.
+    private func reslotForPreferredDays(
+        _ original: [WorkoutDay],
+        preferred: Set<String>,
+        labels: [String]
+    ) -> [WorkoutDay] {
+        let workoutQueue = original.filter { !$0.isRestDay }
+        var queueIndex = 0
+        var rebuilt: [WorkoutDay] = []
+        for label in labels {
+            if preferred.contains(label), queueIndex < workoutQueue.count {
+                let src = workoutQueue[queueIndex]
+                rebuilt.append(WorkoutDay(
+                    id: src.id,
+                    dayLabel: label,
+                    name: src.name,
+                    focusAreas: src.focusAreas,
+                    icon: src.icon,
+                    isRestDay: false,
+                    exercises: src.exercises,
+                    isWeakPointFocus: src.isWeakPointFocus
+                ))
+                queueIndex += 1
+            } else {
+                rebuilt.append(WorkoutDay(
+                    dayLabel: label,
+                    name: "Rest",
+                    focusAreas: ["Recovery"],
+                    icon: "bed.double.fill",
+                    isRestDay: true
+                ))
+            }
+        }
+        return rebuilt
     }
 
     private func buildPushDay(isGym: Bool, weakFocus: Bool) -> WorkoutDay {
@@ -2563,8 +2849,278 @@ private struct AICoachGlassBackground: ViewModifier {
     }
 }
 
+/// Tinted Liquid Glass capsule for the Quick Start secondary CTAs.
+/// On iOS 26 uses the real `glassEffect` material; falls back to a
+/// `.ultraThinMaterial` look on older OSes so the layout is identical.
+private struct QuickStartGlass: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(tint.opacity(0.18)).interactive(), in: .rect(cornerRadius: 16))
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(tint.opacity(0.14))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(tint.opacity(0.25), lineWidth: 0.75)
+                )
+        }
+    }
+}
+
+/// Liquid Glass surface for hub empty states. Tinted to whatever the
+/// section's accent is (indigo for templates, etc.) so the empty state
+/// matches the rest of the polished cards.
+private struct EmptyStateGlass: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(tint.opacity(0.10)).interactive(), in: .rect(cornerRadius: 18))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [tint.opacity(0.25), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.6
+                        )
+                )
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.12), tint.opacity(0.04), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [tint.opacity(0.18), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
+        }
+    }
+}
+
+/// Liquid Glass row for the Coming Soon teaser. Same tint as the
+/// feature's accent so the row reads as a related-but-locked surface.
+private struct ComingSoonRowGlass: ViewModifier {
+    let tint: Color
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(tint.opacity(0.10)).interactive(), in: .rect(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(tint.opacity(0.20), lineWidth: 0.6)
+                )
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [tint.opacity(0.10), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(tint.opacity(0.16), lineWidth: 0.6)
+                )
+        }
+    }
+}
+
+/// Glass capsule for the nav bar Calendar + History pill. Picks up the
+/// real iOS 26 material when available; falls back to a thin material
+/// capsule on older OSes so the layout stays identical.
+private struct ToolbarPillGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            content
+                .background(Capsule().fill(.ultraThinMaterial))
+                .overlay(Capsule().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+        }
+    }
+}
+
+/// Liquid Glass treatment for the Today hero card. Tints the material
+/// with the workout accent (or green when a session is in progress) so
+/// the card visually responds to state. Falls back to a thin material
+/// + tinted overlay on older OSes.
+private struct TodayHeroGlass: ViewModifier {
+    let accent: Color
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(
+                    .regular.tint(accent.opacity(isActive ? 0.22 : 0.14)).interactive(),
+                    in: .rect(cornerRadius: 20)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [accent.opacity(isActive ? 0.45 : 0.25), accent.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: isActive ? 1.2 : 0.75
+                        )
+                )
+                .shadow(color: accent.opacity(isActive ? 0.25 : 0.10), radius: 18, y: 8)
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [accent.opacity(isActive ? 0.18 : 0.10), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .strokeBorder(accent.opacity(isActive ? 0.30 : 0.14), lineWidth: isActive ? 1.2 : 0.75)
+                )
+        }
+    }
+}
+
+/// Liquid Glass for the "Your plan based on" summary card. Tinted cyan
+/// to mirror the brain icon, identical layout on older OSes.
+private struct PlanSummaryGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(Color.cyan.opacity(0.10)).interactive(), in: .rect(cornerRadius: 16))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.cyan.opacity(0.18), lineWidth: 0.6)
+                )
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.cyan.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.cyan.opacity(0.12), lineWidth: 0.6)
+                )
+        }
+    }
+}
+
+/// Liquid Glass card surface used for template / routine rows in the
+/// hub. iOS 26 picks up real material; older builds get a subtle
+/// indigo-tinted material that matches the rest of the section.
+private struct RoutineCardGlass: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.tint(Color.indigo.opacity(0.10)).interactive(), in: .rect(cornerRadius: 14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.white.opacity(0.18), Color.indigo.opacity(0.10)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
+        } else {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.indigo.opacity(0.08), Color.purple.opacity(0.04), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [Color.indigo.opacity(0.16), .clear],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 0.5
+                        )
+                )
+        }
+    }
+}
+
 /// Identifiable wrapper so `WeightOCRService.Result` can drive a sheet.
 private struct HubPhotoResult: Identifiable {
     let id = UUID()
     let value: WeightOCRService.Result
+}
+
+/// Identifiable wrapper used to drive the per-exercise chart sheet
+/// from the PowerUserInsightsSection's "Next PR" card tap.
+private struct InsightExercise: Identifiable {
+    var id: String { name }
+    let name: String
 }

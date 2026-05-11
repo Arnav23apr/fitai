@@ -24,6 +24,11 @@ struct ScanResult: Identifiable {
     let muscleScores: MuscleScores
     let visibleMuscleGroups: [String]
     var frontPhoto: UIImage? = nil
+    /// True when this result is a placeholder for a free-tier user who saw the
+    /// scan animation but did NOT have their photo sent to the AI. The scan
+    /// results sheet renders blurred values + an unlock CTA. Premium users
+    /// always get isLocked = false.
+    var isLocked: Bool = false
 }
 
 struct TransformationResult: Identifiable {

@@ -100,7 +100,7 @@ struct CoachView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showPaywall) { PaywallSheet() }
+            .sheet(isPresented: $showPaywall) { PaywallSheet(context: .coach) }
             .confirmationDialog("Clear conversation?", isPresented: $showConfirmClear, titleVisibility: .visible) {
                 Button("Clear Chat", role: .destructive) {
                     notification.notificationOccurred(.warning)
@@ -558,34 +558,9 @@ struct CoachView: View {
             }
 
             HStack(alignment: .bottom, spacing: 8) {
-                // Mic: push-to-talk transcribes into the text field. User
-                // reviews + sends. Same VoiceLogService used in active
-                // session for parity.
-                Button {
-                    showVoiceCapture = true
-                } label: {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 16, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(LinearGradient(colors: [.red, .red.opacity(0.85)], startPoint: .top, endPoint: .bottom))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
-
-                // Camera: opens the weight scanner; OCR result populates
-                // the input field as a structured prompt the user can edit.
-                Button {
-                    showCoachPhotoScanner = true
-                } label: {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 16, weight: .heavy))
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(LinearGradient(colors: [.purple, .indigo], startPoint: .top, endPoint: .bottom))
-                        .clipShape(Circle())
-                }
-                .buttonStyle(.plain)
+                // Voice + photo entry points are sunset for now; the
+                // sheets and handlers below remain wired so we can flip
+                // them back on without re-plumbing.
 
                 TextField(L.t("askYourCoach", lang), text: $viewModel.inputText, axis: .vertical)
                     .font(.body)

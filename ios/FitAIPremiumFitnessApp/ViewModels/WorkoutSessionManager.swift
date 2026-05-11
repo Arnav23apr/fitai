@@ -80,6 +80,24 @@ class WorkoutSessionManager {
         updateLiveActivity()
     }
 
+    /// Swap an exercise in place. Preserves position so the lifter
+    /// keeps the order they set up. Mirrors the SessionExercise replace
+    /// in ActiveSessionView so persistence + Live Activity stay in sync.
+    func replaceExercise(id: String, with replacement: Exercise) {
+        guard isActive else { return }
+        guard let idx = exercises.firstIndex(where: { $0.id == id }) else { return }
+        let oldName = exercises[idx].name
+        exercises[idx] = replacement
+        if let nameIdx = exerciseIds.firstIndex(of: id) {
+            exerciseNames[nameIdx] = replacement.name
+        }
+        if currentExerciseName == oldName || currentExerciseName.isEmpty {
+            currentExerciseName = replacement.name
+        }
+        persistSession()
+        updateLiveActivity()
+    }
+
     /// Remove an exercise from the in-progress session.
     func removeExercise(id: String) {
         guard isActive else { return }

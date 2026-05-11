@@ -12,11 +12,12 @@ struct HardTruthView: View {
 
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
+    private var isFemale: Bool { appState.profile.gender.lowercased() == "female" }
 
     private var statBody: String {
         switch appState.profile.primaryGoal {
-        case "Build Muscle": return L.t("hardTruthMuscle", lang)
-        case "Lose Fat":     return L.t("hardTruthFat", lang)
+        case "Build Muscle": return L.t(isFemale ? "hardTruthMuscleFemale" : "hardTruthMuscle", lang)
+        case "Lose Fat":     return L.t(isFemale ? "hardTruthFatFemale" : "hardTruthFat", lang)
         case "Recomp":       return L.t("hardTruthRecomp", lang)
         default:             return L.t("hardTruthDefault", lang)
         }
