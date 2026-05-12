@@ -265,6 +265,31 @@ class WorkoutSessionManager {
     // MARK: - Persistence
 
     private let sessionKey = "activeWorkoutSession"
+    /// Separate key for the per-set detail (weights, reps, completion ticks,
+    /// tags, rpe). Kept apart from `sessionKey` so the lightweight Exercise
+    /// shell stays cheap to read while the heavier set data only round-trips
+    /// when actually needed.
+    private let sessionDetailKey = "activeWorkoutSessionDetail"
+
+    /// Snapshot the live per-set state so a crash / force-quit / device
+    /// reboot mid-workout doesn't wipe weights, reps, and completion ticks.
+    /// Called from ActiveSessionView after every set edit.
+    func persistSessionDetail<T: Encodable>(_ exercises: [T]) {
+        guard let data = try? JSONEncoder().encode(exercises) else { return }
+        UserDefaults.standard.set(data, forKey: sessionDetailKey)
+    }
+
+    /// Counterpart to `persistSessionDetail`. Returns the decoded payload or
+    /// nil if nothing was stored / the schema drifted (in which case the
+    /// caller falls back to rebuilding from the lightweight shell).
+    func loadSessionDetail<T: Decodable>(_ type: T.Type) -> T? {
+        guard let data = UserDefaults.standard.data(forKey: sessionDetailKey) else { return nil }
+        return try? JSONDecoder().decode(T.self, from: data)
+    }
+
+    private func clearSessionDetail() {
+        UserDefaults.standard.removeObject(forKey: sessionDetailKey)
+    }
 
     private func persistSession() {
         let exercisePayload: [[String: Any]] = exercises.map { ex in
@@ -358,6 +383,7 @@ class WorkoutSessionManager {
 
     private func clearPersistedSession() {
         UserDefaults.standard.removeObject(forKey: sessionKey)
+        clearSessionDetail()
     }
 
     /// Public hook for `AppState.logout()` / `deleteAccount()` to wipe an
@@ -366,6 +392,7 @@ class WorkoutSessionManager {
     /// user's "Resume workout" pill until they completed or discarded it.
     static func clearPersistedSessionForLogout() {
         UserDefaults.standard.removeObject(forKey: "activeWorkoutSession")
+        UserDefaults.standard.removeObject(forKey: "activeWorkoutSessionDetail")
     }
 
     // MARK: - Live Activity

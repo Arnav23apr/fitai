@@ -22,10 +22,10 @@ struct MainTabView: View {
             }
             .accessibilityLabel("Scan tab")
             .accessibilityHint("Body scan and physique analysis")
-            Tab("Workouts", systemImage: "dumbbell.fill", value: 1) {
+            Tab("Plan", systemImage: "dumbbell.fill", value: 1) {
                 PlanView()
             }
-            .accessibilityLabel("Workouts tab")
+            .accessibilityLabel("Plan tab")
             .accessibilityHint("Start, log, and track your workouts")
             Tab(L.t("compete", lang), systemImage: "trophy.fill", value: 2) {
                 CompeteView()

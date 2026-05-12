@@ -96,22 +96,33 @@ struct FitAIPremiumFitnessAppApp: App {
                     // the AppDelegate didRegister... callback which uploads
                     // the device token to push_tokens.
                     await PushNotificationService.shared.requestAuthorizationAndRegister()
+
+                    // Wire RC's customer-info stream to the profile *once*
+                    // so any entitlement update (purchase, refund, expiry,
+                    // restore from another device) propagates live into
+                    // `appState.profile.isPremium`. Without this, sheets
+                    // presented while RC was still settling read stale
+                    // `false` and disable Pro gates for legitimate Pro
+                    // users (the "Coach button stays grey" bug).
+                    StoreViewModel.shared.onPremiumStateChange = { [appState] active in
+                        applyPremiumStateChange(active, appState: appState)
+                    }
+
                     await StoreViewModel.shared.fetchOfferings()
                     // Wait for RevenueCat to actually return customer info
                     // before reconciling. fetchOfferings() only loads
                     // packages, not entitlements — without this awaited
-                    // refresh, syncPremiumStatus() reads StoreViewModel's
-                    // default `isPremium = false` and downgrades the
-                    // profile every cold launch (the bug where Pro
-                    // disappears on every relaunch).
-                    await StoreViewModel.shared.refreshPremiumStatus()
-                    syncPremiumStatus()
+                    // refresh, the sync reads StoreViewModel's default
+                    // `false` and downgrades the profile every cold
+                    // launch.
+                    let rcAnswer = await StoreViewModel.shared.refreshPremiumStatus()
+                    syncPremiumStatus(rcAnswer: rcAnswer)
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                     Task {
                         await StoreViewModel.shared.fetchOfferings()
-                        await StoreViewModel.shared.refreshPremiumStatus()
-                        syncPremiumStatus()
+                        let rcAnswer = await StoreViewModel.shared.refreshPremiumStatus()
+                        syncPremiumStatus(rcAnswer: rcAnswer)
                         // Bump presence heartbeat — friends will see us as
                         // online for the next 5 min after every foreground.
                         await appState.bumpPresence()
@@ -121,17 +132,36 @@ struct FitAIPremiumFitnessAppApp: App {
     }
 
     /// Reconciles `profile.isPremium` against RevenueCat's view of the
-    /// world. Caller MUST await `refreshPremiumStatus()` first so we're
-    /// reading a fresh entitlement, not StoreViewModel's default-false.
-    private func syncPremiumStatus() {
-        let rcPremium = StoreViewModel.shared.isPremium
+    /// world. Pass the result of `refreshPremiumStatus()`:
+    ///   - `true`  → upgrade if not already premium
+    ///   - `false` → downgrade if currently premium (RC explicitly said no)
+    ///   - `nil`   → unknown (network failure, RC not configured); leave
+    ///               the profile untouched. Never downgrade on uncertainty.
+    private func syncPremiumStatus(rcAnswer: Bool?) {
+        guard let rcPremium = rcAnswer else { return }
         if rcPremium && !appState.profile.isPremium {
             appState.profile.isPremium = true
             appState.saveProfile()
-        } else if !rcPremium && appState.profile.isPremium && Purchases.isConfigured {
-            // RevenueCat is loaded and confirms not premium — revoke cached flag
+        } else if !rcPremium && appState.profile.isPremium {
             appState.profile.isPremium = false
             appState.saveProfile()
         }
+    }
+}
+
+/// Applied on every `customerInfoStream` emission. Lives at file scope so
+/// the closure handed to `StoreViewModel.onPremiumStateChange` doesn't
+/// capture `self` (FitAIPremiumFitnessAppApp is a struct, but the closure
+/// outlives any single render). Same semantics as `syncPremiumStatus`
+/// minus the unknown-state guard: RC fired with concrete data, so we
+/// trust the upgrade-or-downgrade signal directly.
+@MainActor
+private func applyPremiumStateChange(_ active: Bool, appState: AppState) {
+    if active && !appState.profile.isPremium {
+        appState.profile.isPremium = true
+        appState.saveProfile()
+    } else if !active && appState.profile.isPremium {
+        appState.profile.isPremium = false
+        appState.saveProfile()
     }
 }

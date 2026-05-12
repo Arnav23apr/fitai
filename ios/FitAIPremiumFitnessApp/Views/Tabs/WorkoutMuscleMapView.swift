@@ -10,6 +10,14 @@ struct WorkoutMuscleMapView: View {
     private var primaryMuscles: [Muscle] { mapper.primaryMuscles(for: exercises) }
     private var secondaryMuscles: [Muscle] { mapper.secondaryMuscles(for: exercises) }
 
+    /// On a clearly back-focused day (pull/legs-posterior) we render only
+    /// the back silhouette so the highlight actually lands inside the
+    /// visible body — the previous two-up layout left back-only workouts
+    /// looking empty on the front half. Front/back ties show both.
+    private var dominance: (side: BodySide, decisive: Bool) {
+        MuscleMapperService.dominantSide(primary: primaryMuscles, secondary: secondaryMuscles)
+    }
+
     @State private var appeared: Bool = false
 
     private let darkStyle = BodyViewStyle(
@@ -36,8 +44,12 @@ struct WorkoutMuscleMapView: View {
             }
 
             HStack(spacing: 8) {
-                buildBodyView(side: .front)
-                buildBodyView(side: .back)
+                if dominance.decisive {
+                    buildBodyView(side: dominance.side)
+                } else {
+                    buildBodyView(side: .front)
+                    buildBodyView(side: .back)
+                }
             }
             .frame(height: 220)
             .opacity(appeared ? 1 : 0)

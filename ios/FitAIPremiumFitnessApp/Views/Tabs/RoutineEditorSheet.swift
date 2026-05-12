@@ -17,7 +17,14 @@ struct RoutineEditorSheet: View {
     @State private var defaultRest: Int
     @State private var exercises: [RoutineExercise]
     @State private var showExercisePicker: Bool = false
+    @State private var showAICoach: Bool = false
     @FocusState private var focusedField: Field?
+
+    /// Stable ID for the routine being edited. Generated once at init so
+    /// both the AI Coach save path (PlanModSheet writes via RoutineService)
+    /// and the manual Save path use the same row — without this, a new
+    /// routine going through Coach + manual save would create two rows.
+    @State private var routineId: String
 
     private enum Field: Hashable {
         case name
@@ -31,6 +38,7 @@ struct RoutineEditorSheet: View {
         _icon = State(initialValue: initial?.icon ?? "dumbbell.fill")
         _defaultRest = State(initialValue: initial?.defaultRestSeconds ?? 90)
         _exercises = State(initialValue: initial?.exercises ?? [])
+        _routineId = State(initialValue: initial?.id ?? UUID().uuidString)
     }
 
     private let iconOptions = ["dumbbell.fill", "figure.strengthtraining.traditional",
@@ -73,6 +81,9 @@ struct RoutineEditorSheet: View {
                             .background(Color.primary.opacity(0.08), in: Circle())
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    coachButton
+                }
             }
             .safeAreaInset(edge: .bottom) {
                 saveButton
@@ -89,7 +100,77 @@ struct RoutineEditorSheet: View {
                     ))
                 }
             }
+            .sheet(isPresented: $showAICoach) {
+                PlanModSheet(routine: builtRoutine) { updated in
+                    // Hydrate the editor's working copy with whatever the
+                    // AI returned. PlanModSheet has already persisted the
+                    // routine via RoutineService (with our stable routineId,
+                    // so it overwrites instead of duplicating). The user
+                    // can now keep tweaking manually before tapping Save,
+                    // or just dismiss.
+                    name = updated.name
+                    icon = updated.icon
+                    defaultRest = updated.defaultRestSeconds
+                    exercises = updated.exercises
+                }
+            }
         }
+    }
+
+    /// Top-bar entry into PlanModSheet ("Modify with Coach"). Reuses the
+    /// chat-driven editor the routine card kebab menu already exposes, so
+    /// users get the same Coach capability without having to back out to
+    /// the routine list first.
+    private var coachButton: some View {
+        Button {
+            showAICoach = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11, weight: .heavy))
+                Text("Coach")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [Color.indigo, Color.purple],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                Capsule().fill(
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.18), Color.purple.opacity(0.10)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+            )
+            .overlay(
+                Capsule().strokeBorder(Color.indigo.opacity(0.25), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .sensoryFeedback(.impact(weight: .light), trigger: showAICoach)
+    }
+
+    /// Snapshot of the in-progress edit, passed to PlanModSheet so the AI
+    /// sees what the user already has (name, icon, exercises so far) and
+    /// produces a diff against it. Same `routineId` as the eventual manual
+    /// save so the two paths target one row in RoutineService.
+    private var builtRoutine: Routine {
+        Routine(
+            id: routineId,
+            name: name.trimmingCharacters(in: .whitespaces).isEmpty ? "New Split" : name,
+            icon: icon,
+            exercises: exercises,
+            defaultRestSeconds: defaultRest,
+            createdAt: initial?.createdAt ?? Date(),
+            updatedAt: Date()
+        )
     }
 
     // MARK: - Page background
@@ -510,22 +591,37 @@ struct RoutineEditorSheet: View {
     }
 
     private func restChip(_ ex: Binding<RoutineExercise>) -> some View {
-        Menu {
-            Button("Use default (\(formatRest(defaultRest)))") {
+        // RestRecommender suggests a per-exercise default from movement
+        // type + rep range. We surface it as a ghost-text placeholder
+        // when there's no user override — no data is written, the
+        // session-time recommender will compute the same value plus a
+        // load-aware bump.
+        let suggestion = RestRecommender.suggestedBaseline(
+            exerciseName: ex.wrappedValue.name,
+            repsString: ex.wrappedValue.reps
+        )
+        return Menu {
+            Button("Auto (≈ \(formatRest(suggestion)))") {
                 ex.wrappedValue.restSecondsOverride = nil
             }
             ForEach(restPresets, id: \.self) { s in
                 Button(formatRest(s)) { ex.wrappedValue.restSecondsOverride = s }
             }
         } label: {
-            let isOverride = ex.wrappedValue.restSecondsOverride != nil
+            let override = ex.wrappedValue.restSecondsOverride
+            let isOverride = override != nil
             HStack(spacing: 4) {
                 Image(systemName: "timer")
                     .font(.system(size: 10, weight: .bold))
-                Text(formatRest(ex.wrappedValue.restSecondsOverride ?? defaultRest))
-                    .font(.caption.weight(.bold))
+                if isOverride {
+                    Text(formatRest(override ?? suggestion))
+                        .font(.caption.weight(.bold))
+                } else {
+                    Text("≈ \(formatRest(suggestion))")
+                        .font(.caption.weight(.semibold))
+                }
             }
-            .foregroundStyle(isOverride ? Color.indigo : Color.primary.opacity(0.85))
+            .foregroundStyle(isOverride ? Color.indigo : Color.primary.opacity(0.55))
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
             .background(
@@ -577,7 +673,7 @@ struct RoutineEditorSheet: View {
     private var saveButton: some View {
         Button {
             let routine = Routine(
-                id: initial?.id ?? UUID().uuidString,
+                id: routineId,
                 name: name.trimmingCharacters(in: .whitespaces),
                 icon: icon,
                 exercises: exercises,

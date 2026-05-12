@@ -129,6 +129,10 @@ struct PlanView: View {
                                 todayGoalHero
                                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                 planSummaryCard
+                                if let suggestion = appState.pendingProgression {
+                                    progressionSuggestionCard(suggestion)
+                                        .transition(.move(edge: .top).combined(with: .opacity))
+                                }
                                 weeklyPlanSection
                             } else {
                                 routinesSection
@@ -221,6 +225,7 @@ struct PlanView: View {
                 // user last selected (Advanced).
                 planMode = .today
                 autoResumeIfNeeded()
+                checkProgressionIfDue()
             }
             .onChange(of: session.isActive) { _, newValue in
                 // Don't auto-resume while a cover is already presenting,
@@ -2115,6 +2120,275 @@ struct PlanView: View {
             )
         )
         .contentTransition(.numericText())
+    }
+
+    // MARK: - Progression routine source
+
+    /// Where the progression check + apply pull their routine list from.
+    ///
+    /// Priority:
+    ///   1. The user's saved templates (`RoutineService.shared.routines`)
+    ///      — the normal case once they've started building their own splits.
+    ///   2. Synthesized routines from the procedural AI weekly plan
+    ///      (`workoutPlan` → `Routine(from:)`) — fallback for users on
+    ///      `.aiGenerated` mode who never explicitly saved a template.
+    ///      Without this fallback, those users would never see a
+    ///      progression suggestion despite being Pro and logging
+    ///      workouts (the v1 bug: routines=0 short-circuited everything).
+    ///
+    /// Rest days are filtered out so the synthesized list only contains
+    /// training days the AI can actually propose changes against.
+    private func progressionRoutineSource() -> [Routine] {
+        if !routines.routines.isEmpty {
+            return routines.routines
+        }
+        return workoutPlan
+            .filter { !$0.isRestDay }
+            .map { Routine(from: $0) }
+    }
+
+    // MARK: - Progression suggestion (Pro, hybrid weekly check)
+
+    /// Background-generate a progression suggestion if (a) the user is Pro,
+    /// (b) we haven't already got a pending suggestion staged, (c) it's
+    /// been at least 7 days since the last check. AI failures + empty
+    /// suggestions are silent; no card means no card. Updates the
+    /// `lastProgressionCheckAt` stamp regardless of outcome so a "no
+    /// progression yet" result doesn't re-fire on every PlanView appear.
+    ///
+    /// `force = true` bypasses the Pro check + 7-day throttle. Used by the
+    /// DEBUG "Test progression" button below so we can verify the AI + UI
+    /// flow without waiting a week or simulating IAP.
+    private func checkProgressionIfDue(force: Bool = false) {
+        if !force {
+            guard appState.profile.isPremium else { return }
+            guard appState.pendingProgression == nil else { return }
+            let now = Date()
+            if let last = appState.profile.lastProgressionCheckAt,
+               now.timeIntervalSince(last) < 7 * 24 * 3600 {
+                return
+            }
+        }
+        let profile = appState.profile
+        let allLogs = ExerciseLogService.shared.loadAll()
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+        let recentLogs = allLogs.filter { $0.date >= cutoff }
+        let routinesList = progressionRoutineSource()
+        #if DEBUG
+        let synthetic = routines.routines.isEmpty && !routinesList.isEmpty
+        print("[Progression] starting check, force=\(force), recentLogs=\(recentLogs.count), routines=\(routinesList.count)\(synthetic ? " (synthesized from AI plan)" : "")")
+        #endif
+        Task { @MainActor in
+            let suggestion = await ProgressionService.shared.generateSuggestion(
+                profile: profile,
+                recentLogs: recentLogs,
+                routines: routinesList
+            )
+            appState.profile.lastProgressionCheckAt = Date()
+            appState.saveProfile()
+            #if DEBUG
+            if let s = suggestion {
+                print("[Progression] suggestion received: '\(s.headline)' with \(s.changes.count) changes")
+                for change in s.changes {
+                    print("[Progression]   • \(change.exerciseName): \(change.label)")
+                }
+            } else {
+                print("[Progression] AI returned nil (empty changes, parse failure, or AI failure)")
+            }
+            #endif
+            if let suggestion {
+                withAnimation(.snappy(duration: 0.4)) {
+                    appState.pendingProgression = suggestion
+                }
+            }
+        }
+    }
+
+
+    /// Indigo→purple gradient card. Two render modes:
+    ///   - **Proposal**: AI has concrete progression changes to apply.
+    ///     Shows top-3 change bullets + Apply / Keep current buttons.
+    ///   - **Insight**: AI looked at the data and decided not to propose
+    ///     changes (insufficient logs, missed reps, ambiguous signal).
+    ///     Shows the AI's reasoning + a single "Got it" dismiss. Without
+    ///     this branch, users tap the trigger and get silence with no
+    ///     context — they assume it's broken.
+    private func progressionSuggestionCard(_ suggestion: ProgressionSuggestion) -> some View {
+        let hasChanges = !suggestion.changes.isEmpty
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.indigo.opacity(0.30), Color.purple.opacity(0.18)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                    Image(systemName: hasChanges ? "sparkles" : "checklist")
+                        .font(.system(size: 16, weight: .heavy))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.indigo, Color.purple],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(hasChanges ? "COACH SUGGESTION" : "COACH CHECK-IN")
+                        .font(.system(size: 10, weight: .black))
+                        .tracking(1.5)
+                        .foregroundStyle(.purple)
+                    Text(suggestion.headline)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.primary)
+                    if !suggestion.summary.isEmpty {
+                        Text(suggestion.summary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+
+            if hasChanges {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(suggestion.changes.prefix(3)) { change in
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: "arrow.up.right.circle.fill")
+                                .font(.system(size: 11, weight: .heavy))
+                                .foregroundStyle(Color.indigo)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(change.exerciseName)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(.primary)
+                                Text(change.label)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.primary.opacity(0.04), in: .rect(cornerRadius: 10))
+            }
+
+            if hasChanges {
+                progressionProposalActions(suggestion)
+            } else {
+                progressionInsightActions
+            }
+        }
+        .padding(14)
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [Color.indigo.opacity(0.12), Color.purple.opacity(0.05), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
+        .clipShape(.rect(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.30), Color.purple.opacity(0.10)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.6
+                )
+        )
+    }
+
+    /// Apply / Keep current button row — proposal mode (changes present).
+    private func progressionProposalActions(_ suggestion: ProgressionSuggestion) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                let target = progressionRoutineSource()
+                let count = ProgressionService.shared.apply(suggestion, against: target)
+                withAnimation(.snappy(duration: 0.3)) {
+                    appState.pendingProgression = nil
+                }
+                if count > 0 {
+                    appState.showBanner(
+                        InAppBanner(
+                            title: "Progression applied",
+                            subtitle: "Updated \(count) exercise\(count == 1 ? "" : "s").",
+                            icon: "sparkles",
+                            iconTint: .purple
+                        )
+                    )
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .heavy))
+                    Text("Apply")
+                        .font(.subheadline.weight(.bold))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    LinearGradient(
+                        colors: [Color.indigo, Color.purple],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: .capsule
+                )
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                withAnimation(.snappy(duration: 0.3)) {
+                    appState.pendingProgression = nil
+                }
+            } label: {
+                Text("Keep current")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(Color.primary.opacity(0.08), in: .capsule)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// Single dismiss row — insight mode (no concrete progression yet).
+    /// The card's summary already told the user what to do next; this
+    /// just acknowledges and tucks it away until next week's check.
+    private var progressionInsightActions: some View {
+        Button {
+            withAnimation(.snappy(duration: 0.3)) {
+                appState.pendingProgression = nil
+            }
+        } label: {
+            Text("Got it")
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    LinearGradient(
+                        colors: [Color.indigo, Color.purple],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: .capsule
+                )
+        }
+        .buttonStyle(.plain)
     }
 
     private var weeklyPlanSection: some View {

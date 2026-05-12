@@ -18,9 +18,17 @@ struct AddFriendSheet: View {
         !appState.profile.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var hasResultOrError: Bool {
-        viewModel.searchResult != nil || viewModel.isSearching || viewModel.searchError != nil
+    /// Trimmed, lowercased search query — single source of truth used by
+    /// the UI to decide between helper view / loading / suggestions / no
+    /// results.
+    private var normalizedQuery: String {
+        viewModel.searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
+
+    /// Mirrors `FriendViewModel.suggestionsMinChars`. Kept inline rather
+    /// than exposed on the view model because it's purely a UI gating
+    /// concern.
+    private let minChars: Int = 3
 
     var body: some View {
         NavigationStack {
@@ -35,38 +43,7 @@ struct AddFriendSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
 
-                if let result = viewModel.searchResult {
-                    SocialProfileRow(profile: result, trailing: AnyView(
-                        Button {
-                            Task {
-                                await viewModel.sendFriendRequest(toUsername: result.username)
-                                viewModel.searchResult = nil
-                                viewModel.searchText = ""
-                            }
-                        } label: {
-                            Text(L.t("addBtn", lang))
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(hasOwnUsername ? Color(.systemBackground) : Color.secondary)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 7)
-                                .background(hasOwnUsername ? Color.primary : Color.primary.opacity(0.20))
-                                .clipShape(.capsule)
-                        }
-                        .disabled(!hasOwnUsername)
-                    ))
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                } else if viewModel.isSearching {
-                    ProgressView().padding(.top, 24)
-                } else if let err = viewModel.searchError {
-                    Text(err)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 24)
-                } else {
-                    findYourGymBuddy
-                        .padding(.top, 28)
-                }
+                resultsArea
 
                 if let s = viewModel.successMessage {
                     Label(s, systemImage: "checkmark.circle.fill")
@@ -81,7 +58,7 @@ struct AddFriendSheet: View {
                         .padding(.top, 12)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
             }
             .navigationTitle("Add Friend")
             .navigationBarTitleDisplayMode(.inline)
@@ -90,6 +67,95 @@ struct AddFriendSheet: View {
                     Button(L.t("cancel", lang)) { dismiss() }
                 }
             }
+            .onDisappear {
+                viewModel.clearSearchSuggestions()
+                viewModel.searchResult = nil
+                viewModel.searchError = nil
+            }
+        }
+    }
+
+    // MARK: - Results area
+    //
+    // Below `minChars` we show the helper graphic. Once the user crosses
+    // the threshold we either render a loading spinner, the suggestion
+    // list, or a "no matches" hint. Errors from the legacy single-result
+    // path (e.g. "already friends") render inline too.
+
+    @ViewBuilder
+    private var resultsArea: some View {
+        if normalizedQuery.count < minChars {
+            findYourGymBuddy
+                .padding(.top, 28)
+        } else if viewModel.isLoadingSuggestions && viewModel.searchSuggestions.isEmpty {
+            ProgressView().padding(.top, 28)
+        } else if !viewModel.searchSuggestions.isEmpty {
+            suggestionsList
+        } else if let err = viewModel.searchError {
+            Text(err)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+        } else {
+            noMatchesView
+                .padding(.top, 28)
+        }
+    }
+
+    private var suggestionsList: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(viewModel.searchSuggestions) { profile in
+                    SocialProfileRow(profile: profile, trailing: AnyView(addButton(for: profile)))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 4)
+                    Divider()
+                        .padding(.leading, 72)
+                }
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private func addButton(for profile: SocialProfileSummary) -> some View {
+        Button {
+            Task {
+                await viewModel.sendFriendRequest(toUsername: profile.username)
+                // Optimistically remove the row so a successful tap
+                // doesn't leave a stale "Add" button behind. If the
+                // request actually failed the row will come back on the
+                // next keystroke; the toast surfaces the error.
+                viewModel.searchSuggestions.removeAll { $0.id == profile.id }
+            }
+        } label: {
+            Text(L.t("addBtn", lang))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(hasOwnUsername ? Color(.systemBackground) : Color.secondary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(hasOwnUsername ? Color.primary : Color.primary.opacity(0.20))
+                .clipShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .disabled(!hasOwnUsername)
+    }
+
+    private var noMatchesView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 28))
+                .foregroundStyle(.tertiary)
+            Text("No users match \u{201C}\(normalizedQuery)\u{201D}")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Text("Double-check the spelling or ask them for their exact handle.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
         }
     }
 
@@ -161,45 +227,39 @@ struct AddFriendSheet: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search by username", text: $viewModel.searchText)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .onSubmit {
-                        Task { await viewModel.searchUser() }
-                    }
-                if !viewModel.searchText.isEmpty {
-                    Button {
-                        viewModel.searchText = ""
-                        viewModel.searchResult = nil
-                        viewModel.searchError = nil
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.tertiary)
-                    }
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+            TextField("Search by username", text: $viewModel.searchText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .onChange(of: viewModel.searchText) { _, newValue in
+                    // Drive live suggestions. The view model handles
+                    // debounce + sub-threshold short-circuit, so calling
+                    // this on every keystroke is cheap.
+                    viewModel.searchError = nil
+                    viewModel.updateSearchSuggestions(newValue)
+                }
+            if viewModel.isLoadingSuggestions {
+                ProgressView()
+                    .controlSize(.mini)
+                    .padding(.trailing, 2)
+            } else if !viewModel.searchText.isEmpty {
+                Button {
+                    viewModel.searchText = ""
+                    viewModel.searchResult = nil
+                    viewModel.searchError = nil
+                    viewModel.clearSearchSuggestions()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.tertiary)
                 }
             }
-            .padding(.horizontal, 14)
-            .frame(height: 48)
-            .background(Color.primary.opacity(0.08))
-            .clipShape(.rect(cornerRadius: 14))
-
-            Button {
-                Task { await viewModel.searchUser() }
-            } label: {
-                Text("Search")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .padding(.horizontal, 16)
-                    .frame(height: 48)
-                    .background(Color.primary.opacity(0.10))
-                    .clipShape(.rect(cornerRadius: 14))
-            }
-            .disabled(viewModel.searchText.trimmingCharacters(in: .whitespaces).isEmpty)
-            .opacity(viewModel.searchText.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
         }
+        .padding(.horizontal, 14)
+        .frame(height: 48)
+        .background(Color.primary.opacity(0.08))
+        .clipShape(.rect(cornerRadius: 14))
     }
 }

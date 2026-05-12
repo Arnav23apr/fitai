@@ -16,6 +16,7 @@ nonisolated struct UserProfile: Codable, Sendable {
         case forceDarkMode, freeScansEarned
         case privacyMode, allowUsernameSearch, usernameChangedAt
         case goalProjectionURL, goalProjectionGeneratedAt
+        case lastProgressionCheckAt
         case profilePhotoURL
         case aiChatMessagesUsed
         case photoConsentVersion, photoConsentGrantedAt
@@ -118,6 +119,13 @@ nonisolated struct UserProfile: Codable, Sendable {
     /// Timestamp of the last regeneration. Edge function enforces a 90-day
     /// cooldown server-side; client uses this to display "next regen in N days".
     var goalProjectionGeneratedAt: Date? = nil
+
+    // MARK: - Auto-progression (Pro)
+
+    /// When the AI coach last ran the weekly progression check. The check
+    /// is throttled to once every 7 days per user — re-asking sooner is
+    /// wasteful and noisy. Nil = never checked.
+    var lastProgressionCheckAt: Date? = nil
 
     /// Whether the user can trigger a scan without hitting the paywall.
     /// First scan ever is free; after that, only premium or earned-scan users.

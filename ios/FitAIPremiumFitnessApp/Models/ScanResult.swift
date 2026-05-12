@@ -24,6 +24,11 @@ struct ScanResult: Identifiable {
     let muscleScores: MuscleScores
     let visibleMuscleGroups: [String]
     var frontPhoto: UIImage? = nil
+    /// Optional back-pose photo captured during the same scan session. Tap
+    /// the photo on the rated card to flip front ↔ back. nil when the user
+    /// skipped the back capture (e.g., one-photo mode), in which case the
+    /// flip affordance is hidden.
+    var backPhoto: UIImage? = nil
     /// True when this result is a placeholder for a free-tier user who saw the
     /// scan animation but did NOT have their photo sent to the AI. The scan
     /// results sheet renders blurred values + an unlock CTA. Premium users

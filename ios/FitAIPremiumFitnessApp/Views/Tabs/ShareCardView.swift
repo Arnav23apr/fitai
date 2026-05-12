@@ -19,9 +19,23 @@ struct ShareCardView: View {
 
     @State private var showTierLadder: Bool = false
     @State private var summaryExpanded: Bool = false
+    /// True while the rated card shows the back-pose photo. Flipped by
+    /// tapping the photo circle when a back photo exists; reset when the
+    /// card disappears. Skipped in `shareMode` so the exported screenshot
+    /// always uses the front pose (cleaner default for social sharing).
+    @State private var showBackPhoto: Bool = false
 
     private var rank: PhysiqueRank {
         PhysiqueRank.rank(score: result.overallScore, gender: gender)
+    }
+
+    /// Photo to render on the rated card. Defaults to front; flips to back
+    /// when the user tapped the photo and a back pose is available. Share
+    /// renders always show front so the exported image stays consistent.
+    private var displayedPhoto: UIImage? {
+        if shareMode { return result.frontPhoto }
+        if showBackPhoto, let back = result.backPhoto { return back }
+        return result.frontPhoto
     }
 
     private var allScores: [(label: String, score: Double)] {
@@ -159,8 +173,14 @@ struct ShareCardView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 16)
 
-            // Photo
-            if let photo = result.frontPhoto {
+            // Photo — tap to flip front ↔ back when both poses exist. The
+            // small circular "↻" badge in the corner only appears when a
+            // back photo is available so users discover the gesture without
+            // it cluttering the card for single-photo scans.
+            if let photo = displayedPhoto {
+                let canFlip = !shareMode
+                    && result.frontPhoto != nil
+                    && result.backPhoto != nil
                 Image(uiImage: photo)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
@@ -177,8 +197,26 @@ struct ShareCardView: View {
                                 lineWidth: 3
                             )
                     )
+                    .overlay(alignment: .bottomTrailing) {
+                        if canFlip {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(Circle().fill(.black.opacity(0.55)))
+                                .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 1))
+                                .offset(x: 4, y: 4)
+                        }
+                    }
                     .shadow(color: .green.opacity(0.2), radius: 12, y: 4)
                     .padding(.bottom, 16)
+                    .contentShape(Circle())
+                    .onTapGesture {
+                        guard canFlip else { return }
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showBackPhoto.toggle()
+                        }
+                    }
             }
 
             // Hero score: the giant number is the screenshot money shot.

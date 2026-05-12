@@ -31,6 +31,14 @@ struct FriendsView: View {
     @State private var searchText: String = ""
     @FocusState private var searchFocused: Bool
 
+    /// Background task that polls `viewModel.refresh()` every ~25s while
+    /// the sheet is visible. Gives the Challenges tab a "near-realtime"
+    /// feel without WebSockets — new challenges, accept/decline status,
+    /// and submitted scores show up automatically within ~25s instead of
+    /// waiting on a pull-to-refresh. Mirrors `startLeaderboardAutoRefresh`
+    /// in CompeteView. Cancelled on .onDisappear.
+    @State private var pollTask: Task<Void, Never>? = nil
+
     private var lang: String { appState.profile.selectedLanguage }
 
     var body: some View {
@@ -179,6 +187,10 @@ struct FriendsView: View {
                 if activityVM.events.isEmpty {
                     await activityVM.refresh()
                 }
+                startAutoRefresh()
+            }
+            .onDisappear {
+                stopAutoRefresh()
             }
             .refreshable {
                 await viewModel.refresh()
@@ -969,6 +981,31 @@ struct FriendsView: View {
         }
         .padding(.vertical, 32)
         .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Compact relative time
+
+    // MARK: - Auto-refresh
+
+    /// Polling alternative to Realtime WebSocket. Refetches challenges,
+    /// friend requests, and notifications every 25s while the sheet is
+    /// visible. Costs one HTTP request per cycle — negligible — and gives
+    /// "near-realtime" UX without the WebSocket reconnect/quota complexity.
+    /// Idempotent: cancels any prior task before starting a new one.
+    private func startAutoRefresh() {
+        stopAutoRefresh()
+        pollTask = Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 25_000_000_000)
+                if Task.isCancelled { return }
+                await viewModel.refresh()
+            }
+        }
+    }
+
+    private func stopAutoRefresh() {
+        pollTask?.cancel()
+        pollTask = nil
     }
 
     // MARK: - Compact relative time

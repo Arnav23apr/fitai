@@ -9,9 +9,21 @@ class StoreViewModel {
 
     var offerings: Offerings?
     var isPremium: Bool = false
+    /// Set to `true` the first time RevenueCat returns a definitive answer
+    /// (either via `customerInfoStream` or an awaited `refreshPremiumStatus`).
+    /// Callers that *downgrade* `profile.isPremium` should only act when
+    /// this is true — otherwise a network blip or pre-init race silently
+    /// flips legitimate Pro users back to free.
+    var hasConfirmedPremiumState: Bool = false
     var isLoading: Bool = false
     var isPurchasing: Bool = false
     var error: String?
+
+    /// Fired on every RC `customerInfoStream` emission, immediately after
+    /// `isPremium` is updated. The app root wires this to mirror the
+    /// state onto `appState.profile.isPremium` so feature gates inside
+    /// sheets never lag behind RC's truth.
+    var onPremiumStateChange: ((Bool) -> Void)? = nil
 
     private init() {
         guard Purchases.isConfigured else { return }
@@ -22,7 +34,10 @@ class StoreViewModel {
     private func listenForUpdates() async {
         guard Purchases.isConfigured else { return }
         for await info in Purchases.shared.customerInfoStream {
-            isPremium = info.entitlements["Fit AI Pro"]?.isActive == true
+            let active = info.entitlements["Fit AI Pro"]?.isActive == true
+            isPremium = active
+            hasConfirmedPremiumState = true
+            onPremiumStateChange?(active)
         }
     }
 
@@ -67,14 +82,23 @@ class StoreViewModel {
         }
     }
 
-    /// Refresh premium status from RevenueCat. Call after any entitlement-gating check.
-    func refreshPremiumStatus() async {
-        guard Purchases.isConfigured else { return }
+    /// Refresh premium status from RevenueCat. Call after any entitlement-
+    /// gating check. Returns the freshly-fetched state, or `nil` when RC
+    /// couldn't be reached — callers must NOT downgrade on `nil` because
+    /// "unknown" is not the same as "not premium".
+    @discardableResult
+    func refreshPremiumStatus() async -> Bool? {
+        guard Purchases.isConfigured else { return nil }
         do {
             let info = try await Purchases.shared.customerInfo()
-            isPremium = info.entitlements["Fit AI Pro"]?.isActive == true
+            let active = info.entitlements["Fit AI Pro"]?.isActive == true
+            isPremium = active
+            hasConfirmedPremiumState = true
+            onPremiumStateChange?(active)
+            return active
         } catch {
             self.error = error.localizedDescription
+            return nil
         }
     }
 

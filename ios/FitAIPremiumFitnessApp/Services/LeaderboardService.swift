@@ -109,6 +109,42 @@ nonisolated class LeaderboardService: @unchecked Sendable {
         return profile
     }
 
+    /// Instagram-style live suggestions. Backed by the
+    /// `search_leaderboard_users` RPC (migration 025) which ranks by
+    /// trigram similarity with a prefix boost — so "fri" returns every
+    /// @fri* handle, and a one-letter typo ("freind") still surfaces
+    /// "@friend_*" instead of an empty list.
+    ///
+    /// `limit` is clamped server-side to 25; the default of 8 matches the
+    /// AddFriendSheet UI which renders an inline list, not a paginated
+    /// view.
+    func searchUsers(query: String, limit: Int = 8) async -> [LeaderboardProfile] {
+        let needle = query.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty,
+              let url = URL(string: "\(baseURL)/rpc/search_leaderboard_users") else { return [] }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        [
+            "apikey": anonKey,
+            "Authorization": "Bearer \(anonKey)",
+            "Content-Type": "application/json"
+        ].forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+
+        let body: [String: Any] = [
+            "p_query": needle,
+            "p_limit": limit
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let profiles = try? JSONDecoder().decode([LeaderboardProfile].self, from: data) else {
+            return []
+        }
+        return profiles
+    }
+
     func fetchUserRank(username: String) async -> Int? {
         let query = username.lowercased()
         let all = await fetchLeaderboard(limit: 500)

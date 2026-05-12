@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// Strong-style overlay numeric keypad. Replaces iOS's default numpad with a
-/// fitness-tuned one: 0-9, decimal, backspace, ±5 quick-adjust plate keys,
-/// and Next-field navigation. Slides up from the bottom while a weight or
-/// reps cell is focused.
+/// fitness-tuned one: 0-9, decimal, backspace, and Next-field navigation.
+/// Slides up from the bottom while a weight or reps cell is focused.
 ///
 /// The user's text/Double bindings are owned by the row; this view just
 /// emits keystroke intents and lets the row decide how to mutate them.
@@ -12,7 +11,6 @@ struct StrongKeypad: View {
         case digit(String)
         case dot
         case backspace
-        case adjust(Double)   // +5, -5 etc.
         case next
         case dismiss
     }
@@ -82,25 +80,26 @@ struct StrongKeypad: View {
             keyButton(systemImage: "keyboard.chevron.compact.down", weight: .medium) {
                 onKey(.dismiss)
             }
-            adjustPair
-            keyButton(label: "Next", tint: .blue, foreground: .white) {
-                onKey(.next)
-            }
+            tallNextKey
         }
         .frame(width: 90)
     }
 
-    private var adjustPair: some View {
-        HStack(spacing: 6) {
-            keyButton(label: "−5", weight: .heavy) {
-                onKey(.adjust(-5))
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            }
-            keyButton(label: "+5", weight: .heavy) {
-                onKey(.adjust(5))
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            }
+    // Fills the height left by the three digit rows below dismiss so the
+    // side column matches the digit column edge-to-edge.
+    private var tallNextKey: some View {
+        Button {
+            onKey(.next)
+        } label: {
+            Text("Next")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Color.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 42 * 3 + 6 * 2)
+                .background(Color.blue)
+                .clipShape(.rect(cornerRadius: 9))
         }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Key style helpers

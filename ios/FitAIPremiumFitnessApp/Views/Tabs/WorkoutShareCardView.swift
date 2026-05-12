@@ -102,11 +102,10 @@ struct WorkoutStoriesCardView: View {
     private var secondaryMuscles: [Muscle] { mapper.secondaryMuscles(for: data.exercises) }
 
     private var preferredSide: BodySide {
-        let frontMuscles: Set<Muscle> = [.chest, .abs, .obliques, .quadriceps, .biceps, .deltoids, .forearm]
-        let frontCount = primaryMuscles.filter { frontMuscles.contains($0) }.count
-            + secondaryMuscles.filter { frontMuscles.contains($0) }.count
-        let backCount = (primaryMuscles.count + secondaryMuscles.count) - frontCount
-        return frontCount >= backCount ? .front : .back
+        // Defer to the shared classifier so pull days (lats + rear delts +
+        // upper back) no longer get pulled toward front by the deltoids /
+        // forearm wrap-around being mis-bucketed as front-only.
+        MuscleMapperService.dominantSide(primary: primaryMuscles, secondary: secondaryMuscles).side
     }
 
     private let storiesBodyStyle = BodyViewStyle(

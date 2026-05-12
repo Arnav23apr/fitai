@@ -34,6 +34,18 @@ final class FriendViewModel {
     var searchResult: SocialProfileSummary? = nil
     var searchError: String? = nil
 
+    /// Live, instagram-style suggestion list. Fires from
+    /// `updateSearchSuggestions(_:)` once the query crosses 3 characters
+    /// and is debounced ~250ms. Empty when below the threshold or when
+    /// the backend returned no matches above the similarity floor.
+    var searchSuggestions: [SocialProfileSummary] = []
+    var isLoadingSuggestions: Bool = false
+    /// Minimum query length before we hit the network. Matches the
+    /// IG/FB experience and keeps short, expensive prefix scans off the
+    /// backend.
+    private let suggestionsMinChars: Int = 3
+    private var suggestionsTask: Task<Void, Never>? = nil
+
     var showAddFriend: Bool = false
     var showRequestsInbox: Bool = false
     var showChallengeSetup: Bool = false
@@ -439,6 +451,70 @@ final class FriendViewModel {
         } else {
             searchError = "User @\(normalized) not found."
         }
+    }
+
+    /// Debounced search-as-you-type for the AddFriendSheet suggestion
+    /// list. Cancels any in-flight task on every keystroke so we only
+    /// fire the network request ~250ms after the user stops typing.
+    /// Below `suggestionsMinChars` the list is cleared without a request
+    /// (matches the IG/FB pattern — no suggestions until enough signal).
+    func updateSearchSuggestions(_ raw: String) {
+        suggestionsTask?.cancel()
+        let q = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard q.count >= suggestionsMinChars else {
+            searchSuggestions = []
+            isLoadingSuggestions = false
+            return
+        }
+
+        let myUsername = appState?.profile.username.lowercased() ?? ""
+        let friendUsernames = Set(friends.map { $0.username.lowercased() })
+        let outgoingUsernames = Set(outgoingRequests.map { $0.otherUser.username.lowercased() })
+
+        isLoadingSuggestions = true
+        suggestionsTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            if Task.isCancelled { return }
+
+            let results = await LeaderboardService.shared.searchUsers(query: q, limit: 8)
+            if Task.isCancelled { return }
+
+            searchSuggestions = results.compactMap { lb -> SocialProfileSummary? in
+                let lc = lb.username.lowercased()
+                // Drop self, already-friends, and people we already
+                // requested — those rows would render with a useless
+                // "Add" button and clutter the list. Incoming requests
+                // are kept so the user can find/accept them.
+                if lc == myUsername { return nil }
+                if friendUsernames.contains(lc) { return nil }
+                if outgoingUsernames.contains(lc) { return nil }
+                return SocialProfileSummary(
+                    id: lb.id,
+                    username: lb.username,
+                    name: lb.displayName,
+                    avatarSystemName: nil,
+                    profilePhotoURL: nil,
+                    tier: lb.tier,
+                    points: lb.points,
+                    totalWorkouts: lb.totalWorkouts,
+                    currentStreak: lb.streak,
+                    latestScore: nil,
+                    privacyMode: nil,
+                    lastSeenAt: nil,
+                    isPremium: nil
+                )
+            }
+            isLoadingSuggestions = false
+        }
+    }
+
+    /// Resets suggestion state. Call when the AddFriendSheet dismisses
+    /// or the user clears the search field.
+    func clearSearchSuggestions() {
+        suggestionsTask?.cancel()
+        suggestionsTask = nil
+        searchSuggestions = []
+        isLoadingSuggestions = false
     }
 
     // MARK: - Friend requests

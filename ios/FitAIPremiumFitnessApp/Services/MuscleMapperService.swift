@@ -68,6 +68,57 @@ class MuscleMapperService {
         }
     }
 
+    /// Whether a muscle reads as front-of-body, back-of-body, or wraps
+    /// around both. Used by post-workout heatmap views to auto-pick which
+    /// side to render — a pull day surfacing lats + upper back should
+    /// default to the back silhouette, not the front.
+    /// `.deltoids` and `.forearm` wrap visually and stay neutral so they
+    /// don't bias the count either way (a deltoids-only mapping would
+    /// otherwise tip every shoulder workout toward front, which is wrong
+    /// for rear-delt-focused pull days).
+    enum BodyAspect { case front, back, both }
+
+    static func aspect(of muscle: Muscle) -> BodyAspect {
+        switch muscle {
+        case .chest, .abs, .obliques, .biceps, .quadriceps:
+            return .front
+        case .triceps, .trapezius, .upperBack, .lowerBack,
+             .hamstring, .gluteal, .calves:
+            return .back
+        default:
+            // .deltoids / .forearm and anything new in the MuscleMap lib
+            // we haven't classified yet.
+            return .both
+        }
+    }
+
+    /// Decide which side of the body to render based on muscles trained.
+    /// Primary muscles weigh double — they drive the workout's identity.
+    /// Returns `(side, decisive)` where `decisive` is false when the
+    /// front/back counts are tied (caller may choose to show both).
+    static func dominantSide(primary: [Muscle], secondary: [Muscle]) -> (side: BodySide, decisive: Bool) {
+        var frontScore = 0
+        var backScore = 0
+        for m in primary {
+            switch aspect(of: m) {
+            case .front: frontScore += 2
+            case .back: backScore += 2
+            case .both: break
+            }
+        }
+        for m in secondary {
+            switch aspect(of: m) {
+            case .front: frontScore += 1
+            case .back: backScore += 1
+            case .both: break
+            }
+        }
+        if frontScore == backScore {
+            return (.front, false)
+        }
+        return (backScore > frontScore ? .back : .front, true)
+    }
+
     private func specificExerciseMapping(_ name: String) -> MuscleMapping? {
         if name.contains("bench press") || name.contains("dumbbell bench") || name.contains("dumbbell press") {
             if name.contains("incline") {

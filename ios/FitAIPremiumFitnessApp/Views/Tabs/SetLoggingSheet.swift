@@ -34,13 +34,19 @@ struct SetLoggingSheet: View {
     private var isTimed: Bool { trackingMode == .timed }
     private var isRepsOnly: Bool { trackingMode == .repsOnly }
 
-    private var isBodyweightEligible: Bool {
-        trackingMode == .bodyweight && BodyweightDetector.isBodyweightExercise(exercise.name)
+    /// Bodyweight classification for `exercise.name`. Drives every gate
+    /// in this sheet — toggle visibility, lock state, init defaults —
+    /// so we look it up once and switch on the enum everywhere else.
+    private var bwMode: BodyweightDetector.BodyweightMode {
+        BodyweightDetector.mode(for: exercise.name)
     }
 
-    private var isEquipmentOnly: Bool {
-        BodyweightDetector.isEquipmentOnly(exercise.name)
-    }
+    /// The BW toggle card is shown on every weighted/bodyweight exercise.
+    /// For `forcedOn` it locks ON (push-ups, pull-ups — bodyweight by
+    /// definition, the "weight" field is added load). For `forcedOff` it
+    /// locks OFF and greys out (barbell bench, lat pulldown — bodyweight
+    /// makes no sense). For `optional` it's a normal toggle.
+    private var showBodyweightCard: Bool { isWeighted }
 
     private var history: ExerciseHistory {
         exerciseLogService.history(for: exercise.name)
@@ -74,6 +80,19 @@ struct SetLoggingSheet: View {
 
         let hasAISuggestions = !exercise.suggestedWeights.isEmpty && !exercise.suggestedReps.isEmpty
 
+        // Resolve the bodyweight classification once. For forced
+        // exercises (push-ups, pull-ups, dips, etc.) this overrides
+        // last-session state — if the prior session was logged before
+        // the detector knew about the name, we still start with the
+        // toggle in the right position.
+        let detectorMode = BodyweightDetector.mode(for: exercise.name)
+        let initialUseBW: Bool
+        switch detectorMode {
+        case .forcedOn:  initialUseBW = true
+        case .forcedOff: initialUseBW = false
+        case .optional:  initialUseBW = wasBW
+        }
+
         let mode = exercise.trackingMode
         for i in 0..<exercise.sets {
             switch mode {
@@ -88,10 +107,20 @@ struct SetLoggingSheet: View {
                 let suggested = exercise.suggestedReps[safe: i] ?? Int(exercise.reps) ?? 10
                 initialSets.append(SetLog(weight: 0, reps: prevReps > 0 ? prevReps : suggested, isBodyweight: false))
             case .weighted, .bodyweight:
-                if hasLastSession {
+                if initialUseBW {
+                    // Bodyweight mode (forced-on or carried over from
+                    // last session). `weight` represents added load on
+                    // top of bodyweight: 0 means pure BW, +20 means
+                    // weighted, -10 means assisted. Carry the previous
+                    // session's added weight forward when we have it.
+                    let prevAdded = lastSession?.sets[safe: i]?.weight ?? 0
+                    let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
+                    let reps = prevReps > 0 ? prevReps : (Int(exercise.reps) ?? 10)
+                    initialSets.append(SetLog(weight: wasBW ? prevAdded : 0, reps: reps, isBodyweight: true))
+                } else if hasLastSession {
                     let prevWeight = lastSession?.sets[safe: i]?.weight ?? 0
                     let prevReps = lastSession?.sets[safe: i]?.reps ?? 0
-                    initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: wasBW))
+                    initialSets.append(SetLog(weight: prevWeight, reps: prevReps, isBodyweight: false))
                 } else if hasAISuggestions {
                     let sugWeight = exercise.suggestedWeights[safe: i] ?? 0
                     let sugReps = exercise.suggestedReps[safe: i] ?? 0
@@ -118,7 +147,7 @@ struct SetLoggingSheet: View {
             }
         }
         _sets = State(initialValue: initialSets)
-        _useBodyweight = State(initialValue: wasBW)
+        _useBodyweight = State(initialValue: initialUseBW)
         _usedAISuggestions = State(initialValue: !hasLastSession && hasAISuggestions)
         _weightStrings = State(initialValue: initialSets.map { Self.formatWeight($0.weight) })
     }
@@ -133,11 +162,15 @@ struct SetLoggingSheet: View {
                         aiSuggestedBanner
                     }
 
-                    if isBodyweightEligible || isEquipmentOnly {
+                    if showBodyweightCard {
                         bodyweightToggleCard
                     }
 
-                    if !useBodyweight && isBodyweightEligible && !isEquipmentOnly {
+                    // Total-load hint surfaces whenever BW mode is on —
+                    // it spells out "BW (80) + added (20) = 100 kg" so
+                    // the user knows the typed number is added load,
+                    // not absolute.
+                    if useBodyweight {
                         totalLoadInfo
                     }
 
@@ -235,145 +268,203 @@ struct SetLoggingSheet: View {
     // MARK: - Bodyweight Toggle
 
     private var bodyweightToggleCard: some View {
-        Group {
-            if isEquipmentOnly && !isBodyweightEligible {
-                HStack(spacing: 10) {
-                    Image(systemName: "dumbbell.fill")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(Color(.tertiaryLabel))
-                        .frame(width: 32, height: 32)
-                        .background(Color.primary.opacity(0.06))
-                        .clipShape(Circle())
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L.t("bodyweightLabel", lang))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                        Text(L.t("requiresEquipment", lang))
-                            .font(.caption)
-                            .foregroundStyle(.quaternary)
-                    }
-
-                    Spacer()
-
-                    ZStack {
-                        Capsule()
-                            .fill(Color.primary.opacity(0.06))
-                            .frame(width: 48, height: 28)
-                        Circle()
-                            .fill(Color(.tertiarySystemFill))
-                            .frame(width: 22, height: 22)
-                            .offset(x: -10)
-                    }
-                }
-                .padding(14)
-                .background(Color.primary.opacity(0.02))
-                .clipShape(.rect(cornerRadius: 14))
-                .opacity(0.6)
-            } else {
-                Button {
-                    withAnimation(.spring(duration: 0.35)) {
-                        useBodyweight.toggle()
-                        if useBodyweight {
-                            let bw = bodyweightValue
-                            for i in sets.indices {
-                                if !sets[i].isCompleted {
-                                    sets[i].weight = bw
-                                    sets[i].isBodyweight = true
-                                    if i < weightStrings.count {
-                                        weightStrings[i] = Self.formatWeight(bw)
-                                    }
-                                }
-                            }
-                        } else {
-                            let lastSession = exerciseLogService.lastSession(for: exercise.name)
-                            for i in sets.indices {
-                                if !sets[i].isCompleted {
-                                    sets[i].isBodyweight = false
-                                    let newWeight: Double
-                                    if let prev = lastSession?.sets[safe: i]?.weight {
-                                        newWeight = prev
-                                    } else if let suggested = exercise.suggestedWeights[safe: i] {
-                                        newWeight = suggested
-                                    } else {
-                                        newWeight = 0
-                                    }
-                                    sets[i].weight = newWeight
-                                    if i < weightStrings.count {
-                                        weightStrings[i] = Self.formatWeight(newWeight)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "figure.walk")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(useBodyweight ? .white : .green)
-                            .frame(width: 32, height: 32)
-                            .background(useBodyweight ? Color.green : Color.green.opacity(0.12))
-                            .clipShape(Circle())
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(L.t("bodyweightLabel", lang))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Text(useBodyweight ? "\(L.t("bodyweightLabel", lang)): \(Int(bodyweightValue)) \(weightUnit)" : L.t("tapBodyweight", lang))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        ZStack {
-                            Capsule()
-                                .fill(useBodyweight ? Color.green : Color.primary.opacity(0.1))
-                                .frame(width: 48, height: 28)
-                            Circle()
-                                .fill(.white)
-                                .frame(width: 22, height: 22)
-                                .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-                                .offset(x: useBodyweight ? 10 : -10)
-                        }
-                    }
-                    .padding(14)
-                    .background(
-                        useBodyweight ?
-                        Color.green.opacity(0.06) : Color.primary.opacity(0.03)
-                    )
-                    .clipShape(.rect(cornerRadius: 14))
-                    .overlay(
-                        useBodyweight ?
-                        RoundedRectangle(cornerRadius: 14)
-                            .strokeBorder(Color.green.opacity(0.15), lineWidth: 1) : nil
-                    )
-                }
-                .sensoryFeedback(.impact(weight: .light), trigger: useBodyweight)
-            }
+        switch bwMode {
+        case .forcedOff:
+            // Equipment-only exercise (barbell bench, lat pulldown, etc.)
+            // — bodyweight isn't a meaningful concept here. Show the
+            // card greyed out with a "Requires equipment" subtitle so the
+            // user understands why the toggle won't move.
+            return AnyView(lockedBodyweightCard(isOn: false))
+        case .forcedOn:
+            // Push-ups, pull-ups, dips, planks — bodyweight by
+            // definition. Toggle is locked ON with a lock glyph; the
+            // weight field below tracks added load over bodyweight.
+            return AnyView(lockedBodyweightCard(isOn: true))
+        case .optional:
+            return AnyView(interactiveBodyweightCard)
         }
+    }
+
+    /// Read-only variant of the BW toggle for forced exercises. Same
+    /// visual rhythm as the interactive version so the user perceives
+    /// it as the same control, just immobile.
+    private func lockedBodyweightCard(isOn: Bool) -> some View {
+        let iconName = isOn ? "figure.walk" : "dumbbell.fill"
+        let iconTint: Color = isOn ? .green : Color(.tertiaryLabel)
+        let iconBg: Color = isOn ? Color.green.opacity(0.12) : Color.primary.opacity(0.06)
+        let titleColor: Color = isOn ? .primary : Color(.tertiaryLabel)
+        let subtitle: String = isOn
+            ? "Bodyweight exercise — enter any added weight below"
+            : L.t("requiresEquipment", lang)
+        let cardBg: Color = isOn ? Color.green.opacity(0.06) : Color.primary.opacity(0.02)
+
+        return HStack(spacing: 10) {
+            Image(systemName: iconName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(iconTint)
+                .frame(width: 32, height: 32)
+                .background(iconBg)
+                .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    Text(L.t("bodyweightLabel", lang))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(titleColor)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 9, weight: .heavy))
+                        .foregroundStyle(isOn ? Color.green.opacity(0.55) : Color(.tertiaryLabel))
+                }
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            ZStack {
+                Capsule()
+                    .fill(isOn ? Color.green : Color.primary.opacity(0.08))
+                    .frame(width: 48, height: 28)
+                Circle()
+                    .fill(.white)
+                    .frame(width: 22, height: 22)
+                    .shadow(color: .black.opacity(0.10), radius: 2, y: 1)
+                    .offset(x: isOn ? 10 : -10)
+            }
+            .opacity(0.7)
+        }
+        .padding(14)
+        .background(cardBg)
+        .clipShape(.rect(cornerRadius: 14))
+        .overlay(
+            isOn ? RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(Color.green.opacity(0.15), lineWidth: 1) : nil
+        )
+        .opacity(isOn ? 1.0 : 0.65)
+        .accessibilityLabel(isOn ? "Bodyweight required for this exercise" : "Bodyweight not applicable")
+    }
+
+    /// Tappable BW toggle for ambiguous exercises (Bulgarian split
+    /// squats, walking lunges with optional dumbbells, etc.). Flipping
+    /// the toggle rewrites every incomplete set's weight to the new
+    /// semantics — ON resets to 0 added, OFF restores prior/suggested
+    /// absolute loads — so the input field always shows a number in
+    /// the right basis without the user having to retype.
+    private var interactiveBodyweightCard: some View {
+        Button {
+            withAnimation(.spring(duration: 0.35)) {
+                useBodyweight.toggle()
+                if useBodyweight {
+                    // Turning ON: reinterpret incomplete-set weights as
+                    // ADDED load. The prior value (e.g. 80 kg absolute)
+                    // would be wildly wrong as "added", so zero it out
+                    // and let the user enter +X for weighted variations.
+                    for i in sets.indices where !sets[i].isCompleted {
+                        sets[i].isBodyweight = true
+                        sets[i].weight = 0
+                        if i < weightStrings.count {
+                            weightStrings[i] = ""
+                        }
+                    }
+                } else {
+                    // Turning OFF: restore prior-session/suggested
+                    // absolute loads so the user has something to edit.
+                    let lastSession = exerciseLogService.lastSession(for: exercise.name)
+                    for i in sets.indices where !sets[i].isCompleted {
+                        sets[i].isBodyweight = false
+                        let newWeight: Double
+                        if let prev = lastSession?.sets[safe: i]?.weight, prev > 0 {
+                            newWeight = prev
+                        } else if let suggested = exercise.suggestedWeights[safe: i] {
+                            newWeight = suggested
+                        } else {
+                            newWeight = 0
+                        }
+                        sets[i].weight = newWeight
+                        if i < weightStrings.count {
+                            weightStrings[i] = Self.formatWeight(newWeight)
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "figure.walk")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(useBodyweight ? .white : .green)
+                    .frame(width: 32, height: 32)
+                    .background(useBodyweight ? Color.green : Color.green.opacity(0.12))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L.t("bodyweightLabel", lang))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text(useBodyweight
+                         ? "BW \(Int(bodyweightValue)) \(weightUnit) — type added weight below"
+                         : L.t("tapBodyweight", lang))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                ZStack {
+                    Capsule()
+                        .fill(useBodyweight ? Color.green : Color.primary.opacity(0.1))
+                        .frame(width: 48, height: 28)
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 22, height: 22)
+                        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                        .offset(x: useBodyweight ? 10 : -10)
+                }
+            }
+            .padding(14)
+            .background(
+                useBodyweight ?
+                Color.green.opacity(0.06) : Color.primary.opacity(0.03)
+            )
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                useBodyweight ?
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(Color.green.opacity(0.15), lineWidth: 1) : nil
+            )
+        }
+        .sensoryFeedback(.impact(weight: .light), trigger: useBodyweight)
     }
 
     // MARK: - Total Load Info
 
     @ViewBuilder
     private var totalLoadInfo: some View {
-        let addedWeight = sets.first(where: { !$0.isCompleted })?.weight ?? sets.first?.weight ?? 0
-        if addedWeight > 0 {
-            let totalLoad = bodyweightValue + addedWeight
-            HStack(spacing: 8) {
-                Image(systemName: "info.circle.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.blue)
-                Text("Total load: \(Int(totalLoad))\(weightUnit) (\(Int(bodyweightValue)) BW + \(Int(addedWeight)) added)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
+        // First incomplete set is the user's "current intent" — that's
+        // the value we surface in the hint. Falls back to set 1 once
+        // every set is logged.
+        let added = sets.first(where: { !$0.isCompleted })?.weight ?? sets.first?.weight ?? 0
+        let total = bodyweightValue + added
+        HStack(spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(.blue)
+            Group {
+                if added == 0 {
+                    Text("Total load: \(Int(total)) \(weightUnit) (bodyweight only)")
+                } else if added > 0 {
+                    Text("Total load: \(Int(total)) \(weightUnit) (\(Int(bodyweightValue)) BW + \(Int(added)) added)")
+                } else {
+                    Text("Net load: \(Int(total)) \(weightUnit) (\(Int(bodyweightValue)) BW − \(Int(-added)) assisted)")
+                }
             }
-            .padding(10)
-            .background(Color.blue.opacity(0.05))
-            .clipShape(.rect(cornerRadius: 10))
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            Spacer()
         }
+        .padding(10)
+        .background(Color.blue.opacity(0.05))
+        .clipShape(.rect(cornerRadius: 10))
     }
 
     // MARK: - Header
@@ -487,7 +578,11 @@ struct SetLoggingSheet: View {
                                 .foregroundStyle(.secondary)
                         case .weighted, .bodyweight:
                             if set.isBodyweight {
-                                Text("BW")
+                                // Render the prior session's added-load
+                                // sign so the user sees the actual
+                                // resistance: "BW" for pure bodyweight,
+                                // "+25" for weighted, "−10" for assisted.
+                                Text(bodyweightSetLabel(weight: set.weight))
                                     .font(.system(.caption2, design: .rounded, weight: .bold))
                                     .foregroundStyle(.green)
                             } else {
@@ -711,6 +806,18 @@ struct SetLoggingSheet: View {
         return "\(s)s"
     }
 
+    /// Compact label for a stored bodyweight set's added load.
+    /// "BW" for 0, "+25" for weighted, "−10" for assisted. Used by the
+    /// previous-session card so the history is legible at a glance.
+    private func bodyweightSetLabel(weight: Double) -> String {
+        if weight == 0 { return "BW" }
+        let abs = abs(weight)
+        let body: String = abs.truncatingRemainder(dividingBy: 1) == 0
+            ? "\(Int(abs))"
+            : String(format: "%.1f", abs)
+        return weight > 0 ? "+\(body)" : "−\(body)"
+    }
+
     private static func formatWeight(_ weight: Double) -> String {
         guard weight > 0 else { return "" }
         return weight.truncatingRemainder(dividingBy: 1) == 0 ? "\(Int(weight))" : String(format: "%.1f", weight)
@@ -818,47 +925,48 @@ struct SetLoggingSheet: View {
 
     private func weightedInputFields(index: Int, isDisabled: Bool) -> some View {
         HStack(spacing: 4) {
-            if useBodyweight {
-                bodyweightWeightLabel
-            } else {
-                VStack(spacing: 4) {
-                    Text(weightUnit.uppercased())
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.tertiary)
+            VStack(spacing: 4) {
+                // Label adapts to the active mode. In BW mode the field
+                // holds *added* weight (0 = pure BW, +X = weighted),
+                // which is a different concept than absolute load, so
+                // we relabel the column to "+ KG" to signal that.
+                Text(useBodyweight ? "+ \(weightUnit.uppercased())" : weightUnit.uppercased())
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(useBodyweight ? Color.green : Color(.tertiaryLabel))
 
-                    let weightBinding = Binding<String>(
-                        get: { index < weightStrings.count ? weightStrings[index] : "" },
-                        set: { val in
-                            guard index < weightStrings.count else { return }
-                            let filtered = val.filter { $0.isNumber || $0 == "." }
-                            if let parsed = Double(filtered), parsed > maxWeight {
-                                showWeightLimitAlert = true
-                                return
-                            }
-                            weightStrings[index] = filtered
-                            if let parsed = Double(filtered) {
-                                sets[index].weight = parsed
-                            } else if filtered.isEmpty {
-                                sets[index].weight = 0
-                            }
+                let weightBinding = Binding<String>(
+                    get: { index < weightStrings.count ? weightStrings[index] : "" },
+                    set: { val in
+                        guard index < weightStrings.count else { return }
+                        let filtered = val.filter { $0.isNumber || $0 == "." }
+                        if let parsed = Double(filtered), parsed > maxWeight {
+                            showWeightLimitAlert = true
+                            return
                         }
-                    )
+                        weightStrings[index] = filtered
+                        if let parsed = Double(filtered) {
+                            sets[index].weight = parsed
+                        } else if filtered.isEmpty {
+                            sets[index].weight = 0
+                        }
+                    }
+                )
 
-                    ZStack(alignment: .topTrailing) {
-                        TextField("0", text: weightBinding)
-                            .keyboardType(.decimalPad)
-                            .multilineTextAlignment(.center)
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                            .frame(width: 76, height: 68)
-                            .background(Color.primary.opacity(0.06))
-                            .clipShape(.rect(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
-                            )
-                            .disabled(isDisabled)
+                ZStack(alignment: .topTrailing) {
+                    TextField(useBodyweight ? "0" : "0", text: weightBinding)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                        .frame(width: 76, height: 68)
+                        .background(useBodyweight ? Color.green.opacity(0.08) : Color.primary.opacity(0.06))
+                        .clipShape(.rect(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(useBodyweight ? Color.green.opacity(0.18) : Color.primary.opacity(0.08), lineWidth: 1)
+                        )
+                        .disabled(isDisabled)
 
-                        if PlateCalculator.isBarbellExercise(exercise.name), sets[index].weight > 0 {
+                    if !useBodyweight, PlateCalculator.isBarbellExercise(exercise.name), sets[index].weight > 0 {
                             Button {
                                 plateCalcSetIndex = index
                             } label: {
@@ -886,8 +994,6 @@ struct SetLoggingSheet: View {
                         }
                     }
                 }
-            }
-
             Text("×")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.tertiary)
@@ -912,23 +1018,6 @@ struct SetLoggingSheet: View {
                 .disabled(isDisabled)
             }
         }
-    }
-
-    private var bodyweightWeightLabel: some View {
-        VStack(spacing: 4) {
-            Text("BW")
-                .font(.system(.caption, design: .rounded, weight: .black))
-                .foregroundStyle(.green)
-            Text("\(Int(bodyweightValue))")
-                .font(.system(.title3, design: .rounded, weight: .bold))
-                .foregroundStyle(.primary)
-            Text(weightUnit)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.secondary)
-        }
-        .frame(width: 70, height: 80)
-        .background(Color.green.opacity(0.08))
-        .clipShape(.rect(cornerRadius: 12))
     }
 
     @ViewBuilder
@@ -967,7 +1056,11 @@ struct SetLoggingSheet: View {
     private var addDropSetButton: some View {
         Button {
             withAnimation(.spring(duration: 0.3)) {
-                let lastWeight = useBodyweight ? bodyweightValue : (sets.last?.weight ?? 0) * 0.7
+                // In BW mode, weight = ADDED load. A drop set defaults
+                // to 0 added (i.e., pure bodyweight rep-out). In
+                // non-BW mode it's a classic 70% drop off the previous
+                // working set.
+                let lastWeight = useBodyweight ? 0 : (sets.last?.weight ?? 0) * 0.7
                 sets.append(SetLog(weight: lastWeight, reps: 0, isDropSet: true, isBodyweight: useBodyweight))
                 weightStrings.append(Self.formatWeight(lastWeight))
             }
@@ -1040,7 +1133,12 @@ struct SetLoggingSheet: View {
     private func completeSet(at index: Int) {
         withAnimation(.spring(duration: 0.35)) {
             if useBodyweight {
-                sets[index].weight = bodyweightValue
+                // Only stamp the BW flag — don't overwrite the user's
+                // entered weight. In the new semantics `weight` already
+                // holds the ADDED load (0 = pure BW, +X = weighted,
+                // -X = assisted). Replacing it with `bodyweightValue`
+                // would re-introduce the old "weight == absolute load"
+                // ambiguity and break the total-load math.
                 sets[index].isBodyweight = true
             }
             sets[index].isCompleted = true
@@ -1060,15 +1158,20 @@ struct SetLoggingSheet: View {
 
             if index < sets.count - 1 {
                 currentSetIndex = index + 1
-                startRestTimer()
+                startRestTimer(completedWeight: sets[index].weight)
             }
         }
     }
 
-    private func startRestTimer() {
+    private func startRestTimer(completedWeight: Double = 0) {
         timer?.invalidate()
-        let totalSets = exercise.sets
-        restTimerTotal = totalSets >= 4 ? 120 : 90
+        let recentAvg = ExerciseLogService.shared.recentTopSetAverage(for: exercise.name)
+        restTimerTotal = RestRecommender.recommend(
+            exerciseName: exercise.name,
+            repsString: exercise.reps,
+            completedWeight: completedWeight,
+            recentAverageWeight: recentAvg
+        )
         restSecondsRemaining = restTimerTotal
         withAnimation(.spring(duration: 0.4)) {
             restTimerActive = true

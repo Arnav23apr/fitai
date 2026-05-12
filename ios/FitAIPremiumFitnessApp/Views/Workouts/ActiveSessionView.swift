@@ -338,6 +338,9 @@ struct ActiveSessionView: View {
         // `session.isActive`). Discard / Finish remain the only paths that
         // actually end the workout, so accidental dismiss is harmless.
         .onAppear { startIfNeeded() }
+        // Snapshot per-set state on every edit so a force-quit mid-workout
+        // doesn't reset weights, reps, and ✓ ticks on resume.
+        .onChange(of: sessionExercises) { _, _ in persistSetDetail() }
     }
 
     // MARK: - RPE discoverability hint
@@ -705,8 +708,18 @@ struct ActiveSessionView: View {
         if session.isActive && !session.exercises.isEmpty {
             workoutName = session.workoutName
             sessionStart = session.startTime ?? Date()
-            sessionExercises = session.exercises.map { ex in
-                SessionExercise.fromExercise(ex, defaultRest: defaultRestSeconds)
+            // Prefer the persisted per-set detail (weights/reps/✓) when
+            // available — it carries the actual lifting state the user
+            // had entered before the app was killed. Fall back to the
+            // lightweight Exercise shell if the detail snapshot is
+            // missing or fails to decode.
+            if let saved: [SessionExercise] = session.loadSessionDetail([SessionExercise].self),
+               !saved.isEmpty {
+                sessionExercises = saved
+            } else {
+                sessionExercises = session.exercises.map { ex in
+                    SessionExercise.fromExercise(ex, defaultRest: defaultRestSeconds)
+                }
             }
         } else {
             workoutName = initialName.isEmpty ? WorkoutSessionManager.timeOfDayWorkoutName() : initialName
@@ -716,6 +729,14 @@ struct ActiveSessionView: View {
             sessionStart = Date()
             startManagerSession()
         }
+    }
+
+    /// Push the current per-set state to UserDefaults so a mid-workout
+    /// force-quit / OS kill / reboot doesn't reset weights, reps, and ✓
+    /// ticks on resume. Cheap (one JSON encode + UserDefaults write) and
+    /// called from .onChange of sessionExercises.
+    private func persistSetDetail() {
+        session.persistSessionDetail(sessionExercises)
     }
 
     private func startManagerSession() {
@@ -810,8 +831,7 @@ struct ActiveSessionView: View {
                 return !isLastInGroup
             }()
             if !suppressRest {
-                let restSec = sessionExercises[exIdx].sets[setIdx].restSeconds ?? defaultRestSeconds
-                startRest(seconds: restSec)
+                startRest(seconds: resolveRest(exIdx: exIdx, setIdx: setIdx))
             }
         }
     }
@@ -822,6 +842,23 @@ struct ActiveSessionView: View {
         restState = .running(endsAt: endsAt, total: seconds)
         session.updateRestTimer(isResting: true, secondsRemaining: seconds)
         scheduleRestClear(at: endsAt)
+    }
+
+    /// Decide how long the rest after this set should be. Per-exercise
+    /// user override wins; otherwise `RestRecommender` derives a value
+    /// from movement type, rep range, and how heavy the completed set
+    /// was vs the lifter's recent average for this exercise.
+    private func resolveRest(exIdx: Int, setIdx: Int) -> Int {
+        let ex = sessionExercises[exIdx]
+        let setRow = ex.sets[setIdx]
+        if let override = setRow.restSeconds { return override }
+        let recentAvg = ExerciseLogService.shared.recentTopSetAverage(for: ex.name)
+        return RestRecommender.recommend(
+            exerciseName: ex.name,
+            repsString: ex.targetReps,
+            completedWeight: setRow.weight,
+            recentAverageWeight: recentAvg
+        )
     }
 
     /// Auto-dismiss the rest banner once the countdown hits zero. Multiple
@@ -1029,6 +1066,17 @@ struct ActiveSessionView: View {
 
             logService.saveLog(log)
             exerciseVolumes[sx.id] = log.totalVolume
+
+            // Mirror per-set detail to Supabase so it survives reinstall /
+            // device switch / sign-out. Without this, ExerciseLog only lives
+            // in UserDefaults — the calendar then shows "0 sets / 0 kg" and
+            // the Previous column shows "-" after a clean install.
+            if let userId = appState.currentUserIdPublic {
+                let logCopy = log
+                Task.detached {
+                    await SupabaseSyncService.shared.insertExerciseLog(userId: userId, log: logCopy)
+                }
+            }
         }
     }
 
@@ -1217,29 +1265,12 @@ struct ActiveSessionView: View {
         case .backspace:
             editingText = String(editingText.dropLast())
             commitText(editingText, to: field)
-        case .adjust(let delta):
-            adjustField(field, by: delta)
-            // Reload buffer from the freshly-mutated model.
-            editingText = textFor(field)
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
         case .next:
             commitText(editingText, to: field)
             advanceFocus()
         case .dismiss:
             commitText(editingText, to: field)
             focusedField = nil
-        }
-    }
-
-    private func adjustField(_ field: FieldFocus, by delta: Double) {
-        guard let (exIdx, setIdx) = locateSet(field) else { return }
-        switch field {
-        case .weight:
-            let next = max(0, sessionExercises[exIdx].sets[setIdx].weight + delta)
-            sessionExercises[exIdx].sets[setIdx].weight = next
-        case .reps:
-            let next = max(0, sessionExercises[exIdx].sets[setIdx].reps + Int(delta))
-            sessionExercises[exIdx].sets[setIdx].reps = next
         }
     }
 
@@ -1492,8 +1523,10 @@ struct ActiveSessionView: View {
         }
         // Start a single rest timer (post-final-set) instead of one per
         // set, since we just batch-logged.
-        let restSec = sessionExercises[exIdx].sets.last?.restSeconds ?? defaultRestSeconds
-        startRest(seconds: restSec)
+        let lastIdx = sessionExercises[exIdx].sets.count - 1
+        if lastIdx >= 0 {
+            startRest(seconds: resolveRest(exIdx: exIdx, setIdx: lastIdx))
+        }
         playLogConfirmation()
     }
 
@@ -1521,8 +1554,7 @@ struct ActiveSessionView: View {
         sessionExercises[exIdx].sets[setIdx].reps = lastCompleted.reps
         sessionExercises[exIdx].sets[setIdx].tag = lastCompleted.tag
         sessionExercises[exIdx].sets[setIdx].isCompleted = true
-        let restSec = sessionExercises[exIdx].sets[setIdx].restSeconds ?? defaultRestSeconds
-        startRest(seconds: restSec)
+        startRest(seconds: resolveRest(exIdx: exIdx, setIdx: setIdx))
         playLogConfirmation()
     }
 
@@ -1561,7 +1593,7 @@ struct ActiveSessionView: View {
             reps: lastSet?.reps ?? 0,
             tag: tag ?? .normal,
             isCompleted: false,
-            restSeconds: lastSet?.restSeconds ?? defaultRestSeconds,
+            restSeconds: lastSet?.restSeconds,
             rpe: nil,
             isBodyweight: lastSet?.isBodyweight ?? BodyweightDetector.isBodyweightExercise(sessionExercises[exIdx].name)
         )
@@ -1723,7 +1755,7 @@ private struct IdentifiedAnalysis: Identifiable {
 /// In-memory shape for one exercise within an active session. Mirrors
 /// `RoutineExercise` but carries per-set logging data and is mutated freely
 /// during the session. Persisted lightly via WorkoutSessionManager.
-struct SessionExercise: Identifiable, Equatable {
+struct SessionExercise: Identifiable, Equatable, Codable {
     let id: String
     var name: String
     var muscleGroup: String
@@ -1754,7 +1786,10 @@ struct SessionExercise: Identifiable, Equatable {
                 reps: 0,
                 tag: .normal,
                 isCompleted: false,
-                restSeconds: ex.restSecondsOverride ?? defaultRest,
+                // Only the user's explicit override lives on the set;
+                // when nil, ActiveSessionView's `resolveRest` falls
+                // through to RestRecommender.
+                restSeconds: ex.restSecondsOverride,
                 isBodyweight: BodyweightDetector.isBodyweightExercise(ex.name)
             ))
         }
@@ -1788,7 +1823,10 @@ struct SessionExercise: Identifiable, Equatable {
                 reps: 0,
                 tag: .normal,
                 isCompleted: false,
-                restSeconds: defaultRest,
+                // No user override on the AI-plan path; RestRecommender
+                // resolves at set-completion time using the just-logged
+                // weight (the "heavy squat" bump).
+                restSeconds: nil,
                 isBodyweight: BodyweightDetector.isBodyweightExercise(ex.name)
             ))
         }
@@ -1803,7 +1841,7 @@ struct SessionExercise: Identifiable, Equatable {
 }
 
 /// One row in the set table.
-struct SessionSet: Identifiable, Equatable {
+struct SessionSet: Identifiable, Equatable, Codable {
     let id: String
     var index: Int
     var previousWeight: Double

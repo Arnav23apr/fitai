@@ -1125,6 +1125,67 @@ final class ExerciseDatabase: Sendable {
             .sorted()
     }
 
+    /// Classify a lift as heavy compound, compound, or isolation for the
+    /// rest recommender. Resolution: explicit override list first, then
+    /// name keywords, then primary/secondary muscle counts.
+    func category(for exerciseName: String) -> ExerciseCategory {
+        let n = exerciseName.lowercased()
+
+        if Self.heavyCompoundOverrides.contains(where: { n.contains($0) }) {
+            return .heavyCompound
+        }
+        if Self.isolationKeywords.contains(where: { n.contains($0) }) {
+            return .isolation
+        }
+        if Self.compoundOverrides.contains(where: { n.contains($0) }) {
+            return .compound
+        }
+
+        let info = info(for: exerciseName)
+        if info.primaryMuscles.isEmpty && info.secondaryMuscles.isEmpty {
+            return .unknown
+        }
+        return info.secondaryMuscles.count >= 2 ? .compound : .isolation
+    }
+
+    // Substring matches on the lowercased exercise name. Order doesn't
+    // matter — Swift's `contains(where:)` short-circuits on first hit.
+    private static let heavyCompoundOverrides: [String] = [
+        "back squat", "front squat", "barbell squat", "low bar squat",
+        "high bar squat", "pause squat", "box squat",
+        "deadlift", "sumo deadlift", "conventional deadlift",
+        "romanian deadlift", "rdl", "trap bar deadlift", "stiff leg deadlift",
+        "bench press", "incline bench press", "decline bench press",
+        "close grip bench press", "paused bench press",
+        "overhead press", "ohp", "military press", "standing press",
+        "push press", "strict press",
+        "barbell row", "pendlay row", "bent over row", "yates row",
+        "hip thrust", "barbell hip thrust",
+        "clean", "snatch", "power clean", "hang clean",
+    ]
+
+    private static let compoundOverrides: [String] = [
+        "pull-up", "pullup", "pull up", "chin-up", "chinup", "chin up",
+        "dip", "dips",
+        "lunge", "split squat", "bulgarian split squat",
+        "leg press", "hack squat",
+        "dumbbell press", "dumbbell bench press", "dumbbell row",
+        "t-bar row", "t bar row", "seated row", "cable row",
+        "shoulder press", "arnold press",
+        "good morning",
+    ]
+
+    private static let isolationKeywords: [String] = [
+        "curl", "tricep", "triceps", "extension", "kickback",
+        "lateral raise", "front raise", "rear delt", "reverse fly",
+        "fly", "flye", "pec deck",
+        "calf raise", "leg curl", "leg extension",
+        "shrug", "wrist", "forearm",
+        "crunch", "sit-up", "situp", "sit up", "leg raise",
+        "russian twist", "ab wheel", "cable crunch",
+        "face pull", "pullover", "concentration curl",
+    ]
+
     /// Search by case-insensitive substring on the exercise name.
     func search(_ query: String) -> [String] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()

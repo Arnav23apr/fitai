@@ -198,7 +198,8 @@ class SupabaseSyncService: @unchecked Sendable {
             "available_equipment": profile.availableEquipment,
             "ai_chat_messages_used": profile.aiChatMessagesUsed,
             "photo_improvement_opt_in": profile.photoImprovementOptIn,
-            "profile_photo_url": profile.profilePhotoURL
+            "profile_photo_url": profile.profilePhotoURL,
+            "last_progression_check_at": profile.lastProgressionCheckAt.map { ISO8601DateFormatter().string(from: $0) }
         ]
 
         // Filter out nil values for JSON serialization
@@ -696,6 +697,73 @@ class SupabaseSyncService: @unchecked Sendable {
         _ = try? await URLSession.shared.data(for: request)
     }
 
+    // MARK: - Exercise notes (pinned, per-exercise text)
+
+    /// Fetch every pinned note for this user. Returns
+    /// `[lowercased_exercise_name: body]` so the caller can hydrate
+    /// `ExerciseNoteService`'s in-memory dict directly.
+    func fetchExerciseNotes(userId: String) async -> [String: String] {
+        guard let url = URL(string: "\(baseURL)/exercise_notes?user_id=eq.\(userId)&select=exercise_name,body") else { return [:] }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 15
+        let headers = await authHeaders()
+        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            return [:]
+        }
+        struct Row: Decodable { let exercise_name: String; let body: String }
+        guard let rows = try? JSONDecoder().decode([Row].self, from: data) else { return [:] }
+        var dict: [String: String] = [:]
+        for r in rows { dict[r.exercise_name] = r.body }
+        return dict
+    }
+
+    /// Upsert a single note. `exerciseName` should already be lowercased
+    /// (matches the client lookup key + the table's PK shape).
+    func upsertExerciseNote(userId: String, exerciseName: String, body: String) async {
+        guard let url = URL(string: "\(baseURL)/exercise_notes") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 15
+        var headers = await authHeaders()
+        headers["Prefer"] = "resolution=merge-duplicates"
+        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        let payload: [String: Any] = [
+            "user_id": userId,
+            "exercise_name": exerciseName,
+            "body": body,
+            "updated_at": ISO8601DateFormatter().string(from: Date())
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                #if DEBUG
+                print("[SupabaseSync] upsertExerciseNote failed: HTTP \(http.statusCode)")
+                #endif
+            }
+        } catch {
+            #if DEBUG
+            print("[SupabaseSync] upsertExerciseNote error: \(error.localizedDescription)")
+            #endif
+        }
+    }
+
+    func deleteExerciseNote(userId: String, exerciseName: String) async {
+        // PostgREST expects URL-encoded query parameters; exercise names
+        // contain spaces ("bench press") and possibly punctuation.
+        let encoded = exerciseName.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? exerciseName
+        guard let url = URL(string: "\(baseURL)/exercise_notes?user_id=eq.\(userId)&exercise_name=eq.\(encoded)") else { return }
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        request.timeoutInterval = 15
+        let headers = await authHeaders()
+        headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
     // MARK: - Presence (last_seen_at heartbeat)
 
     /// Bump `last_seen_at = now()` on the user's profile so friends see
@@ -834,6 +902,12 @@ struct RemoteUserProfile: Codable {
     let photoImprovementOptIn: Bool?
     let profilePhotoURL: String?
     let notificationPrefs: [String: JSONCodable]?
+    /// Timestamp of the user's last AI progression-suggestion check.
+    /// Mirrored to keep the 7-day throttle honest across devices —
+    /// without this, switching devices resets the throttle and a Pro
+    /// user could see two progression suggestions in the same week.
+    /// Optional so older rows (pre-migration 022) decode cleanly.
+    let lastProgressionCheckAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, username, email, bio, gender, points, tier
@@ -879,6 +953,7 @@ struct RemoteUserProfile: Codable {
         case photoImprovementOptIn = "photo_improvement_opt_in"
         case profilePhotoURL = "profile_photo_url"
         case notificationPrefs = "notification_prefs"
+        case lastProgressionCheckAt = "last_progression_check_at"
     }
 
     /// Convert to local UserProfile
@@ -934,6 +1009,7 @@ struct RemoteUserProfile: Codable {
         if let used = aiChatMessagesUsed     { p.aiChatMessagesUsed = used }
         if let opt = photoImprovementOptIn   { p.photoImprovementOptIn = opt }
         p.profilePhotoURL = profilePhotoURL
+        p.lastProgressionCheckAt = lastProgressionCheckAt.flatMap { iso.date(from: $0) }
         return p
     }
 }

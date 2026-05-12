@@ -25,6 +25,12 @@ class AppState {
     /// schedules an auto-dismiss.
     var currentBanner: InAppBanner? = nil
 
+    /// Latest weekly progression suggestion from the AI coach. Held in
+    /// memory only (regenerating on cold launch is cheap and avoids
+    /// stale week-old suggestions sticking around through a relaunch).
+    /// Set by PlanView's background check, cleared by Apply / Keep current.
+    var pendingProgression: ProgressionSuggestion? = nil
+
     /// Surface a toast banner over the tab bar. Auto-dismisses after
     /// `seconds`. Safe to call repeatedly — newer banners replace older.
     func showBanner(_ banner: InAppBanner, autoDismissAfter seconds: Double = 4.5) {
@@ -59,7 +65,33 @@ class AppState {
 
     init() {
         scanHistory = ScanHistoryService.shared.loadAll()
+        wireExerciseNoteSync()
         Task { await checkSession() }
+    }
+
+    /// Mirror every local pinned-note write to the `exercise_notes`
+    /// cloud table (migration 023). Without this, notes only lived in
+    /// UserDefaults and a reinstall / device switch lost them silently.
+    /// The hydrate side runs in `restoreFromCloud`.
+    private func wireExerciseNoteSync() {
+        ExerciseNoteService.shared.onChange = { [weak self] change in
+            guard let self, let userId = self.currentUserId else { return }
+            Task {
+                switch change {
+                case .set(let name, let body):
+                    await SupabaseSyncService.shared.upsertExerciseNote(
+                        userId: userId,
+                        exerciseName: name,
+                        body: body
+                    )
+                case .clear(let name):
+                    await SupabaseSyncService.shared.deleteExerciseNote(
+                        userId: userId,
+                        exerciseName: name
+                    )
+                }
+            }
+        }
     }
 
     func checkSession() async {
@@ -328,6 +360,61 @@ class AppState {
         // remote URL so a fresh device gets the user's avatar back.
         restored.customPhotoData = profile.customPhotoData
 
+        // ─── Local-fresher fields ────────────────────────────────────
+        // `profile = restored` would overwrite EVERY local field, which
+        // is fine for user-edited settings (name, gender, goal) but is
+        // wrong for fields that get mutated mid-session by usage events.
+        // `saveProfile()` fires a fire-and-forget cloud upload, so any
+        // local mutation that happened in the window between the last
+        // save and an app kill never made it to the cloud. Without these
+        // guards a single force-quit right after a workout / scan / IAP
+        // silently rolls those counters back to their previous values
+        // on the next launch.
+        //
+        // Strategy:
+        //   - Booleans: OR — accept upgrades from either side
+        //   - Counters: max — pick whichever side is further along
+        //   - Sets/dates: pick the local one when it's strictly newer
+        let localIsPremium = profile.isPremium
+        restored.isPremium = localIsPremium || restored.isPremium
+
+        // Accumulators — local wins when ahead. Streaks/workouts/scans
+        // /points are monotonically non-decreasing for the typical user;
+        // a "lower" cloud value is almost always stale, not a correction.
+        restored.currentStreak = max(profile.currentStreak, restored.currentStreak)
+        restored.totalWorkouts = max(profile.totalWorkouts, restored.totalWorkouts)
+        restored.totalScans = max(profile.totalScans, restored.totalScans)
+        restored.points = max(profile.points, restored.points)
+        // Latest score is the most-recent scan result. Keep local if it
+        // exists, otherwise fall back to remote.
+        if profile.latestScore != nil {
+            restored.latestScore = profile.latestScore
+            restored.lastScanDate = profile.lastScanDate ?? restored.lastScanDate
+        }
+        // Free-scans-earned can only go up (referral unlocks). Same logic.
+        restored.freeScansEarned = max(profile.freeScansEarned, restored.freeScansEarned)
+        // AI chat quota is a per-cycle counter — local is authoritative
+        // because cycle boundaries are computed device-side.
+        restored.aiChatMessagesUsed = max(profile.aiChatMessagesUsed, restored.aiChatMessagesUsed)
+
+        // Completed-days-this-week is a Set semantically. Merge by union
+        // so a workout logged offline (or just before app kill) isn't
+        // dropped.
+        let mergedDays = Set(profile.completedDaysThisWeek).union(restored.completedDaysThisWeek)
+        restored.completedDaysThisWeek = Array(mergedDays)
+
+        // Progression check stamp — keep the more recent one so the
+        // 7-day throttle holds across devices. The new field on the
+        // remote profile (migration 022) supplies the cloud side; until
+        // that ships this just preserves local.
+        if let local = profile.lastProgressionCheckAt {
+            if let remoteStamp = restored.lastProgressionCheckAt {
+                restored.lastProgressionCheckAt = max(local, remoteStamp)
+            } else {
+                restored.lastProgressionCheckAt = local
+            }
+        }
+
         profile = restored
 
         // Avatar hydration: if we have a remote URL but no local image
@@ -404,6 +491,16 @@ class AppState {
         if !remoteRoutines.isEmpty {
             await MainActor.run {
                 RoutineService.shared.replaceAll(remoteRoutines)
+            }
+        }
+
+        // Fetch pinned exercise notes (migration 023). Closing the gap
+        // where reinstall / device switch silently wiped the user's
+        // "use foot plate at hole 4" reminders.
+        let remoteNotes = await SupabaseSyncService.shared.fetchExerciseNotes(userId: userId)
+        if !remoteNotes.isEmpty {
+            await MainActor.run {
+                ExerciseNoteService.shared.hydrate(remoteNotes)
             }
         }
 

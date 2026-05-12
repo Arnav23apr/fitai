@@ -136,7 +136,7 @@ class ScanViewModel {
                 userPrompt: userPrompt
             )
 
-            let result = parseScanResultFromObject(object, photo: frontImg, gender: profile.gender)
+            let result = parseScanResultFromObject(object, photo: frontImg, backPhoto: backImage, gender: profile.gender)
             analysisResult = result
 
             await pauseUntilMinimumElapsed(start: analyzeStart, minimum: minimumDuration)
@@ -196,6 +196,7 @@ class ScanViewModel {
                                        legs: 5, core: 5, glutes: 0),
             visibleMuscleGroups: ["chest", "shoulders", "back", "arms", "legs", "core"],
             frontPhoto: frontImg,
+            backPhoto: backImage,
             isLocked: true
         )
 
@@ -309,7 +310,7 @@ class ScanViewModel {
         showResults = false
     }
 
-    private func parseScanResultFromObject(_ json: [String: Any], photo: UIImage?, gender: String) -> ScanResult {
+    private func parseScanResultFromObject(_ json: [String: Any], photo: UIImage?, backPhoto: UIImage? = nil, gender: String) -> ScanResult {
         let score: Double
         if let s = json["overallScore"] as? Double {
             score = s
@@ -371,7 +372,8 @@ class ScanViewModel {
             muscleMassRating: mm,
             muscleScores: scores,
             visibleMuscleGroups: visible,
-            frontPhoto: photo
+            frontPhoto: photo,
+            backPhoto: backPhoto
         )
     }
 

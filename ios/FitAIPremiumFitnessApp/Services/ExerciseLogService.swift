@@ -50,6 +50,20 @@ class ExerciseLogService {
         history(for: exerciseName).lastSession
     }
 
+    /// Average top-set weight over the most recent `sessions` logs. Used by
+    /// `RestRecommender` to decide whether the current set is "heavy" and
+    /// deserves a longer rest. Returns 0 when there's no history (which
+    /// disables the heavy bump — first session gets the baseline rest).
+    func recentTopSetAverage(for exerciseName: String, sessions: Int = 5) -> Double {
+        let recent = history(for: exerciseName).logs
+            .sorted { $0.date > $1.date }
+            .prefix(sessions)
+            .map(\.bestSetWeight)
+            .filter { $0 > 0 }
+        guard !recent.isEmpty else { return 0 }
+        return recent.reduce(0, +) / Double(recent.count)
+    }
+
     func personalBestWeight(for exerciseName: String) -> Double {
         history(for: exerciseName).personalBestWeight
     }
