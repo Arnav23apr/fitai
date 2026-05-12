@@ -37,6 +37,20 @@ struct GoalProjectionCard: View {
 
     @State private var isRegenerating: Bool = false
 
+    /// Index into `Self.quotes`, randomized on every `.onAppear` of the profile
+    /// variant so each tab-switch shows a fresh regret-framed one-liner.
+    /// Seeded random on first render so the first impression is non-deterministic.
+    @State private var quoteIndex: Int = Int.random(in: 0..<8)
+
+    /// Tap-to-reveal state for the profile variant. Starts blurred each time the
+    /// card appears so the reveal is a deliberate "peek at your dream body"
+    /// moment. Resets on `.onDisappear` (tab switch away).
+    @State private var isRevealed: Bool = false
+
+    /// True while the full-size cinematic viewer is presented. Tap on the already-
+    /// revealed image to enter; tap backdrop / close button to dismiss.
+    @State private var showFullSize: Bool = false
+
     /// On-disk-or-network image, populated by `loadImage()` when the card appears
     /// and whenever `appState.profile.goalProjectionURL` changes. Cached bytes
     /// (see `GoalProjectionCache`) survive network blips so the user never sees
@@ -97,50 +111,63 @@ struct GoalProjectionCard: View {
 
     private var profileVariant: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Your goal physique")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.primary)
-                    if let last = lastGenLabel {
-                        Text("Updated \(last)")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                Spacer()
-                if onRegenerate != nil {
-                    Button {
-                        guard !isRegenerating else { return }
-                        isRegenerating = true
-                        onRegenerate?()
-                        // Caller sets isRegenerating back via state ownership;
-                        // we reset locally after a short window so the spinner
-                        // doesn't get stuck if the parent forgets.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
-                            isRegenerating = false
-                        }
-                    } label: {
-                        if isRegenerating {
-                            ProgressView()
-                                .controlSize(.small)
-                        } else {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 32, height: 32)
-                                .background(Color.primary.opacity(0.06))
-                                .clipShape(Circle())
-                        }
-                    }
-                    .disabled(isRegenerating)
-                }
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(currentQuote.emoji)
+                    .font(.system(size: 18))
+                Text(currentQuote.text)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: 0)
             }
 
             imageBlock(height: 240)
         }
         .padding(14)
         .modifier(GradientCardBackground(tintColor: .purple, cornerRadius: 16))
+        .onAppear { rotateQuote() }
+        .fullScreenCover(isPresented: $showFullSize) {
+            if let img = loadedImage {
+                GoalProjectionFullScreenViewer(image: img) {
+                    showFullSize = false
+                }
+            }
+        }
+    }
+
+    // MARK: - Rotating quote
+
+    /// Regret/counterfactual one-liners rotated on each card appearance.
+    /// Sigma/stoic energy on purpose. Tab-switching to Profile picks a fresh
+    /// pairing, so the message stays sticky-but-varied across sessions.
+    private struct Quote {
+        let emoji: String
+        let text: String
+    }
+
+    private static let quotes: [Quote] = [
+        Quote(emoji: "🗿", text: "The version you keep delaying."),
+        Quote(emoji: "🔱", text: "Who you become without the snooze button."),
+        Quote(emoji: "💪", text: "The body you've been postponing."),
+        Quote(emoji: "⚔️", text: "You, if you'd stopped putting it off."),
+        Quote(emoji: "🦁", text: "The version of you that didn't quit."),
+        Quote(emoji: "🏛️", text: "You at zero excuses."),
+        Quote(emoji: "🔥", text: "Future you, paid in full."),
+        Quote(emoji: "⚡", text: "The cut you keep cancelling."),
+    ]
+
+    private var currentQuote: Quote {
+        Self.quotes[quoteIndex % Self.quotes.count]
+    }
+
+    private func rotateQuote() {
+        // Pick a new index that isn't the current one so two consecutive
+        // appearances never repeat the same line.
+        guard Self.quotes.count > 1 else { return }
+        var next = Int.random(in: 0..<Self.quotes.count)
+        while next == quoteIndex { next = Int.random(in: 0..<Self.quotes.count) }
+        quoteIndex = next
     }
 
     // MARK: - Pre-cancel variant
@@ -201,6 +228,22 @@ struct GoalProjectionCard: View {
                 Image(uiImage: img)
                     .resizable()
                     .scaledToFill()
+                    .blur(radius: shouldBlur ? 28 : 0)
+                    .overlay {
+                        if shouldBlur {
+                            revealOverlay
+                        }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if shouldBlur {
+                            withAnimation(.easeOut(duration: 0.45)) {
+                                isRevealed = true
+                            }
+                        } else if context == .profile {
+                            showFullSize = true
+                        }
+                    }
             } else if loadFailed {
                 failurePlaceholder(height: height)
             } else if hasAny {
@@ -236,6 +279,37 @@ struct GoalProjectionCard: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .scanTransformationGenerated)) { _ in
             Task { await loadImage() }
+        }
+        .onDisappear {
+            // Reset reveal so coming back to the Profile tab is a fresh peek.
+            if context == .profile { isRevealed = false }
+        }
+    }
+
+    /// True only for the profile variant before the user has tapped to peek.
+    /// The plan-preview and pre-cancel variants always show the image flat —
+    /// those moments need impact, not a guessing game.
+    private var shouldBlur: Bool {
+        context == .profile && !isRevealed
+    }
+
+    /// Instagram-sensitive-content style overlay shown over the blurred image.
+    private var revealOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.25)
+            VStack(spacing: 10) {
+                Image(systemName: "eye.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(18)
+                    .background(.ultraThinMaterial, in: Circle())
+                Text("Tap to peek")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                Text("Only you see this.")
+                    .font(.caption)
+                    .foregroundStyle(.white.opacity(0.75))
+            }
         }
     }
 
@@ -335,5 +409,79 @@ struct GoalProjectionCard: View {
         .frame(height: height)
         .frame(maxWidth: .infinity)
         .clipShape(.rect(cornerRadius: 14))
+    }
+}
+
+/// Cinematic full-screen presentation of the goal projection. Opened by tapping
+/// the (already-revealed) image on the Profile card. The blurred backdrop is
+/// the image itself massively scaled and blurred so the whole screen feels
+/// dipped in the user's "future you" color palette. Tap the backdrop or the
+/// close button to dismiss.
+private struct GoalProjectionFullScreenViewer: View {
+    let image: UIImage
+    let onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            // Blurred backdrop, image colors bleed into the whole screen.
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFill()
+                .blur(radius: 60)
+                .overlay(Color.black.opacity(0.45))
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture { onClose() }
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 8)
+
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, 20)
+                    .clipShape(.rect(cornerRadius: 22))
+                    .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
+                    // Block the backdrop-tap from firing when the user lands on
+                    // the image itself; only blank space dismisses.
+                    .contentShape(Rectangle())
+                    .onTapGesture { /* no-op */ }
+
+                Spacer(minLength: 8)
+
+                VStack(spacing: 8) {
+                    Text("👑")
+                        .font(.system(size: 40))
+                    Text("This could be you, bro.")
+                        .font(.system(.title2, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                    Text("Stay consistent. The body's already yours, you just haven't claimed it yet.")
+                        .font(.footnote)
+                        .foregroundStyle(.white.opacity(0.75))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .padding(.bottom, 32)
+            }
+
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: onClose) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(12)
+                            .background(.ultraThinMaterial, in: Circle())
+                    }
+                    .padding(.trailing, 18)
+                    .padding(.top, 18)
+                }
+                Spacer()
+            }
+        }
+        .statusBarHidden()
     }
 }
