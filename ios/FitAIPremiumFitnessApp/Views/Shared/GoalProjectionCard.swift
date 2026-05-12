@@ -450,9 +450,20 @@ private struct GoalProjectionFullScreenViewer: View {
 
                 Spacer(minLength: 8)
 
-                VStack(spacing: 8) {
-                    Text("👑")
-                        .font(.system(size: 40))
+                VStack(spacing: 10) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 36, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.00, green: 0.86, blue: 0.40),
+                                    Color(red: 0.96, green: 0.69, blue: 0.21),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .shadow(color: Color(red: 0.96, green: 0.69, blue: 0.21).opacity(0.5), radius: 12)
                     Text("This could be you, bro.")
                         .font(.system(.title2, weight: .bold))
                         .foregroundStyle(.white)
@@ -469,19 +480,41 @@ private struct GoalProjectionFullScreenViewer: View {
             VStack {
                 HStack {
                     Spacer()
-                    Button(action: onClose) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(12)
-                            .background(.ultraThinMaterial, in: Circle())
-                    }
-                    .padding(.trailing, 18)
-                    .padding(.top, 18)
+                    closeButton
+                        .padding(.trailing, 18)
+                        .padding(.top, 18)
                 }
                 Spacer()
             }
         }
         .statusBarHidden()
+    }
+
+    /// Soft, glassy close button with a faint outer halo so the edges fade into
+    /// the image instead of cutting against it harshly.
+    private var closeButton: some View {
+        Button(action: onClose) {
+            ZStack {
+                // Outer halo — slightly larger blurred circle that bleeds into
+                // the backdrop, giving the button a soft "fade" instead of a
+                // hard outline against the image.
+                Circle()
+                    .fill(Color.black.opacity(0.35))
+                    .frame(width: 56, height: 56)
+                    .blur(radius: 10)
+
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(.regularMaterial, in: Circle())
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.5)
+                    )
+            }
+            .frame(width: 56, height: 56)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
     }
 }
