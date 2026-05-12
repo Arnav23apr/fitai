@@ -205,7 +205,7 @@ class ScanViewModel {
         return result
     }
 
-    func generateTransformation(profile: UserProfile) async {
+    func generateTransformation(profile: UserProfile, userId: String? = nil) async {
         guard let frontImg = frontImage else { return }
         isGeneratingTransformation = true
         errorMessage = nil
@@ -283,6 +283,14 @@ class ScanViewModel {
                 description: L.t("transformationDesc", profile.selectedLanguage)
                     .replacingOccurrences(of: "%@", with: goalDescription)
             )
+
+            // Bridge to the Profile card: write the clean image to the
+            // shared local cache so `GoalProjectionCard` can display it
+            // immediately, and notify any visible card to refresh.
+            let cacheUserId = userId ?? "anon"
+            GoalProjectionCache.saveScanTransformation(image: transformedImage, userId: cacheUserId)
+            NotificationCenter.default.post(name: .scanTransformationGenerated, object: nil)
+
             isGeneratingTransformation = false
         } catch {
             errorMessage = "Could not generate transformation: \(error.localizedDescription)"

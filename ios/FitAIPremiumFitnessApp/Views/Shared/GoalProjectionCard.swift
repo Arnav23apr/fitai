@@ -37,10 +37,17 @@ struct GoalProjectionCard: View {
 
     @State private var isRegenerating: Bool = false
 
-    private var imageURL: URL? {
-        guard let s = appState.profile.goalProjectionURL,
-              let url = URL(string: s) else { return nil }
-        return url
+    /// On-disk-or-network image, populated by `loadImage()` when the card appears
+    /// and whenever `appState.profile.goalProjectionURL` changes. Cached bytes
+    /// (see `GoalProjectionCache`) survive network blips so the user never sees
+    /// "Couldn't load your projection" once a projection has loaded once.
+    @State private var loadedImage: UIImage? = nil
+    @State private var loadFailed: Bool = false
+    @State private var isLoading: Bool = false
+
+    private var imageURLString: String? {
+        let s = appState.profile.goalProjectionURL
+        return (s?.isEmpty == false) ? s : nil
     }
 
     private var lastGenLabel: String? {
@@ -184,44 +191,51 @@ struct GoalProjectionCard: View {
 
     @ViewBuilder
     private func imageBlock(height: CGFloat) -> some View {
-        if let url = imageURL {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .empty:
-                    placeholder(height: height) {
-                        ProgressView().controlSize(.regular)
-                    }
-                case .success(let img):
-                    img.resizable()
-                        .scaledToFill()
-                case .failure:
-                    failurePlaceholder(height: height)
-                @unknown default:
-                    placeholder(height: height) { EmptyView() }
+        let userId = appState.currentUserIdPublic ?? "anon"
+        let hasLocalScan = GoalProjectionCache.hasScanTransformation(userId: userId)
+        let hasRemote = imageURLString != nil
+        let hasAny = hasLocalScan || hasRemote
+
+        Group {
+            if let img = loadedImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else if loadFailed {
+                failurePlaceholder(height: height)
+            } else if hasAny {
+                placeholder(height: height) {
+                    ProgressView().controlSize(.regular)
                 }
-            }
-            .frame(height: height)
-            .frame(maxWidth: .infinity)
-            .clipShape(.rect(cornerRadius: 14))
-        } else {
-            placeholder(height: height) {
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 30))
-                        .foregroundStyle(.tertiary)
-                    VStack(spacing: 4) {
-                        Text("Locked")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                        Text("Run a body scan to generate your 90-day physique projection.")
-                            .font(.caption)
+            } else {
+                placeholder(height: height) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 30))
                             .foregroundStyle(.tertiary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 28)
-                            .lineSpacing(2)
+                        VStack(spacing: 4) {
+                            Text("Locked")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Text("Run a body scan to generate your 90-day physique projection.")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 28)
+                                .lineSpacing(2)
+                        }
                     }
                 }
             }
+        }
+        .frame(height: height)
+        .frame(maxWidth: .infinity)
+        .clipShape(.rect(cornerRadius: 14))
+        .task(id: imageURLString ?? "_local") {
+            await loadImage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .scanTransformationGenerated)) { _ in
+            Task { await loadImage() }
         }
     }
 
@@ -263,6 +277,52 @@ struct GoalProjectionCard: View {
                     }
                 }
             }
+        }
+    }
+
+    /// Resolves the projection image in this order:
+    ///   1. Scan-tab local transformation (most recent thing the user generated)
+    ///   2. URL-keyed disk cache
+    ///   3. Network fetch via `GoalProjectionCache.fetchAndStore`
+    ///   4. Failure placeholder
+    @MainActor
+    private func loadImage() async {
+        let userId = appState.currentUserIdPublic ?? "anon"
+
+        // Prefer the locally-saved Scan transformation. This is what the
+        // user generated and expects to see — we shouldn't go to the
+        // network (and risk the cooldown / 404) when we already have
+        // their image on disk.
+        if let local = GoalProjectionCache.loadScanTransformation(userId: userId) {
+            loadedImage = local
+            loadFailed = false
+            return
+        }
+
+        guard let urlString = imageURLString else {
+            loadedImage = nil
+            loadFailed = false
+            return
+        }
+
+        if let cached = GoalProjectionCache.loadImage(userId: userId, expectedURL: urlString) {
+            loadedImage = cached
+            loadFailed = false
+            return
+        }
+
+        guard !isLoading else { return }
+        isLoading = true
+        loadFailed = false
+
+        let image = await GoalProjectionCache.fetchAndStore(url: urlString, userId: userId)
+        isLoading = false
+
+        if let image {
+            loadedImage = image
+            loadFailed = false
+        } else {
+            loadFailed = true
         }
     }
 

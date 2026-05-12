@@ -26,8 +26,24 @@ struct ProfileView: View {
     @State private var showWorkoutModePicker: Bool = false
     @State private var showWorkoutPlanReview: Bool = false
     @State private var showLegal: Bool = false
+    /// Set when a regenerate attempt is rejected by the server's 90-day cooldown.
+    /// Drives the `.alert` that tells the user how long until their next projection.
+    @State private var goalProjectionCooldownDays: Int? = nil
+    /// Bumped whenever the Scan tab finishes generating a transformation,
+    /// so the goal-projection visibility check re-evaluates against the
+    /// fresh local cache without waiting for a tab re-render.
+    @State private var localScanRefreshKey: Int = 0
 
     private var lang: String { appState.profile.selectedLanguage }
+
+    /// True if the user has either a server-side projection URL or a
+    /// locally-generated Scan transformation we can display.
+    private var hasGoalProjection: Bool {
+        _ = localScanRefreshKey
+        if let url = appState.profile.goalProjectionURL, !url.isEmpty { return true }
+        let userId = appState.currentUserIdPublic ?? "anon"
+        return GoalProjectionCache.hasScanTransformation(userId: userId)
+    }
 
     var body: some View {
         NavigationStack {
@@ -41,9 +57,7 @@ struct ProfileView: View {
                         if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
                             limitedOfferCard
                         }
-                        if appState.profile.canSeeGoalProjection,
-                           let url = appState.profile.goalProjectionURL,
-                           !url.isEmpty {
+                        if appState.profile.canSeeGoalProjection, hasGoalProjection {
                             GoalProjectionCard(
                                 context: .profile,
                                 onRegenerate: { regenerateGoalProjection() }
@@ -133,6 +147,21 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showLegal) {
                 LegalSheet()
+            }
+            .alert(
+                "Next projection locked",
+                isPresented: Binding(
+                    get: { goalProjectionCooldownDays != nil },
+                    set: { if !$0 { goalProjectionCooldownDays = nil } }
+                ),
+                presenting: goalProjectionCooldownDays
+            ) { _ in
+                Button("OK", role: .cancel) { goalProjectionCooldownDays = nil }
+            } message: { days in
+                Text("You can regenerate your goal physique in \(days) day\(days == 1 ? "" : "s"). Stay consistent — the next projection will reflect your real progress.")
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .scanTransformationGenerated)) { _ in
+                localScanRefreshKey &+= 1
             }
             .sheet(isPresented: $showPreCancelIntercept) {
                 GoalProjectionCard(
@@ -824,12 +853,27 @@ struct ProfileView: View {
             guard let sourceURL = await PhotoUploadService.shared
                 .uploadGoalProjectionSource(image: image, userId: userId) else { return }
             let outcome = await GoalProjectionService.shared.generate(sourceImageURL: sourceURL)
-            if case .success(let projectionURL) = outcome {
+            switch outcome {
+            case .success(let projectionURL):
+                // Prefetch bytes to disk before publishing the URL, so the card
+                // displays from cache immediately without racing Supabase Storage
+                // propagation or network flakes.
+                await GoalProjectionCache.fetchAndStore(url: projectionURL, userId: userId)
+                // A fresh server-side projection supersedes the local Scan
+                // transformation, otherwise the card would keep showing the
+                // stale local image.
+                GoalProjectionCache.clearScanTransformation(userId: userId)
                 await MainActor.run {
                     appState.profile.goalProjectionURL = projectionURL
                     appState.profile.goalProjectionGeneratedAt = Date()
                     appState.saveProfile()
                 }
+            case .cooldown(let daysLeft):
+                await MainActor.run {
+                    goalProjectionCooldownDays = max(daysLeft, 0)
+                }
+            case .noScan, .failure:
+                break
             }
         }
     }

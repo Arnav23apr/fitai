@@ -536,7 +536,7 @@ struct ScanView: View {
                     Button(action: {
                         if appState.profile.isPremium {
                             showTransformationSheet = true
-                            Task { await viewModel.generateTransformation(profile: appState.profile) }
+                            Task { await viewModel.generateTransformation(profile: appState.profile, userId: appState.currentUserIdPublic) }
                         } else {
                             showPaywall = true
                         }

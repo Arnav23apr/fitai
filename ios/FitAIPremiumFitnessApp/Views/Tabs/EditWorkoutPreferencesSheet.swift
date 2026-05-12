@@ -3,6 +3,7 @@ import SwiftUI
 struct EditWorkoutPreferencesSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var primaryGoal: String = ""
     @State private var selectedGoals: Set<String> = []
@@ -144,7 +145,7 @@ struct EditWorkoutPreferencesSheet: View {
                         .font(.system(size: 44, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText(value: Double(workoutsPerWeek)))
-                        .animation(.snappy, value: workoutsPerWeek)
+                        .animation(reduceMotion ? nil : .snappy, value: workoutsPerWeek)
                     Text("× / week")
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
@@ -169,7 +170,7 @@ struct EditWorkoutPreferencesSheet: View {
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundStyle(count == workoutsPerWeek ? Color(.systemBackground) : .secondary)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 38)
+                                .frame(height: 44)
                                 .background(count == workoutsPerWeek ? Color.primary : Color.primary.opacity(0.06))
                                 .clipShape(.rect(cornerRadius: 10))
                         }
@@ -204,7 +205,8 @@ struct EditWorkoutPreferencesSheet: View {
                     ForEach(locationOptions, id: \.value) { option in
                         let isSelected = trainingLocation == option.value
                         Button {
-                            withAnimation(.snappy(duration: 0.3)) {
+                            let animation: Animation? = reduceMotion ? nil : .snappy(duration: 0.3)
+                            withAnimation(animation) {
                                 trainingLocation = option.value
                                 if option.value == "Gym" {
                                     selectedEquipment = []
@@ -247,7 +249,8 @@ struct EditWorkoutPreferencesSheet: View {
                 ForEach(equipmentOptions, id: \.label) { eq in
                     let isSelected = selectedEquipment.contains(eq.label)
                     Button {
-                        withAnimation(.snappy(duration: 0.2)) {
+                        let animation: Animation? = reduceMotion ? nil : .snappy(duration: 0.2)
+                        withAnimation(animation) {
                             if isSelected {
                                 selectedEquipment.remove(eq.label)
                             } else {

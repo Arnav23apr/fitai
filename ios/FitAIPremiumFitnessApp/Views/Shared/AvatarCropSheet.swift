@@ -3,7 +3,13 @@ import SwiftUI
 /// Apple-style "Move and Scale" crop sheet for the user's custom avatar.
 /// Mirrors the Contacts / iMessage flow: full-bleed photo behind a
 /// circular viewfinder, pinch and pan to compose, Cancel / Choose pills
-/// floating on top — no navigation chrome.
+/// floating on top, no navigation chrome.
+///
+/// Pinch+pan is delegated to a UIScrollView subclass, which gives the
+/// same hardware-accelerated, around-the-centroid zoom that Instagram
+/// and Apple's own Photos picker use. Layout happens in the scroll
+/// view's own `layoutSubviews` so it always picks up the correct bounds
+/// (SwiftUI's `updateUIView` can fire before bounds settle).
 ///
 /// Output is a square JPEG sized to the visible crop circle's bounding
 /// box, so the rest of the app can keep applying `.clipShape(Circle())`
@@ -17,18 +23,14 @@ struct AvatarCropSheet: View {
     /// Called with the cropped JPEG data when the user taps "Choose".
     let onCrop: (Data) -> Void
 
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
-    @State private var scale: CGFloat = 1.0
-    @State private var lastScale: CGFloat = 1.0
-    @State private var viewSize: CGSize = .zero
+    @State private var controller = CropController()
     @State private var appeared: Bool = false
 
     /// Output JPEG dimensions in pixels. 768pt at quality 0.85 = sharp on
     /// retina while keeping uploads well under the bucket's 5MB cap.
     private let outputSize: CGFloat = 768
 
-    /// Visible crop circle diameter on screen — computed from the smaller
+    /// Visible crop circle diameter on screen, computed from the smaller
     /// screen dimension so the circle fills most of the width on any
     /// device while leaving room for the floating button pills.
     private func cropDiameter(in size: CGSize) -> CGFloat {
@@ -42,22 +44,18 @@ struct AvatarCropSheet: View {
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                // Full-bleed image. .scaledToFit() inside an .infinity
-                // frame lets the photo expand to whichever screen edge
-                // it hits first.
-                Image(uiImage: sourceImage)
-                    .resizable()
-                    .scaledToFit()
-                    .scaleEffect(scale)
-                    .offset(offset)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .gesture(combinedGesture)
+                ZoomableImageView(
+                    image: sourceImage,
+                    cropDiameter: diameter,
+                    controller: controller
+                )
+                .ignoresSafeArea()
 
-                // Dim everything outside the crop circle. Punch-out mask
-                // is composited so the underlying image bleeds through
-                // the circle at full brightness.
+                // Outside-the-circle tint. Lower opacity than a full
+                // dimmer so the surrounding photo stays readable while
+                // still letting the crop area pop.
                 Rectangle()
-                    .fill(Color.black.opacity(0.6))
+                    .fill(Color.black.opacity(0.45))
                     .ignoresSafeArea()
                     .mask {
                         ZStack {
@@ -70,14 +68,15 @@ struct AvatarCropSheet: View {
                     }
                     .allowsHitTesting(false)
 
-                // Crop circle ring.
+                // Crop circle ring. Slightly thicker + softer shadow so
+                // it reads against both bright and dark photos.
                 Circle()
-                    .strokeBorder(Color.white.opacity(0.95), lineWidth: 1.5)
+                    .strokeBorder(Color.white, lineWidth: 2.5)
                     .frame(width: diameter, height: diameter)
-                    .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+                    .shadow(color: .black.opacity(0.5), radius: 12, y: 2)
                     .allowsHitTesting(false)
 
-                // "Move and Scale" hint — sits below the crop circle in
+                // "Move and Scale" hint sits below the crop circle in
                 // the dimmed area so it doesn't compete with the photo.
                 VStack {
                     Spacer()
@@ -88,9 +87,9 @@ struct AvatarCropSheet: View {
                 }
                 .allowsHitTesting(false)
 
-                // Floating Liquid Glass action pills (Cancel / Choose) on
-                // top of everything. Anchored to the top safe-area inset
-                // rather than to a navigation bar.
+                // Floating Liquid Glass action pills (Cancel / Choose)
+                // on top of everything. Anchored to the top safe-area
+                // inset rather than to a navigation bar.
                 VStack {
                     HStack {
                         Button { dismiss() } label: {
@@ -125,151 +124,209 @@ struct AvatarCropSheet: View {
                 }
             }
             .preferredColorScheme(.dark)
-            .onAppear {
-                viewSize = geo.size
-                // Settle the initial offset/scale so the image is
-                // perfectly centered behind the crop circle on first
-                // appear (handles non-square source aspect ratios).
-                resetToFit()
-            }
-            .onChange(of: geo.size) { _, newSize in viewSize = newSize }
+            .onAppear { appeared = true }
         }
         .ignoresSafeArea()
         .statusBarHidden()
     }
 
-    // MARK: - Gestures
-
-    private var combinedGesture: some Gesture {
-        SimultaneousGesture(
-            DragGesture()
-                .onChanged { value in
-                    let proposed = CGSize(
-                        width: lastOffset.width + value.translation.width,
-                        height: lastOffset.height + value.translation.height
-                    )
-                    offset = clampedOffset(proposed, scale: scale)
-                }
-                .onEnded { _ in lastOffset = offset },
-            MagnificationGesture()
-                .onChanged { value in
-                    let proposed = max(0.5, min(6.0, lastScale * value))
-                    let newScale = clampedScale(proposed)
-                    scale = newScale
-                    // Max offset shrinks as scale drops, so re-clamp.
-                    offset = clampedOffset(offset, scale: newScale)
-                }
-                .onEnded { _ in
-                    lastScale = scale
-                    lastOffset = offset
-                }
-        )
-    }
-
-    // MARK: - Clamping (image bounds always cover the crop square)
-
-    /// Smallest scale at which the image's shorter side still fills the
-    /// crop circle. Below this the crop would reveal photo edges.
-    private func minScale() -> CGFloat {
-        let imgSize = sourceImage.size
-        guard viewSize.width > 0, viewSize.height > 0,
-              imgSize.width > 0, imgSize.height > 0 else { return 1.0 }
-        let baseFitScale = min(viewSize.width / imgSize.width, viewSize.height / imgSize.height)
-        let diameter = cropDiameter(in: viewSize)
-        let shorterImageSide = min(imgSize.width, imgSize.height)
-        let shorterOnScreenAtBase = shorterImageSide * baseFitScale
-        guard shorterOnScreenAtBase > 0 else { return 1.0 }
-        return diameter / shorterOnScreenAtBase
-    }
-
-    private func clampedScale(_ proposed: CGFloat) -> CGFloat {
-        max(proposed, minScale())
-    }
-
-    /// At a given scale, the image's displayed width/height define how
-    /// far the user can pan before an image edge enters the crop square.
-    /// Permissible range is ±(displayed - diameter)/2 on each axis.
-    private func clampedOffset(_ proposed: CGSize, scale: CGFloat) -> CGSize {
-        let imgSize = sourceImage.size
-        guard viewSize.width > 0, viewSize.height > 0,
-              imgSize.width > 0, imgSize.height > 0 else { return proposed }
-        let baseFitScale = min(viewSize.width / imgSize.width, viewSize.height / imgSize.height)
-        let effectiveScale = baseFitScale * scale
-        let displayedW = imgSize.width * effectiveScale
-        let displayedH = imgSize.height * effectiveScale
-        let diameter = cropDiameter(in: viewSize)
-
-        let maxX = max(0, (displayedW - diameter) / 2)
-        let maxY = max(0, (displayedH - diameter) / 2)
-
-        return CGSize(
-            width: max(-maxX, min(maxX, proposed.width)),
-            height: max(-maxY, min(maxY, proposed.height))
-        )
-    }
-
-    // MARK: - Initial fit
-
-    /// Pre-scale the image so its shorter dimension fills the crop circle
-    /// — matches what users expect from Contacts (the photo is already
-    /// "framed" by the circle and they only need to fine-tune position).
-    private func resetToFit() {
-        guard viewSize.width > 0, viewSize.height > 0 else { return }
-        scale = minScale()
-        lastScale = scale
-        offset = .zero
-        lastOffset = .zero
-    }
-
     // MARK: - Rendering
 
-    /// Replicate the visible transform onto a fixed-size canvas matching
-    /// the crop circle's bounding box. Anything outside the canvas is
-    /// discarded — which gives us the exact rectangle the user composed.
+    /// Translates the scroll view's pan/zoom state into a source-image
+    /// rect, then renders that rect into a fixed-size square canvas.
     private func produceCroppedData(viewSize: CGSize, diameter: CGFloat) -> Data? {
-        guard viewSize.width > 0, viewSize.height > 0 else { return nil }
+        let zoomScale = controller.zoomScale
+        guard viewSize.width > 0, viewSize.height > 0, zoomScale > 0 else { return nil }
 
-        let imgSize = sourceImage.size
-        let baseFitScale = min(viewSize.width / imgSize.width, viewSize.height / imgSize.height)
-        let effectiveScale = baseFitScale * scale
+        // Crop circle's top-left in scroll-view bounds (centered).
+        let cropTopLeftInBounds = CGPoint(
+            x: (viewSize.width - diameter) / 2,
+            y: (viewSize.height - diameter) / 2
+        )
 
-        // The image's on-screen rect (post-scaledToFit, post-scaleEffect,
-        // post-offset). Origin is in screen coordinates.
-        let displayedW = imgSize.width * effectiveScale
-        let displayedH = imgSize.height * effectiveScale
-        let imgOriginX = (viewSize.width - displayedW) / 2 + offset.width
-        let imgOriginY = (viewSize.height - displayedH) / 2 + offset.height
+        // Translate to scroll view content coords (which is what
+        // contentOffset is expressed in).
+        let cropTopLeftInContent = CGPoint(
+            x: controller.contentOffset.x + cropTopLeftInBounds.x,
+            y: controller.contentOffset.y + cropTopLeftInBounds.y
+        )
 
-        // The crop circle's top-left in screen coordinates.
-        let cropOriginX = (viewSize.width - diameter) / 2
-        let cropOriginY = (viewSize.height - diameter) / 2
-
-        // Re-express the image rect in the crop circle's coordinate space,
-        // then scale that space up to the output canvas.
-        let canvasScale = outputSize / diameter
-        let canvasImgOriginX = (imgOriginX - cropOriginX) * canvasScale
-        let canvasImgOriginY = (imgOriginY - cropOriginY) * canvasScale
-        let canvasImgW = displayedW * canvasScale
-        let canvasImgH = displayedH * canvasScale
+        // The image view's bounds are the natural image size, so one
+        // content-coord unit equals 1 / zoomScale source pixels.
+        let pxPerContent = 1.0 / zoomScale
+        let srcRect = CGRect(
+            x: cropTopLeftInContent.x * pxPerContent,
+            y: cropTopLeftInContent.y * pxPerContent,
+            width: diameter * pxPerContent,
+            height: diameter * pxPerContent
+        )
 
         // Force scale=1 so the pixel dimensions match `outputSize` exactly.
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
+        format.opaque = true
         let renderer = UIGraphicsImageRenderer(
             size: CGSize(width: outputSize, height: outputSize),
             format: format
         )
 
         let final = renderer.image { _ in
-            sourceImage.draw(in: CGRect(
-                x: canvasImgOriginX,
-                y: canvasImgOriginY,
-                width: canvasImgW,
-                height: canvasImgH
-            ))
+            // Map srcRect onto (0, 0, outputSize, outputSize) by drawing
+            // the full image with origin/size shifted so that srcRect
+            // ends up filling the canvas.
+            let scaleX = outputSize / srcRect.width
+            let scaleY = outputSize / srcRect.height
+            let drawRect = CGRect(
+                x: -srcRect.minX * scaleX,
+                y: -srcRect.minY * scaleY,
+                width: sourceImage.size.width * scaleX,
+                height: sourceImage.size.height * scaleY
+            )
+            sourceImage.draw(in: drawRect)
         }
 
         return final.jpegData(compressionQuality: 0.85)
+    }
+}
+
+// MARK: - Scroll state container
+
+/// Plain class held in `@State`. Reference semantics let the UIScrollView
+/// delegate write at 60fps without going through SwiftUI; the parent
+/// just reads the latest values at "Choose" time.
+final class CropController {
+    var contentOffset: CGPoint = .zero
+    var zoomScale: CGFloat = 1.0
+}
+
+// MARK: - UIScrollView-backed image
+
+private struct ZoomableImageView: UIViewRepresentable {
+    let image: UIImage
+    let cropDiameter: CGFloat
+    let controller: CropController
+
+    func makeUIView(context: Context) -> CropScrollView {
+        let scroll = CropScrollView()
+        scroll.controller = controller
+        scroll.configure(image: image, cropDiameter: cropDiameter)
+        return scroll
+    }
+
+    func updateUIView(_ scroll: CropScrollView, context: Context) {
+        scroll.controller = controller
+        if scroll.cropDiameter != cropDiameter {
+            scroll.cropDiameter = cropDiameter
+            scroll.setNeedsLayout()
+        }
+    }
+}
+
+/// UIScrollView subclass that owns its own layout. Doing it here (rather
+/// than in `updateUIView`) guarantees we re-run when bounds change,
+/// which is when SwiftUI's container finishes its layout pass.
+final class CropScrollView: UIScrollView, UIScrollViewDelegate {
+    let displayImageView = UIImageView()
+    weak var controller: CropController?
+    var cropDiameter: CGFloat = 0
+    private var sourceImage: UIImage?
+    private var didInitialCenter = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        delegate = self
+        bouncesZoom = true
+        bounces = true
+        // Force pan recognition even when contentSize is close to bounds.
+        // The contentInset still defines the legal scroll range.
+        alwaysBounceVertical = true
+        alwaysBounceHorizontal = true
+        showsVerticalScrollIndicator = false
+        showsHorizontalScrollIndicator = false
+        contentInsetAdjustmentBehavior = .never
+        backgroundColor = .clear
+        decelerationRate = .fast
+        // Image bleeds outside the visible crop circle on purpose; the
+        // overlay handles the dim mask, so don't clip.
+        clipsToBounds = false
+
+        displayImageView.contentMode = .scaleAspectFill
+        displayImageView.isUserInteractionEnabled = false
+        addSubview(displayImageView)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func configure(image: UIImage, cropDiameter: CGFloat) {
+        self.sourceImage = image
+        self.cropDiameter = cropDiameter
+        displayImageView.image = image
+        displayImageView.frame = CGRect(origin: .zero, size: image.size)
+        contentSize = image.size
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let image = sourceImage,
+              bounds.size.width > 0,
+              bounds.size.height > 0,
+              cropDiameter > 0 else { return }
+
+        let imageSize = image.size
+        // Base scale = the zoom factor at which the shorter image side
+        // exactly fills the crop circle.
+        let base = max(cropDiameter / imageSize.width,
+                       cropDiameter / imageSize.height)
+
+        // Apply zoom limits once. Subsequent layout passes (rotation,
+        // sheet resize) don't need to reset zoom since the bounds-based
+        // formula is invariant.
+        if abs(minimumZoomScale - base) > 0.0001 {
+            minimumZoomScale = base
+            maximumZoomScale = base * 6
+            setZoomScale(base, animated: false)
+        }
+
+        // Insets let the user pan any image edge to align with the
+        // crop circle edge without scrollView clamping the offset first.
+        let insetX = max(0, (bounds.width - cropDiameter) / 2)
+        let insetY = max(0, (bounds.height - cropDiameter) / 2)
+        contentInset = UIEdgeInsets(top: insetY, left: insetX,
+                                    bottom: insetY, right: insetX)
+
+        // Center the image so the crop circle sits over its midpoint.
+        if !didInitialCenter {
+            let scaledSize = CGSize(
+                width: imageSize.width * zoomScale,
+                height: imageSize.height * zoomScale
+            )
+            let centered = CGPoint(
+                x: scaledSize.width / 2 - bounds.width / 2,
+                y: scaledSize.height / 2 - bounds.height / 2
+            )
+            setContentOffset(centered, animated: false)
+            didInitialCenter = true
+        }
+
+        controller?.zoomScale = zoomScale
+        controller?.contentOffset = contentOffset
+    }
+
+    // MARK: UIScrollViewDelegate
+
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        displayImageView
+    }
+
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        controller?.contentOffset = scrollView.contentOffset
+    }
+
+    func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        controller?.zoomScale = scrollView.zoomScale
+        controller?.contentOffset = scrollView.contentOffset
     }
 }
 
