@@ -129,11 +129,21 @@ struct GoalProjectionCard: View {
         .onAppear { rotateQuote() }
         .fullScreenCover(isPresented: $showFullSize) {
             if let img = loadedImage {
-                GoalProjectionFullScreenViewer(image: img) {
+                GoalProjectionFullScreenViewer(
+                    image: img,
+                    salutation: salutation
+                ) {
                     showFullSize = false
                 }
             }
         }
+    }
+
+    /// Gender-aware vocative used in the full-screen viewer's "This could be
+    /// you, ___." copy. Crown above the text already gives it the regal vibe,
+    /// "queen" feels natural for women; everyone else gets "bro".
+    private var salutation: String {
+        appState.profile.gender.lowercased() == "female" ? "queen" : "bro"
     }
 
     // MARK: - Rotating quote
@@ -412,6 +422,23 @@ struct GoalProjectionCard: View {
     }
 }
 
+/// Applies iOS 26's liquid-glass effect clipped to a circle, falling back to a
+/// material blur on older OSes so the file still compiles & ships if someone
+/// drops the deployment target.
+private struct LiquidGlassCircle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content
+                .glassEffect(.regular.interactive(), in: .circle)
+        } else {
+            content
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().stroke(.white.opacity(0.20), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.35), radius: 12, y: 4)
+        }
+    }
+}
+
 /// Cinematic full-screen presentation of the goal projection. Opened by tapping
 /// the (already-revealed) image on the Profile card. The blurred backdrop is
 /// the image itself massively scaled and blurred so the whole screen feels
@@ -419,6 +446,9 @@ struct GoalProjectionCard: View {
 /// close button to dismiss.
 private struct GoalProjectionFullScreenViewer: View {
     let image: UIImage
+    /// "bro" / "queen" / whatever the caller picks based on user gender.
+    /// Slotted into "This could be you, ___."
+    let salutation: String
     let onClose: () -> Void
 
     var body: some View {
@@ -439,10 +469,13 @@ private struct GoalProjectionFullScreenViewer: View {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, 20)
-                    .clipShape(.rect(cornerRadius: 22))
+                    .clipShape(.rect(cornerRadius: 32))
                     .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
+                    .overlay(alignment: .topTrailing) {
+                        closeButton
+                            .padding(12)
+                    }
+                    .padding(.horizontal, 20)
                     // Block the backdrop-tap from firing when the user lands on
                     // the image itself; only blank space dismisses.
                     .contentShape(Rectangle())
@@ -451,20 +484,9 @@ private struct GoalProjectionFullScreenViewer: View {
                 Spacer(minLength: 8)
 
                 VStack(spacing: 10) {
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 36, weight: .semibold))
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [
-                                    Color(red: 1.00, green: 0.86, blue: 0.40),
-                                    Color(red: 0.96, green: 0.69, blue: 0.21),
-                                ],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .shadow(color: Color(red: 0.96, green: 0.69, blue: 0.21).opacity(0.5), radius: 12)
-                    Text("This could be you, bro.")
+                    Text("👑")
+                        .font(.system(size: 44))
+                    Text("This could be you, \(salutation).")
                         .font(.system(.title2, weight: .bold))
                         .foregroundStyle(.white)
                         .multilineTextAlignment(.center)
@@ -476,44 +498,22 @@ private struct GoalProjectionFullScreenViewer: View {
                 }
                 .padding(.bottom, 32)
             }
-
-            VStack {
-                HStack {
-                    Spacer()
-                    closeButton
-                        .padding(.trailing, 18)
-                        .padding(.top, 18)
-                }
-                Spacer()
-            }
         }
         .statusBarHidden()
     }
 
-    /// Soft, glassy close button with a faint outer halo so the edges fade into
-    /// the image instead of cutting against it harshly.
+    /// Liquid-glass close button overlaid on the image's top-right corner.
+    /// Uses iOS 26's `.glassEffect` for the proper translucent / refractive look;
+    /// falls back to `.ultraThinMaterial` on older OSes so the build still ships
+    /// if the deployment target is lowered later.
     private var closeButton: some View {
         Button(action: onClose) {
-            ZStack {
-                // Outer halo — slightly larger blurred circle that bleeds into
-                // the backdrop, giving the button a soft "fade" instead of a
-                // hard outline against the image.
-                Circle()
-                    .fill(Color.black.opacity(0.35))
-                    .frame(width: 56, height: 56)
-                    .blur(radius: 10)
-
-                Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 38, height: 38)
-                    .background(.regularMaterial, in: Circle())
-                    .overlay(
-                        Circle().stroke(Color.white.opacity(0.18), lineWidth: 0.5)
-                    )
-            }
-            .frame(width: 56, height: 56)
-            .contentShape(Circle())
+            Image(systemName: "xmark")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 50, height: 50)
+                .modifier(LiquidGlassCircle())
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
     }
