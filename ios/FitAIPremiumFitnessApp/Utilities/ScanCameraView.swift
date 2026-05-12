@@ -8,14 +8,14 @@ import PhotosUI
 
 private extension View {
     @ViewBuilder
-    func glassCircleButton() -> some View {
+    func glassCircleButton(size: CGFloat = 44) -> some View {
         if #available(iOS 26.0, *) {
             self
-                .frame(width: 44, height: 44)
+                .frame(width: size, height: size)
                 .glassEffect(.regular.interactive(), in: .circle)
         } else {
             self
-                .frame(width: 44, height: 44)
+                .frame(width: size, height: size)
                 .background(.ultraThinMaterial)
                 .clipShape(Circle())
         }
@@ -45,22 +45,29 @@ struct ScanCameraView: View {
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
 
-                // Corner brackets — inset from camera edges with clearance
-                // for the top bar buttons (X, ?, flash) and the bottom gallery
-                // strip. Numbers tuned so the L-corners never overlap controls.
+                // Corner brackets — pulled in from the screen edges so the
+                // four L-corners form a tighter, more square-ish portrait
+                // framing zone around where the subject will stand (rather
+                // than hugging the bezels). Top/bottom paddings keep clear
+                // of the top bar (X, ?, flash) and the bottom gallery +
+                // shutter cluster respectively.
                 cornerBrackets
-                    .padding(.horizontal, 28)
-                    .padding(.top, geo.safeAreaInsets.top + 100)
-                    .padding(.bottom, 280)
+                    .padding(.horizontal, 56)
+                    .padding(.top, geo.safeAreaInsets.top + 150)
+                    .padding(.bottom, 310)
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
 
                 // Overlaid controls
                 VStack(spacing: 0) {
-                    // Top bar — sits inside safe area with breathing room
+                    // Top bar — sits on the line directly below the Dynamic
+                    // Island. statusBarHidden() collapses the reported safe
+                    // area inside this sheet to ~0, so we use a fixed offset
+                    // measured from screen top instead. ~95pt clears the
+                    // island on every iPhone with one (16/16 Pro/17 family).
                     topBar
                         .padding(.horizontal, 20)
-                        .padding(.top, 18)
+                        .padding(.top, 60)
 
                     Spacer()
 
@@ -78,9 +85,10 @@ struct ScanCameraView: View {
                     galleryStrip
                         .padding(.bottom, 20)
 
-                    // Bottom controls
+                    // Bottom controls — lifted so the shutter doesn't kiss
+                    // the home-indicator area.
                     bottomControls
-                        .padding(.bottom, 8)
+                        .padding(.bottom, 28)
                 }
             }
         }
@@ -135,10 +143,10 @@ struct ScanCameraView: View {
             // Close
             Button { dismiss() } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 21, weight: .semibold))
                     .foregroundStyle(.white)
             }
-            .glassCircleButton()
+            .glassCircleButton(size: 58)
             .accessibilityLabel("Close camera")
 
             Spacer()
@@ -146,19 +154,19 @@ struct ScanCameraView: View {
             // Photo guidelines (?)
             Button { showPhotoTips = true } label: {
                 Image(systemName: "questionmark")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(.system(size: 21, weight: .bold))
                     .foregroundStyle(.white)
             }
-            .glassCircleButton()
+            .glassCircleButton(size: 58)
             .accessibilityLabel("Photo tips")
 
             // Flash
             Button { flashOn.toggle() } label: {
                 Image(systemName: flashOn ? "bolt.fill" : "bolt.slash.fill")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(flashOn ? .yellow : .white)
             }
-            .glassCircleButton()
+            .glassCircleButton(size: 58)
             .accessibilityLabel(flashOn ? "Turn off flash" : "Turn on flash")
         }
     }
@@ -235,20 +243,20 @@ struct ScanCameraView: View {
             Button { showFullPicker = true } label: {
                 if let first = recentPhotos.first {
                     GalleryThumbnailImage(asset: first)
-                        .frame(width: 46, height: 46)
-                        .clipShape(.rect(cornerRadius: 10))
+                        .frame(width: 58, height: 58)
+                        .clipShape(.rect(cornerRadius: 12))
                         .overlay(
-                            RoundedRectangle(cornerRadius: 10)
+                            RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(.white.opacity(0.3), lineWidth: 1)
                         )
                 } else {
                     Image(systemName: "photo.on.rectangle")
-                        .font(.system(size: 20))
+                        .font(.system(size: 22))
                         .foregroundStyle(.white)
-                        .glassCircleButton()
+                        .glassCircleButton(size: 58)
                 }
             }
-            .frame(width: 46)
+            .frame(width: 58)
 
             Spacer()
 
@@ -261,10 +269,10 @@ struct ScanCameraView: View {
                 ZStack {
                     Circle()
                         .strokeBorder(.white, lineWidth: 5)
-                        .frame(width: 76, height: 76)
+                        .frame(width: 86, height: 86)
                     Circle()
                         .fill(.white)
-                        .frame(width: 62, height: 62)
+                        .frame(width: 70, height: 70)
                 }
                 .scaleEffect(shutterScale)
             }
@@ -273,16 +281,15 @@ struct ScanCameraView: View {
 
             Spacer()
 
-            // Flip camera
+            // Flip camera — matches the top buttons in size for symmetry.
             Button {
                 camera.flipCamera()
             } label: {
                 Image(systemName: "camera.rotate.fill")
-                    .font(.system(size: 18))
+                    .font(.system(size: 20))
                     .foregroundStyle(.white)
             }
-            .glassCircleButton()
-            .frame(width: 46)
+            .glassCircleButton(size: 58)
             .accessibilityLabel("Switch camera")
         }
         .padding(.horizontal, 28)

@@ -24,6 +24,11 @@ struct PlanView: View {
     @State private var showCreateRoutine: Bool = false
     @State private var routineToEdit: Routine? = nil
     @State private var activeSessionRoutine: Routine? = nil
+    /// Routine queued for the pre-flight WorkoutPreviewSheet. Set when the
+    /// user taps a routine card (or example template, or AI plan day) so
+    /// they can review exercises before committing. The sheet's Start
+    /// button then promotes this to `activeSessionRoutine`.
+    @State private var routineToPreview: Routine? = nil
     @State private var showEmptyWorkoutSession: Bool = false
     @State private var showComingSoon: ComingSoonFeature? = nil
     @State private var planModRoutine: Routine? = nil
@@ -246,7 +251,7 @@ struct PlanView: View {
                     }
                 }
             }
-            .fullScreenCover(item: $activeSessionRoutine) { routine in
+            .sheet(item: $activeSessionRoutine) { routine in
                 ActiveSessionView(
                     initialName: routine.name,
                     initialIcon: routine.icon,
@@ -266,6 +271,32 @@ struct PlanView: View {
                         }
                     }
                 )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(item: $routineToPreview) { routine in
+                WorkoutPreviewSheet(
+                    routine: routine,
+                    onStart: {
+                        // Dismiss the preview first, then promote to the
+                        // active session via a short delay. Same coalescing
+                        // dodge the post-workout share overlay uses — without
+                        // the gap, iOS sometimes merges the two presentation
+                        // changes and the session never appears.
+                        routineToPreview = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                            activeSessionRoutine = routine
+                        }
+                    },
+                    onEdit: {
+                        routineToPreview = nil
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.30) {
+                            routineToEdit = routine
+                        }
+                    }
+                )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .alert("Import failed", isPresented: Binding(
                 get: { clipboardImportError != nil },
@@ -300,7 +331,7 @@ struct PlanView: View {
                 )
                 .presentationDetents([.medium, .large])
             }
-            .fullScreenCover(isPresented: $showEmptyWorkoutSession) {
+            .sheet(isPresented: $showEmptyWorkoutSession) {
                 ActiveSessionView(
                     initialName: WorkoutSessionManager.timeOfDayWorkoutName(),
                     initialIcon: "dumbbell.fill",
@@ -316,6 +347,8 @@ struct PlanView: View {
                         }
                     }
                 )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
             .fullScreenCover(item: $pendingShareData.asIdentifiable) { wrapper in
                 WorkoutShareOverlay(
@@ -552,7 +585,8 @@ struct PlanView: View {
     private func exampleTemplateCard(_ routine: Routine) -> some View {
         let tint = exampleTint(for: routine)
         return Button {
-            activeSessionRoutine = routine
+            // Same preview-first behavior as user routines.
+            routineToPreview = routine
         } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center, spacing: 0) {
@@ -1003,8 +1037,10 @@ struct PlanView: View {
 
     private func routineCard(_ routine: Routine) -> some View {
         Button {
-            // Strong-style: tap a template → straight into ActiveSessionView.
-            activeSessionRoutine = routine
+            // Tap a template → pre-flight WorkoutPreviewSheet → user
+            // confirms via Start. Skips straight-to-logger so the lifter
+            // can scan the exercise list before committing.
+            routineToPreview = routine
         } label: {
             HStack(spacing: 14) {
                 ZStack {
@@ -1121,13 +1157,14 @@ struct PlanView: View {
         }
     }
 
-    /// Unified entry point: start (or resume) a `WorkoutDay` via
-    /// ActiveSessionView. AI-plan days, template launches, and resume all
-    /// go through here so the active-session UI is the single source of
-    /// truth for in-workout logging.
+    /// Unified entry point for the AI-plan "today's workout" taps. Routes
+    /// through the preview sheet like the manual templates do — different
+    /// source (WorkoutDay vs Routine), same UX from the user's POV.
+    /// Photo-capture quick-log (startSessionFromPhoto) bypasses this and
+    /// goes straight to the session, since the user already committed.
     private func startWorkoutDay(_ workout: WorkoutDay) {
         guard !workout.isRestDay else { return }
-        activeSessionRoutine = Routine(from: workout)
+        routineToPreview = Routine(from: workout)
     }
 
     @MainActor
@@ -2029,6 +2066,57 @@ struct PlanView: View {
 
     // MARK: - Weekly Plan
 
+    /// Indigo→purple gradient pill that surfaces the weekly training
+    /// frequency next to the "This Week" header. Replaced the original
+    /// tertiary-grey pill (low contrast, visually disconnected from the
+    /// rest of the gradient story). Big rounded number anchors the eye,
+    /// "/week" tail uses a softer weight so it reads as the unit.
+    private var weekFrequencyBadge: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "calendar")
+                .font(.system(size: 10, weight: .heavy))
+            HStack(spacing: 0) {
+                Text("\(appState.profile.workoutsPerWeek)×")
+                    .font(.system(.caption, design: .rounded, weight: .heavy))
+                Text("/week")
+                    .font(.system(.caption2, design: .rounded, weight: .semibold))
+                    .opacity(0.75)
+            }
+        }
+        .foregroundStyle(
+            LinearGradient(
+                colors: [Color.indigo, Color.purple],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(
+            Capsule().fill(
+                LinearGradient(
+                    colors: [
+                        Color.indigo.opacity(0.18),
+                        Color.purple.opacity(0.10)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+        )
+        .overlay(
+            Capsule().strokeBorder(
+                LinearGradient(
+                    colors: [Color.indigo.opacity(0.35), Color.purple.opacity(0.20)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                lineWidth: 0.5
+            )
+        )
+        .contentTransition(.numericText())
+    }
+
     private var weeklyPlanSection: some View {
         VStack(spacing: 14) {
             HStack {
@@ -2036,25 +2124,24 @@ struct PlanView: View {
                     .font(.title3.weight(.semibold))
                     .foregroundStyle(.primary)
                 Spacer()
-                Text("\(appState.profile.workoutsPerWeek)x/week")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.06))
-                    .clipShape(.capsule)
+                weekFrequencyBadge
             }
 
             ForEach(Array(workoutPlan.enumerated()), id: \.element.id) { index, workout in
                 Button(action: {
+                    // Route through ActiveSessionView (same path as Today's
+                    // hero card and Templates) so the in-session logging UX
+                    // including StrongKeypad is identical across every entry
+                    // point. The legacy WorkoutDetailSheet path used the iOS
+                    // decimal pad — inconsistent with the rest of the app.
                     if !workout.isRestDay {
-                        selectedDay = workout
+                        startWorkoutDay(workout)
                     }
                 }) {
                     workoutRow(workout, isToday: index == todayIndex, cardIndex: index)
                 }
                 .disabled(workout.isRestDay)
-                .sensoryFeedback(.selection, trigger: selectedDay?.id)
+                .sensoryFeedback(.selection, trigger: activeSessionRoutine?.id)
             }
         }
     }

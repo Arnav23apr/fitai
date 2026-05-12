@@ -70,6 +70,7 @@ struct ExerciseCard: View {
                 }
                 .buttonStyle(.plain)
                 Spacer()
+                bodyweightPill
                 Menu {
                     Button {
                         showDemo = true
@@ -204,10 +205,39 @@ struct ExerciseCard: View {
             .buttonStyle(.plain)
         }
         .padding(14)
-        .background(Color.primary.opacity(0.04))
+        // Gradient card matches the design language of the routine list
+        // and WorkoutPreviewSheet (indigo→purple wash + hairline) so the
+        // exercise blocks read as kin to the cards the user just came
+        // from, instead of being flat grey rectangles in a vacuum.
+        .background(
+            ZStack {
+                Color(.secondarySystemGroupedBackground)
+                LinearGradient(
+                    colors: [
+                        Color.indigo.opacity(0.10),
+                        Color.purple.opacity(0.04),
+                        .clear
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        )
         .clipShape(.rect(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.16), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
+                )
+        )
         .onAppear {
             pinnedNote = ExerciseNoteService.shared.pinnedNote(for: exercise.name)
+            syncBodyweightFlagToClassification()
         }
         .sheet(isPresented: $showNoteEditor) {
             PinnedNoteEditorSheet(
@@ -253,6 +283,100 @@ struct ExerciseCard: View {
             ExerciseDemoSheet(exerciseName: exercise.name)
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
+        }
+    }
+
+    // MARK: - Bodyweight pill
+
+    /// Header pill that surfaces the bodyweight mode for this exercise.
+    /// - `forcedOn`: green "BW" badge with a lock — pull-ups, push-ups, etc.
+    ///   stay bodyweight no matter what. Weight column = added/assistance.
+    /// - `forcedOff`: hidden. Barbell bench can't be "added bodyweight"; no
+    ///   reason to show the affordance.
+    /// - `optional`: tappable toggle. Off = absolute weight, on = added on
+    ///   top of body. The user's call.
+    @ViewBuilder
+    private var bodyweightPill: some View {
+        let mode = BodyweightDetector.mode(for: exercise.name)
+        switch mode {
+        case .forcedOff:
+            EmptyView()
+        case .forcedOn:
+            HStack(spacing: 4) {
+                Image(systemName: "figure.walk")
+                    .font(.system(size: 10, weight: .heavy))
+                Text("BW")
+                    .font(.system(size: 11, weight: .heavy))
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.green.opacity(0.6))
+            }
+            .foregroundStyle(.green)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color.green.opacity(0.14))
+            .clipShape(.capsule)
+            .accessibilityLabel("Bodyweight exercise, weight column tracks added weight")
+        case .optional:
+            let isOn = exercise.sets.first(where: { !$0.isCompleted })?.isBodyweight
+                    ?? exercise.sets.first?.isBodyweight
+                    ?? false
+            Button {
+                toggleBodyweight(to: !isOn)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "figure.walk")
+                        .font(.system(size: 10, weight: .heavy))
+                    Text("BW")
+                        .font(.system(size: 11, weight: .heavy))
+                }
+                .foregroundStyle(isOn ? .white : .secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(isOn ? Color.green : Color.primary.opacity(0.08))
+                .clipShape(.capsule)
+            }
+            .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: isOn)
+            .accessibilityLabel(isOn ? "Bodyweight mode on" : "Bodyweight mode off")
+        }
+    }
+
+    /// Flip the bodyweight flag on every incomplete set. Completed sets are
+    /// historical and stay untouched (their stored weight is what was
+    /// logged at the time).
+    ///
+    /// When turning ON, zero out incomplete-set weights — the previous
+    /// value was an absolute load (e.g. 135 lb bench), and reinterpreting
+    /// it as "+135 lb added to bodyweight" would be wildly wrong. Let the
+    /// user type the added weight fresh.
+    private func toggleBodyweight(to newValue: Bool) {
+        for i in exercise.sets.indices where !exercise.sets[i].isCompleted {
+            exercise.sets[i].isBodyweight = newValue
+            if newValue {
+                exercise.sets[i].weight = 0
+            }
+        }
+    }
+
+    /// When the card mounts, enforce forced bodyweight modes on incomplete
+    /// sets. Covers two corner cases:
+    ///   1. A persisted session created before the detector knew about the
+    ///      exercise name (forced state was wrong at the time it was saved).
+    ///   2. A custom exercise where the user picked a name that now matches
+    ///      a forced pattern after a detector update.
+    /// Completed sets are skipped — their logged data is authoritative.
+    private func syncBodyweightFlagToClassification() {
+        let target: Bool
+        switch BodyweightDetector.mode(for: exercise.name) {
+        case .forcedOn: target = true
+        case .forcedOff: target = false
+        case .optional: return
+        }
+        for i in exercise.sets.indices where !exercise.sets[i].isCompleted {
+            if exercise.sets[i].isBodyweight != target {
+                exercise.sets[i].isBodyweight = target
+            }
         }
     }
 

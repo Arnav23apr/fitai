@@ -193,10 +193,14 @@ struct SwipeUpSplashView: View {
                             .foregroundStyle(.white.opacity(0.50))
                     }
 
-                    Text("Free 3-day trial · No credit card")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.white.opacity(0.32))
-                        .padding(.bottom, safeBottom + 14)
+                    HStack(spacing: 4) {
+                        Link("Terms", destination: LegalLinks.terms)
+                        Text("·").foregroundStyle(.white.opacity(0.20))
+                        Link("Privacy", destination: LegalLinks.privacy)
+                    }
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.32))
+                    .padding(.bottom, safeBottom + 14)
                 }
                 .opacity(contentVisible ? 1 : 0)
                 .offset(y: contentVisible ? 0 : 22)

@@ -91,15 +91,15 @@ struct CompeteView: View {
                         .padding(.horizontal, 20)
                         .padding(.bottom, 14)
 
-                    VStack(spacing: 0) {
-                        battleCard
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 24)
+                    battleCard
+                        .tourAnchor(.competeBattleCard)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 24)
 
-                        friendsSection
-                            .padding(.bottom, 20)
-                    }
-                    .tourAnchor(.competeRankBadge)
+                    friendsSection
+                        .tourAnchor(.competeFriends)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
 
                     comingSoonCard
                         .padding(.horizontal, 20)
@@ -627,7 +627,6 @@ struct CompeteView: View {
             ForEach(Array(visibleChallenges.enumerated()), id: \.element.id) { index, challenge in
                 challengeRow(challenge, index: index)
             }
-            .tourAnchor(.competeChallenges)
 
             if challenges.count > 2 {
                 Button {
@@ -765,7 +764,6 @@ struct CompeteView: View {
                     .foregroundStyle(.primary)
                 Spacer()
             }
-            .tourAnchor(.competeLeaderboard)
 
             HStack(spacing: 4) {
                 ForEach(LeaderboardTab.allCases, id: \.rawValue) { tab in
@@ -1057,7 +1055,6 @@ struct CompeteView: View {
                     .foregroundStyle(.secondary)
                 }
             }
-            .padding(.horizontal, 20)
 
             if friendVM.friends.isEmpty {
                 Button {
@@ -1089,7 +1086,6 @@ struct CompeteView: View {
                     .background(Color(.secondarySystemGroupedBackground))
                     .clipShape(.rect(cornerRadius: 14))
                 }
-                .padding(.horizontal, 20)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 12) {
@@ -1111,6 +1107,7 @@ struct CompeteView: View {
                             }
                             .frame(width: 72)
                         }
+                        .buttonStyle(BouncyButtonStyle())
 
                         ForEach(friendVM.friends) { friend in
                             Button {
@@ -1118,15 +1115,15 @@ struct CompeteView: View {
                             } label: {
                                 friendBubble(friend)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(BouncyButtonStyle())
                         }
                     }
                 }
                 .contentMargins(.horizontal, 20)
+                .padding(.horizontal, -20)
 
                 if let rival = rivalOfTheWeek {
                     rivalOfTheWeekCard(rival)
-                        .padding(.horizontal, 20)
                 }
 
                 if !friendVM.activeChallenges.isEmpty {
@@ -1137,10 +1134,9 @@ struct CompeteView: View {
                             } label: {
                                 activeChallengeRow(challenge)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(BouncyButtonStyle())
                         }
                     }
-                    .padding(.horizontal, 20)
                 }
             }
         }
@@ -1163,19 +1159,38 @@ struct CompeteView: View {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
-                        .fill(Color.orange.opacity(0.18))
-                        .frame(width: 44, height: 44)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.orange.opacity(0.32),
+                                    Color.red.opacity(0.18)
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 48, height: 48)
+                        .overlay(
+                            Circle().strokeBorder(Color.orange.opacity(0.35), lineWidth: 0.7)
+                        )
+                        .shadow(color: Color.orange.opacity(0.30), radius: 8, y: 2)
                     Image(systemName: "scope")
-                        .font(.system(size: 18, weight: .heavy))
-                        .foregroundStyle(.orange)
+                        .font(.system(size: 19, weight: .heavy))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [Color.orange, Color.red.opacity(0.85)],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text("RIVAL OF THE WEEK")
                         .font(.system(size: 10, weight: .heavy))
                         .tracking(1.5)
                         .foregroundStyle(.orange)
                     Text("@\(rival.username) · \(rival.latestScore.map { String(format: "%.1f", $0) } ?? "—")")
-                        .font(.subheadline.weight(.semibold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(.primary)
                     Text("Closest score to yours. Challenge them.")
                         .font(.caption)
@@ -1184,13 +1199,45 @@ struct CompeteView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .heavy))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.orange.opacity(0.6))
             }
             .padding(14)
-            .background(Color.primary.opacity(0.04))
+            // Gradient card matching the design language of the friend
+            // rows in FriendsView — orange/red wash for the rival accent
+            // + hairline stroke. Replaces the flat 4%-opacity background
+            // that read as a generic grey box.
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [
+                            Color.orange.opacity(0.14),
+                            Color.red.opacity(0.06),
+                            .clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
             .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color.orange.opacity(0.35),
+                                Color.red.opacity(0.15)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.7
+                    )
+            )
+            .shadow(color: Color.orange.opacity(0.10), radius: 14, y: 6)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(BouncyButtonStyle())
     }
 
     // MARK: - Live ticker
@@ -1208,7 +1255,7 @@ struct CompeteView: View {
         var msgs: [String] = []
         let active = friendVM.friends.filter { ($0.currentStreak ?? 0) > 0 }
         if !active.isEmpty {
-            msgs.append("🟢 \(active.count) friend\(active.count == 1 ? "" : "s") active this week")
+            msgs.append("\(active.count) friend\(active.count == 1 ? "" : "s") active this week")
         }
         for friend in friendVM.friends.prefix(2) {
             if let streak = friend.currentStreak, streak >= 3 {
@@ -1478,5 +1525,19 @@ struct CompeteView: View {
         isLoadingLeaderboard = true
         realLeaderboard = await LeaderboardService.shared.fetchLeaderboard(limit: 50)
         isLoadingLeaderboard = false
+    }
+}
+
+/// Tactile press style — scales the label down ~6% on touch and springs
+/// back on release. Applied to the friend bubbles, Add chip, rival card,
+/// and active challenge rows so the whole "Friends & 1v1" cluster feels
+/// like one bouncy, tappable surface instead of a mix of flat buttons.
+/// Spring is tuned to be felt but not cartoonish (extraBounce 0.35,
+/// short duration so quick taps still register the rebound).
+struct BouncyButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
+            .animation(.spring(duration: 0.28, bounce: 0.35), value: configuration.isPressed)
     }
 }

@@ -2,6 +2,11 @@ import SwiftUI
 
 /// Build or edit a user routine. Pick exercises from the database, edit
 /// sets/reps, set per-exercise rest overrides on top of a routine default.
+///
+/// Visual language matches `WorkoutPreviewSheet` and the routine cards —
+/// indigo/purple gradient cards, top page wash, custom text fields. The
+/// previous `Form`-based layout was functional but generic; this one fits
+/// the app's color story.
 struct RoutineEditorSheet: View {
     @Environment(\.dismiss) private var dismiss
     let initial: Routine?
@@ -12,7 +17,12 @@ struct RoutineEditorSheet: View {
     @State private var defaultRest: Int
     @State private var exercises: [RoutineExercise]
     @State private var showExercisePicker: Bool = false
-    @State private var editingExerciseId: String? = nil
+    @FocusState private var focusedField: Field?
+
+    private enum Field: Hashable {
+        case name
+        case reps(String) // exercise.id
+    }
 
     init(initial: Routine?, onSave: @escaping (Routine?) -> Void) {
         self.initial = initial
@@ -35,94 +45,41 @@ struct RoutineEditorSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Name") {
-                    TextField("e.g. Push Day", text: $name)
-                        .textInputAutocapitalization(.words)
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 20) {
+                    nameSection
+                    iconSection
+                    restSection
+                    exercisesSection
                 }
-
-                Section("Icon") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(iconOptions, id: \.self) { sf in
-                                Button {
-                                    icon = sf
-                                } label: {
-                                    Image(systemName: sf)
-                                        .font(.system(size: 18))
-                                        .foregroundStyle(icon == sf ? Color(.systemBackground) : Color.primary)
-                                        .frame(width: 44, height: 44)
-                                        .background(icon == sf ? Color.primary : Color.primary.opacity(0.06))
-                                        .clipShape(Circle())
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
-
-                Section("Default rest") {
-                    Picker("Rest between sets", selection: $defaultRest) {
-                        ForEach(restPresets, id: \.self) { s in
-                            Text(formatRest(s)).tag(s)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                }
-
-                Section("Exercises") {
-                    if exercises.isEmpty {
-                        Text("No exercises yet. Tap Add below.")
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach($exercises) { $ex in
-                            exerciseRow($ex)
-                        }
-                        .onMove { from, to in
-                            exercises.move(fromOffsets: from, toOffset: to)
-                        }
-                        .onDelete { idx in
-                            exercises.remove(atOffsets: idx)
-                        }
-                    }
-                    Button {
-                        showExercisePicker = true
-                    } label: {
-                        Label("Add exercise", systemImage: "plus.circle.fill")
-                    }
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 100) // room for sticky CTA
             }
+            .background(pageBackground)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(initial == nil ? "New Split" : "Edit Split")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button {
                         onSave(nil)
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(.primary)
+                            .frame(width: 30, height: 30)
+                            .background(Color.primary.opacity(0.08), in: Circle())
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let routine = Routine(
-                            id: initial?.id ?? UUID().uuidString,
-                            name: name.trimmingCharacters(in: .whitespaces),
-                            icon: icon,
-                            exercises: exercises,
-                            defaultRestSeconds: defaultRest,
-                            createdAt: initial?.createdAt ?? Date(),
-                            updatedAt: Date()
-                        )
-                        onSave(routine)
-                        dismiss()
-                    }
-                    .disabled(!canSave)
-                    .fontWeight(.semibold)
-                }
-                ToolbarItem(placement: .topBarLeading) {
-                    if !exercises.isEmpty {
-                        EditButton()
-                    }
-                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                saveButton
+                    .padding(.horizontal, 16)
+                    .padding(.top, 10)
+                    .padding(.bottom, 8)
+                    .background(.regularMaterial)
             }
             .sheet(isPresented: $showExercisePicker) {
                 ExercisePickerSheet { picked in
@@ -135,126 +92,532 @@ struct RoutineEditorSheet: View {
         }
     }
 
-    private func exerciseRow(_ ex: Binding<RoutineExercise>) -> some View {
+    // MARK: - Page background
+
+    private var pageBackground: some View {
+        ZStack {
+            Color(.systemBackground)
+            LinearGradient(
+                colors: [
+                    Color.indigo.opacity(0.10),
+                    Color.purple.opacity(0.04),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .center
+            )
+            .ignoresSafeArea()
+        }
+    }
+
+    // MARK: - Section header
+
+    private func sectionHeader(_ title: String) -> some View {
+        Text(title.uppercased())
+            .font(.system(size: 10, weight: .black))
+            .tracking(1.5)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+    }
+
+    // MARK: - Name section
+
+    private var nameSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Name")
+            TextField("e.g. Push Day", text: $name)
+                .textInputAutocapitalization(.words)
+                .focused($focusedField, equals: .name)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .gradientCard(tint: .indigo, cornerRadius: 14)
+        }
+    }
+
+    // MARK: - Icon picker
+
+    private var iconSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Icon")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(iconOptions, id: \.self) { sf in
+                        Button {
+                            icon = sf
+                        } label: {
+                            iconChip(sf, selected: icon == sf)
+                        }
+                        .buttonStyle(.plain)
+                        .sensoryFeedback(.selection, trigger: icon)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .gradientCard(tint: .indigo, cornerRadius: 14)
+        }
+    }
+
+    private func iconChip(_ sf: String, selected: Bool) -> some View {
+        ZStack {
+            if selected {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.indigo, Color.purple],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                    .shadow(color: Color.indigo.opacity(0.4), radius: 8, y: 2)
+            } else {
+                Circle()
+                    .fill(Color.primary.opacity(0.06))
+                    .frame(width: 44, height: 44)
+                    .overlay(
+                        Circle().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+                    )
+            }
+            Image(systemName: sf)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(selected ? Color.white : Color.primary)
+        }
+    }
+
+    // MARK: - Default rest
+
+    private var restSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            sectionHeader("Default rest")
+            Menu {
+                ForEach(restPresets, id: \.self) { s in
+                    Button(formatRest(s)) { defaultRest = s }
+                }
+            } label: {
+                HStack {
+                    Image(systemName: "timer")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.indigo.opacity(0.85))
+                    Text("Rest between sets")
+                        .font(.subheadline)
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text(formatRest(defaultRest))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .gradientCard(tint: .indigo, cornerRadius: 14)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Exercises
+
+    private var exercisesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
+                sectionHeader("Exercises (\(exercises.count))")
+                Spacer()
+            }
+            if exercises.isEmpty {
+                emptyExercisesPlaceholder
+            } else {
+                VStack(spacing: 10) {
+                    ForEach($exercises) { $ex in
+                        exerciseCard($ex)
+                    }
+                }
+            }
+            addExerciseButton
+        }
+    }
+
+    private var emptyExercisesPlaceholder: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "list.bullet.indent")
+                .font(.system(size: 28))
+                .foregroundStyle(.tertiary)
+            Text("No exercises yet")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text("Tap Add below to build your split.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+        .gradientCard(tint: .indigo, cornerRadius: 14)
+    }
+
+    private var addExerciseButton: some View {
+        Button {
+            showExercisePicker = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("Add exercise")
+                    .font(.subheadline.weight(.bold))
+            }
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [Color.indigo, Color.purple],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                ZStack {
+                    Color(.secondarySystemGroupedBackground)
+                    LinearGradient(
+                        colors: [Color.indigo.opacity(0.10), Color.purple.opacity(0.04), .clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+            )
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [Color.indigo.opacity(0.35), Color.purple.opacity(0.20)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        ),
+                        style: StrokeStyle(lineWidth: 1, dash: [5, 4])
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+    }
+
+    // MARK: - Exercise card
+
+    private func exerciseCard(_ ex: Binding<RoutineExercise>) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Header: name + muscle + reorder/delete
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(ex.wrappedValue.name)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
                         if let group = ex.wrappedValue.supersetGroup {
                             Text("SS\(group)")
-                                .font(.system(size: 10, weight: .heavy))
+                                .font(.system(size: 9, weight: .black))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
-                                .background(supersetColor(group))
-                                .clipShape(.capsule)
+                                .background(supersetColor(group), in: Capsule())
                         }
                     }
                     if !ex.wrappedValue.muscleGroup.isEmpty {
-                        Text(ex.wrappedValue.muscleGroup)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
+                        Text(ex.wrappedValue.muscleGroup.capitalized)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
+                rowMenu(ex)
             }
 
+            Divider().opacity(0.4)
+
+            // Sets stepper row
             HStack(spacing: 12) {
-                Stepper(value: ex.sets, in: 1...10) {
-                    Text("Sets: \(ex.wrappedValue.sets)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .labelsHidden()
-                Text("Sets: \(ex.wrappedValue.sets)")
-                    .font(.caption.weight(.medium))
+                Text("Sets")
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .frame(width: 44, alignment: .leading)
+                customStepper(value: ex.sets, range: 1...10)
+                Spacer()
             }
 
-            HStack(spacing: 8) {
+            // Reps row
+            HStack(spacing: 12) {
                 Text("Reps")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                TextField("8-12", text: ex.reps)
-                    .font(.caption.weight(.medium))
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 90)
-                Spacer()
-
-                // RPE / RIR target — Hevy / Strong style "@8" pill.
-                Menu {
-                    Button("None") { ex.wrappedValue.targetRPE = nil }
-                    ForEach([6, 7, 8, 9, 10], id: \.self) { rpe in
-                        Button("RPE \(rpe)") { ex.wrappedValue.targetRPE = rpe }
-                    }
-                } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "gauge.with.dots.needle.bottom.50percent")
-                            .font(.system(size: 10))
-                        Text(ex.wrappedValue.targetRPE.map { "@\($0)" } ?? "RPE")
-                            .font(.caption.weight(.medium))
-                    }
-                    .foregroundStyle(ex.wrappedValue.targetRPE != nil ? .primary : .secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.06))
-                    .clipShape(.capsule)
-                }
-
-                // Rest override picker.
-                Menu {
-                    Button("Use default (\(formatRest(defaultRest)))") {
-                        ex.wrappedValue.restSecondsOverride = nil
-                    }
-                    ForEach(restPresets, id: \.self) { s in
-                        Button(formatRest(s)) {
-                            ex.wrappedValue.restSecondsOverride = s
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 3) {
-                        Image(systemName: "timer")
-                            .font(.system(size: 10))
-                        Text(formatRest(ex.wrappedValue.restSecondsOverride ?? defaultRest))
-                            .font(.caption.weight(.medium))
-                    }
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .frame(width: 44, alignment: .leading)
+                TextField("8-12", text: ex.reps)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.center)
+                    .focused($focusedField, equals: .reps(ex.wrappedValue.id))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .frame(width: 110)
                     .background(Color.primary.opacity(0.06))
-                    .clipShape(.capsule)
-                }
+                    .clipShape(.rect(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(
+                                focusedField == .reps(ex.wrappedValue.id)
+                                    ? Color.indigo.opacity(0.5)
+                                    : Color.primary.opacity(0.08),
+                                lineWidth: 1
+                            )
+                    )
+                Spacer()
             }
 
-            // Superset group picker — small chip menu. Tapping cycles through
-            // None → 1 → 2 → 3 → None, which in practice is enough for any
-            // training split (PPL doesn't usually exceed 3 supersets).
+            // Chip row: RPE / Rest / Superset
             HStack(spacing: 8) {
-                Menu {
-                    Button("Solo (no superset)") { ex.wrappedValue.supersetGroup = nil }
-                    ForEach(1...4, id: \.self) { g in
-                        Button("Superset \(g)") { ex.wrappedValue.supersetGroup = g }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "link")
-                            .font(.system(size: 10))
-                        Text(ex.wrappedValue.supersetGroup.map { "Superset \($0)" } ?? "Solo")
-                            .font(.caption.weight(.medium))
-                    }
-                    .foregroundStyle(ex.wrappedValue.supersetGroup != nil ? .primary : .tertiary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.primary.opacity(0.06))
-                    .clipShape(.capsule)
-                }
-                Spacer()
+                rpeChip(ex)
+                restChip(ex)
+                supersetChip(ex)
+                Spacer(minLength: 0)
             }
         }
-        .padding(.vertical, 4)
+        .padding(14)
+        .gradientCard(tint: .indigo, cornerRadius: 14)
     }
+
+    private func rowMenu(_ ex: Binding<RoutineExercise>) -> some View {
+        Menu {
+            if let idx = exercises.firstIndex(where: { $0.id == ex.wrappedValue.id }), idx > 0 {
+                Button {
+                    exercises.swapAt(idx, idx - 1)
+                } label: {
+                    Label("Move up", systemImage: "arrow.up")
+                }
+            }
+            if let idx = exercises.firstIndex(where: { $0.id == ex.wrappedValue.id }), idx < exercises.count - 1 {
+                Button {
+                    exercises.swapAt(idx, idx + 1)
+                } label: {
+                    Label("Move down", systemImage: "arrow.down")
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                exercises.removeAll { $0.id == ex.wrappedValue.id }
+            } label: {
+                Label("Remove", systemImage: "trash")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.secondary)
+                .frame(width: 30, height: 26)
+                .background(Color.primary.opacity(0.08), in: .rect(cornerRadius: 8))
+        }
+    }
+
+    /// Plus / minus stepper with the count rendered between, since the
+    /// stock SwiftUI Stepper renders flat and doesn't match the rest of
+    /// the chip styling. Same affordances as the system one (long-press
+    /// repeats handled via accessibility).
+    private func customStepper(value: Binding<Int>, range: ClosedRange<Int>) -> some View {
+        HStack(spacing: 0) {
+            Button {
+                if value.wrappedValue > range.lowerBound { value.wrappedValue -= 1 }
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(value.wrappedValue > range.lowerBound ? Color.primary : Color.tertiaryLabel)
+                    .frame(width: 38, height: 36)
+            }
+            .buttonStyle(.plain)
+            .disabled(value.wrappedValue <= range.lowerBound)
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(width: 1, height: 18)
+
+            Text("\(value.wrappedValue)")
+                .font(.system(.subheadline, design: .rounded, weight: .heavy))
+                .foregroundStyle(.primary)
+                .frame(width: 44, height: 36)
+                .contentTransition(.numericText())
+
+            Rectangle()
+                .fill(Color.primary.opacity(0.08))
+                .frame(width: 1, height: 18)
+
+            Button {
+                if value.wrappedValue < range.upperBound { value.wrappedValue += 1 }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(value.wrappedValue < range.upperBound ? Color.primary : Color.tertiaryLabel)
+                    .frame(width: 38, height: 36)
+            }
+            .buttonStyle(.plain)
+            .disabled(value.wrappedValue >= range.upperBound)
+        }
+        .background(Color.primary.opacity(0.06))
+        .clipShape(.capsule)
+        .overlay(
+            Capsule().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5)
+        )
+        .sensoryFeedback(.increase, trigger: value.wrappedValue)
+    }
+
+    // MARK: - Chips
+
+    private func rpeChip(_ ex: Binding<RoutineExercise>) -> some View {
+        Menu {
+            Button("None") { ex.wrappedValue.targetRPE = nil }
+            ForEach([6, 7, 8, 9, 10], id: \.self) { rpe in
+                Button("RPE \(rpe)") { ex.wrappedValue.targetRPE = rpe }
+            }
+        } label: {
+            let isOn = ex.wrappedValue.targetRPE != nil
+            HStack(spacing: 4) {
+                Image(systemName: "gauge.with.dots.needle.bottom.50percent")
+                    .font(.system(size: 10, weight: .bold))
+                Text(ex.wrappedValue.targetRPE.map { "@\($0)" } ?? "RPE")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(isOn ? .white : Color.primary.opacity(0.85))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background {
+                if isOn {
+                    Capsule().fill(
+                        LinearGradient(
+                            colors: [.orange, .orange.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                } else {
+                    Capsule().fill(Color.primary.opacity(0.06))
+                }
+            }
+            .overlay(
+                Capsule().strokeBorder(
+                    isOn ? Color.clear : Color.primary.opacity(0.08),
+                    lineWidth: 0.5
+                )
+            )
+        }
+    }
+
+    private func restChip(_ ex: Binding<RoutineExercise>) -> some View {
+        Menu {
+            Button("Use default (\(formatRest(defaultRest)))") {
+                ex.wrappedValue.restSecondsOverride = nil
+            }
+            ForEach(restPresets, id: \.self) { s in
+                Button(formatRest(s)) { ex.wrappedValue.restSecondsOverride = s }
+            }
+        } label: {
+            let isOverride = ex.wrappedValue.restSecondsOverride != nil
+            HStack(spacing: 4) {
+                Image(systemName: "timer")
+                    .font(.system(size: 10, weight: .bold))
+                Text(formatRest(ex.wrappedValue.restSecondsOverride ?? defaultRest))
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(isOverride ? Color.indigo : Color.primary.opacity(0.85))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                (isOverride ? Color.indigo.opacity(0.15) : Color.primary.opacity(0.06)),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    isOverride ? Color.indigo.opacity(0.30) : Color.primary.opacity(0.08),
+                    lineWidth: 0.5
+                )
+            )
+        }
+    }
+
+    private func supersetChip(_ ex: Binding<RoutineExercise>) -> some View {
+        Menu {
+            Button("Solo (no superset)") { ex.wrappedValue.supersetGroup = nil }
+            ForEach(1...4, id: \.self) { g in
+                Button("Superset \(g)") { ex.wrappedValue.supersetGroup = g }
+            }
+        } label: {
+            let isOn = ex.wrappedValue.supersetGroup != nil
+            let tint = ex.wrappedValue.supersetGroup.map(supersetColor) ?? .secondary
+            HStack(spacing: 4) {
+                Image(systemName: "link")
+                    .font(.system(size: 10, weight: .bold))
+                Text(ex.wrappedValue.supersetGroup.map { "SS\($0)" } ?? "Solo")
+                    .font(.caption.weight(.bold))
+            }
+            .foregroundStyle(isOn ? tint : Color.primary.opacity(0.55))
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                (isOn ? tint.opacity(0.15) : Color.primary.opacity(0.06)),
+                in: Capsule()
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    isOn ? tint.opacity(0.30) : Color.primary.opacity(0.08),
+                    lineWidth: 0.5
+                )
+            )
+        }
+    }
+
+    // MARK: - Save button
+
+    private var saveButton: some View {
+        Button {
+            let routine = Routine(
+                id: initial?.id ?? UUID().uuidString,
+                name: name.trimmingCharacters(in: .whitespaces),
+                icon: icon,
+                exercises: exercises,
+                defaultRestSeconds: defaultRest,
+                createdAt: initial?.createdAt ?? Date(),
+                updatedAt: Date()
+            )
+            onSave(routine)
+            dismiss()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 14, weight: .heavy))
+                Text("Save Split")
+                    .font(.system(.headline, design: .rounded, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 54)
+            .background(
+                Group {
+                    if canSave {
+                        LinearGradient(
+                            colors: [Color.indigo, Color.purple],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    } else {
+                        Color.primary.opacity(0.15)
+                    }
+                }
+            )
+            .clipShape(.rect(cornerRadius: 18))
+            .shadow(color: canSave ? Color.indigo.opacity(0.35) : .clear, radius: 12, y: 6)
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSave)
+    }
+
+    // MARK: - Helpers
 
     /// Pick a stable color per superset group so the user can visually
     /// distinguish multiple supersets in one workout. Cycles 4 colors.
@@ -272,5 +635,14 @@ struct RoutineEditorSheet: View {
         let m = seconds / 60
         let s = seconds % 60
         return s == 0 ? "\(m)m" : "\(m)m \(s)s"
+    }
+}
+
+private extension Color {
+    /// Convenience alias — `.tertiary` doesn't exist as a Color literal, only
+    /// as a ShapeStyle. Used inside the custom stepper where we need a
+    /// disabled-state foreground color but in a Color-typed expression.
+    static var tertiaryLabel: Color {
+        Color(uiColor: UIColor.tertiaryLabel)
     }
 }

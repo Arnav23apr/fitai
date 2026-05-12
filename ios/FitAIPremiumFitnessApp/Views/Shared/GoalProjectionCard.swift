@@ -195,11 +195,7 @@ struct GoalProjectionCard: View {
                     img.resizable()
                         .scaledToFill()
                 case .failure:
-                    placeholder(height: height) {
-                        Image(systemName: "photo.badge.exclamationmark")
-                            .font(.system(size: 28))
-                            .foregroundStyle(.tertiary)
-                    }
+                    failurePlaceholder(height: height)
                 @unknown default:
                     placeholder(height: height) { EmptyView() }
                 }
@@ -223,6 +219,47 @@ struct GoalProjectionCard: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
                             .lineSpacing(2)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func failurePlaceholder(height: CGFloat) -> some View {
+        if let onRegenerate, context == .profile {
+            Button {
+                guard !isRegenerating else { return }
+                isRegenerating = true
+                onRegenerate()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+                    isRegenerating = false
+                }
+            } label: {
+                failurePlaceholderBody(height: height)
+            }
+            .buttonStyle(.plain)
+            .disabled(isRegenerating)
+        } else {
+            failurePlaceholderBody(height: height)
+        }
+    }
+
+    @ViewBuilder
+    private func failurePlaceholderBody(height: CGFloat) -> some View {
+        placeholder(height: height) {
+            VStack(spacing: 10) {
+                Image(systemName: "photo.badge.exclamationmark")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.tertiary)
+                VStack(spacing: 2) {
+                    Text("Couldn't load your projection")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    if onRegenerate != nil && context == .profile {
+                        Text(isRegenerating ? "Regenerating…" : "Tap to regenerate")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                 }
             }

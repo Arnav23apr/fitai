@@ -64,7 +64,12 @@ struct BattleResultView: View {
                 showScores = true
             }
         }
-        .sheet(isPresented: $showShareCard) {
+        // fullScreenCover (not .sheet) because BattleResultView itself is
+        // already presented as a fullScreenCover from BattleSetupView, and
+        // SwiftUI .sheet nested inside .fullScreenCover auto-dismisses
+        // when the parent's @Observable state mutates. The Close button
+        // inside BattleShareSheet handles dismissal explicitly.
+        .fullScreenCover(isPresented: $showShareCard) {
             BattleShareSheet(battle: battle)
         }
     }

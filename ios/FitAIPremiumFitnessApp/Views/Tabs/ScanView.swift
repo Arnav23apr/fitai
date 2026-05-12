@@ -99,6 +99,11 @@ struct ScanView: View {
                         }
                     }
                 )
+                // Black bg lets the AnalyzingOverlayView's loader fill the
+                // sheet edge to edge during generation. Once the result
+                // lands, the inner content has its own backgrounds so the
+                // black is just a neutral canvas behind the photo card.
+                .presentationBackground(.black)
             }
             .sheet(isPresented: $showStreakSheet) {
                 StreakSheet()
@@ -170,14 +175,18 @@ struct ScanView: View {
 
     private var headerSection: some View {
         HStack {
-            HStack(spacing: 10) {
-                Image("FitAILogo")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 28, height: 28)
-                    .clipShape(.rect(cornerRadius: 6))
-                Text("Fit AI")
-                    .font(.title2.weight(.bold))
+            // Same wordmark lockup as the Welcome screen: SF dumbbell glyph
+            // + "FitAI" as one word, no container. Scaled up from the
+            // welcome bar's 12/18pt to match this header's .title2 scale.
+            // Dropped the rounded-square "FitAILogo" asset (the scanning-
+            // brackets metaphor read as camera/scan, not fitness).
+            HStack(spacing: 6) {
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 18, weight: .heavy))
+                    .foregroundStyle(.primary)
+                Text("FitAI")
+                    .font(.system(.title2, weight: .black))
+                    .tracking(-0.3)
                     .foregroundStyle(.primary)
             }
             Spacer()
@@ -1347,19 +1356,10 @@ struct TransformationSheet: View {
         NavigationStack {
             VStack(spacing: 20) {
                 if isGenerating {
-                    Spacer()
-                    VStack(spacing: 20) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                            .tint(.white)
-                        Text(L.t("generatingTransformation", lang))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text(L.t("mayTakeMinute", lang))
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    Spacer()
+                    // Full-bleed analyzing overlay (same shell as scan +
+                    // battle). The sheet's `.presentationBackground(.black)`
+                    // below extends the loader's vibe to the sheet edges.
+                    AnalyzingOverlayView(mode: .transformation)
                 } else if let result {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 20) {

@@ -57,7 +57,10 @@ struct MainTabView: View {
             TourOverlayView()
                 .allowsHitTesting(tourManager.showWelcome || (tourManager.isActive && tourManager.stepReady))
         }
-        .fullScreenCover(isPresented: $showResumeWorkout) {
+        .overlay(alignment: .top) {
+            InAppBannerOverlay()
+        }
+        .sheet(isPresented: $showResumeWorkout) {
             if session.isActive {
                 ActiveSessionView(
                     initialName: session.workoutName,
@@ -74,6 +77,8 @@ struct MainTabView: View {
                         }
                     }
                 )
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
             }
         }
         .fullScreenCover(item: $pendingShareData.asIdentifiable) { wrapper in

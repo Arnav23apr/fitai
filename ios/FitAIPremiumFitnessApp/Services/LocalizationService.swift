@@ -193,6 +193,20 @@ nonisolated struct L {
             "onePercentBody": "The difference isn't genetics. It's a system. Yours starts now.",
             "imIn": "I'm in",
 
+            // Friends sheet — strings for the v2 redesign
+            "inviteBtn": "Invite",
+            "inviteFriendsMessage": "Train with me on FitAI. AI scans, 1v1 battles, weekly streaks.",
+            "newChallengeBtn": "New Challenge",
+            "pickAFriend": "Pick a friend",
+            "yourTurnLabel": "Your turn",
+            "waitingForFmt": "Waiting for @%@",
+            "hypeBtn": "Hype",
+            "hypedBtn": "Hyped",
+            "battleBtn": "Battle",
+            "recordVsFmt": "%@W–%@L",
+            "recentActivityTitle": "Recent activity",
+            "noActivityShort": "Quiet here for now",
+
             // Plan Preview (extended multi-stage reveal)
             "planStage1": "Analyzing your goals and physique data",
             "planStage2": "Matching you against 14,000 lifters with your profile…",

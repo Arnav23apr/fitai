@@ -115,4 +115,23 @@ struct BodyweightDetector {
         }
         return false
     }
+
+    /// How the bodyweight toggle should behave for an exercise.
+    /// - `forcedOn`: exercise is bodyweight by definition (push-ups, pull-ups,
+    ///   planks). The toggle UI shows a locked "BW" badge; user can't flip
+    ///   it off. The `weight` field always represents added/assistance.
+    /// - `forcedOff`: exercise requires equipment (barbell bench, lat
+    ///   pulldown). The toggle is hidden entirely; `weight` is the absolute
+    ///   load. No reason to clutter the row with a non-option.
+    /// - `optional`: ambiguous (e.g., a user-typed custom exercise that
+    ///   doesn't match either list). The toggle is shown and editable.
+    enum BodyweightMode: Equatable {
+        case forcedOn, forcedOff, optional
+    }
+
+    static func mode(for name: String) -> BodyweightMode {
+        if isBodyweightExercise(name) { return .forcedOn }
+        if isEquipmentOnly(name) { return .forcedOff }
+        return .optional
+    }
 }

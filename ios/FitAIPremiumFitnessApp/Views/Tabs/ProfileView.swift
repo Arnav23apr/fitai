@@ -8,9 +8,6 @@ struct ProfileView: View {
     @Environment(TourManager.self) private var tourManager
     @State private var showEditProfile: Bool = false
     @State private var showPaywall: Bool = false
-    /// Debug — temporary RC diagnostic report. Remove once paywall is healthy.
-    @State private var showDebugReport: Bool = false
-    @State private var debugReport: String = ""
     @State private var showLanguagePicker: Bool = false
     @State private var showAppleHealth: Bool = false
     @State private var showNotificationSettings: Bool = false
@@ -24,6 +21,7 @@ struct ProfileView: View {
     @State private var feedbackInitialKind: FeedbackService.Kind = .bug
     @State private var showPreCancelIntercept: Bool = false
     @State private var showMeasurements: Bool = false
+    @State private var showPersonalInfo: Bool = false
     @State private var showPhotosAndData: Bool = false
     @State private var showWorkoutModePicker: Bool = false
     @State private var showWorkoutPlanReview: Bool = false
@@ -43,13 +41,17 @@ struct ProfileView: View {
                         if appState.profile.spinDiscount != nil && !appState.profile.isPremium {
                             limitedOfferCard
                         }
-                        if appState.profile.canSeeGoalProjection {
-                            GoalProjectionCard(context: .profile)
+                        if appState.profile.canSeeGoalProjection,
+                           let url = appState.profile.goalProjectionURL,
+                           !url.isEmpty {
+                            GoalProjectionCard(
+                                context: .profile,
+                                onRegenerate: { regenerateGoalProjection() }
+                            )
                         }
                         WorkoutCalendarHeatmap(logs: appState.profile.workoutLogs)
                         scanHistorySection
                         settingsSection
-                        debugRCButton
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 8)
@@ -83,11 +85,6 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showEditProfile) { EditProfileSheet() }
             .sheet(isPresented: $showPaywall) { PaywallSheet(context: .profile) }
-            .alert("RC Debug Report", isPresented: $showDebugReport) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Printed to console + copied to clipboard. Length: \(debugReport.count) chars.")
-            }
             .sheet(isPresented: $showCurrentPlan) {
                 CurrentPlanSheet()
                     .presentationDetents([.fraction(0.75)])
@@ -122,6 +119,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showMeasurements) {
                 BodyMeasurementsSheet()
+            }
+            .sheet(isPresented: $showPersonalInfo) {
+                PersonalInfoSheet()
             }
             .sheet(isPresented: $showWorkoutModePicker) {
                 WorkoutOnboardingChoiceView { picked in
@@ -418,6 +418,10 @@ struct ProfileView: View {
             }
 
             VStack(spacing: 0) {
+                settingsRow(title: "Personal Info", icon: "person.text.rectangle.fill", iconColor: .blue) {
+                    showPersonalInfo = true
+                }
+                Divider().padding(.leading, 52)
                 settingsRow(title: L.t("workoutPreferences", lang), icon: "dumbbell.fill", iconColor: .orange) {
                     showWorkoutPreferences = true
                 }
@@ -578,7 +582,7 @@ struct ProfileView: View {
 
                 Spacer()
 
-                Text("Try Free")
+                Text("Get Pro")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.black)
                     .padding(.horizontal, 10)
@@ -807,171 +811,29 @@ struct ProfileView: View {
         }
     }
 
-    // MARK: - Debug — RC diagnostic report (temporary)
-
-    /// Tap → fetches live offerings + customer info + StoreViewModel state,
-    /// prints to console, copies to clipboard, shows confirm alert. Remove
-    /// this block once the RC config issue is resolved.
-    private var debugRCButton: some View {
-        VStack(spacing: 6) {
-            Button {
-                Task {
-                    let report = await generateRCDebugReport()
-                    print(report)
-                    UIPasteboard.general.string = report
-                    debugReport = report
-                    showDebugReport = true
+    /// Re-runs the AI goal projection using the most recent saved battle
+    /// photo as the source. Battle photo is auto-saved after every premium
+    /// scan, so it's the freshest physique image we have on disk without
+    /// requiring the user to take another scan. Updates
+    /// `profile.goalProjectionURL` on success; silently no-ops on cooldown.
+    private func regenerateGoalProjection() {
+        guard let userId = appState.currentUserIdPublic,
+              let data = appState.loadBattlePhoto(),
+              let image = UIImage(data: data) else { return }
+        Task.detached { [appState] in
+            guard let sourceURL = await PhotoUploadService.shared
+                .uploadGoalProjectionSource(image: image, userId: userId) else { return }
+            let outcome = await GoalProjectionService.shared.generate(sourceImageURL: sourceURL)
+            if case .success(let projectionURL) = outcome {
+                await MainActor.run {
+                    appState.profile.goalProjectionURL = projectionURL
+                    appState.profile.goalProjectionGeneratedAt = Date()
+                    appState.saveProfile()
                 }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "stethoscope")
-                        .font(.system(size: 12, weight: .bold))
-                    Text("Generate RC Debug Report")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 40)
-                .background(Color.primary.opacity(0.06))
-                .clipShape(.rect(cornerRadius: 10))
             }
-            Text("Temporary debug button — prints to console + clipboard")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
         }
     }
 
-    @MainActor
-    private func generateRCDebugReport() async -> String {
-        var lines: [String] = []
-        let stamp = ISO8601DateFormatter().string(from: Date())
-        lines.append("=== RC DEBUG REPORT ===")
-        lines.append("Timestamp: \(stamp)")
-        lines.append("Bundle: \(Bundle.main.bundleIdentifier ?? "nil")")
-        #if DEBUG
-        lines.append("Build config: DEBUG")
-        #else
-        lines.append("Build config: RELEASE")
-        #endif
-        lines.append("")
-
-        lines.append("--- SDK State ---")
-        lines.append("Purchases.isConfigured: \(Purchases.isConfigured)")
-        if Purchases.isConfigured {
-            lines.append("logLevel: \(Purchases.logLevel)")
-            lines.append("appUserID: \(Purchases.shared.appUserID)")
-            lines.append("isAnonymous: \(Purchases.shared.isAnonymous)")
-        }
-        lines.append("")
-
-        guard Purchases.isConfigured else {
-            lines.append("ABORT: Purchases SDK is not configured. Check Secrets.swift + FitAIPremiumFitnessAppApp.init().")
-            return lines.joined(separator: "\n")
-        }
-
-        lines.append("--- Customer Info ---")
-        do {
-            let info = try await Purchases.shared.customerInfo()
-            lines.append("originalAppUserID: \(info.originalAppUserId)")
-            lines.append("firstSeen: \(info.firstSeen)")
-            lines.append("originalPurchaseDate: \(info.originalPurchaseDate?.description ?? "nil")")
-            lines.append("activeSubscriptions (\(info.activeSubscriptions.count)):")
-            for sub in info.activeSubscriptions {
-                lines.append("  - \(sub)")
-            }
-            lines.append("allPurchasedProductIdentifiers (\(info.allPurchasedProductIdentifiers.count)):")
-            for prod in info.allPurchasedProductIdentifiers {
-                lines.append("  - \(prod)")
-            }
-            lines.append("entitlements.all (\(info.entitlements.all.count)):")
-            for (key, ent) in info.entitlements.all {
-                lines.append("  '\(key)':")
-                lines.append("    isActive: \(ent.isActive)")
-                lines.append("    productIdentifier: '\(ent.productIdentifier)'")
-                lines.append("    expirationDate: \(ent.expirationDate?.description ?? "nil")")
-                lines.append("    willRenew: \(ent.willRenew)")
-                lines.append("    periodType: \(ent.periodType)")
-                lines.append("    store: \(ent.store)")
-            }
-        } catch {
-            let nsErr = error as NSError
-            lines.append("ERROR fetching customerInfo:")
-            lines.append("  message: \(error.localizedDescription)")
-            lines.append("  domain: \(nsErr.domain)")
-            lines.append("  code: \(nsErr.code)")
-            lines.append("  userInfo: \(nsErr.userInfo)")
-        }
-        lines.append("")
-
-        lines.append("--- Offerings ---")
-        do {
-            let offerings = try await Purchases.shared.offerings()
-            lines.append("current offering: \(offerings.current?.identifier ?? "nil")")
-            lines.append("all offerings count: \(offerings.all.count)")
-            for (key, offering) in offerings.all {
-                lines.append("  Offering '\(key)':")
-                lines.append("    serverDescription: \(offering.serverDescription)")
-                lines.append("    availablePackages count: \(offering.availablePackages.count)")
-                for pkg in offering.availablePackages {
-                    let prod = pkg.storeProduct
-                    lines.append("      Package:")
-                    lines.append("        identifier: '\(pkg.identifier)'")
-                    lines.append("        packageType: \(pkg.packageType)")
-                    lines.append("        product.productIdentifier: '\(prod.productIdentifier)'")
-                    lines.append("        product.localizedTitle: '\(prod.localizedTitle)'")
-                    lines.append("        product.localizedPriceString: '\(prod.localizedPriceString)'")
-                    lines.append("        product.price: \(prod.price)")
-                    lines.append("        product.currencyCode: '\(prod.currencyCode ?? "nil")'")
-                    lines.append("        product.subscriptionPeriod: \(String(describing: prod.subscriptionPeriod))")
-                }
-            }
-            if let current = offerings.current {
-                lines.append("Current offering '\(current.identifier)' lookup probes:")
-                let probes = ["weekly", "monthly", "yearly", "lifetime",
-                              "$rc_weekly", "$rc_monthly", "$rc_annual", "$rc_lifetime"]
-                for probe in probes {
-                    let pkg = current.package(identifier: probe)
-                    lines.append("  '\(probe)' -> \(pkg?.storeProduct.productIdentifier ?? "nil")")
-                }
-            }
-        } catch {
-            let nsErr = error as NSError
-            lines.append("ERROR fetching offerings:")
-            lines.append("  message: \(error.localizedDescription)")
-            lines.append("  domain: \(nsErr.domain)")
-            lines.append("  code: \(nsErr.code)")
-            lines.append("  userInfo: \(nsErr.userInfo)")
-        }
-        lines.append("")
-
-        lines.append("--- StoreViewModel state ---")
-        let svm = StoreViewModel.shared
-        lines.append("isPremium: \(svm.isPremium)")
-        lines.append("isLoading: \(svm.isLoading)")
-        lines.append("isPurchasing: \(svm.isPurchasing)")
-        lines.append("error: \(svm.error ?? "nil")")
-        lines.append("offerings.current.identifier: \(svm.offerings?.current?.identifier ?? "nil")")
-        lines.append("weeklyPackage: \(svm.weeklyPackage?.identifier ?? "nil") (product: \(svm.weeklyPackage?.storeProduct.productIdentifier ?? "nil"))")
-        lines.append("monthlyPackage: \(svm.monthlyPackage?.identifier ?? "nil") (product: \(svm.monthlyPackage?.storeProduct.productIdentifier ?? "nil"))")
-        lines.append("annualPackage: \(svm.annualPackage?.identifier ?? "nil") (product: \(svm.annualPackage?.storeProduct.productIdentifier ?? "nil"))")
-        lines.append("lifetimePackage: \(svm.lifetimePackage?.identifier ?? "nil") (product: \(svm.lifetimePackage?.storeProduct.productIdentifier ?? "nil"))")
-        lines.append("weeklyPriceString: '\(svm.weeklyPriceString)'")
-        lines.append("monthlyPriceString: '\(svm.monthlyPriceString)'")
-        lines.append("annualPriceString: '\(svm.annualPriceString)'")
-        lines.append("lifetimePriceString: '\(svm.lifetimePriceString)'")
-        lines.append("annualVsWeeklySavingsPercent: \(svm.annualVsWeeklySavingsPercent)")
-        lines.append("")
-
-        lines.append("--- AppState.profile ---")
-        lines.append("isPremium: \(appState.profile.isPremium)")
-        lines.append("name: '\(appState.profile.name)'")
-        lines.append("selectedLanguage: '\(appState.profile.selectedLanguage)'")
-        lines.append("referralCode: '\(appState.profile.referralCode)'")
-        lines.append("")
-
-        lines.append("=== END REPORT ===")
-        return lines.joined(separator: "\n")
-    }
 }
 
 struct EditProfileSheet: View {
@@ -982,6 +844,11 @@ struct EditProfileSheet: View {
     @State private var bio: String = ""
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var customPhotoData: Data? = nil
+    /// Holds the just-picked UIImage between the photo picker dismissing
+    /// and the AvatarCropSheet presenting. Cleared after the crop sheet
+    /// closes (whether via Choose or Cancel).
+    @State private var cropSourceImage: UIImage? = nil
+    @State private var showCropSheet: Bool = false
 
     private let avatarOptions = [
         "person.crop.circle.fill", "figure.run", "figure.strengthtraining.traditional",
@@ -1116,8 +983,23 @@ struct EditProfileSheet: View {
             .onChange(of: selectedPhotoItem) { _, newValue in
                 guard let item = newValue else { return }
                 Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        customPhotoData = data
+                    let data = try? await item.loadTransferable(type: Data.self)
+                    await MainActor.run {
+                        // Reset the picker selection either way so the user
+                        // can re-pick the same photo if they hit Cancel in
+                        // the crop sheet.
+                        selectedPhotoItem = nil
+                        if let data, let image = UIImage(data: data) {
+                            cropSourceImage = image
+                            showCropSheet = true
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showCropSheet, onDismiss: { cropSourceImage = nil }) {
+                if let image = cropSourceImage {
+                    AvatarCropSheet(sourceImage: image) { croppedData in
+                        customPhotoData = croppedData
                     }
                 }
             }

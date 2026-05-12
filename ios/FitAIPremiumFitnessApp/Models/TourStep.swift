@@ -8,9 +8,8 @@ nonisolated enum TourAnchorID: String, CaseIterable, Sendable {
     case planSummaryCard
     case planTodayWorkout
     case coachInputField
-    case competeRankBadge
-    case competeChallenges
-    case competeLeaderboard
+    case competeBattleCard
+    case competeFriends
     case profileUserCard
     case profileSettings
     case profileRestartTour
@@ -43,12 +42,10 @@ nonisolated struct TourStep: Identifiable, Sendable {
         TourStep(id: 4, anchorID: .scanAnalyzeButton, targetTab: 0, title: "Analyze 🤖", body: "Get a Fit Score, strengths, weak points, and a 12-week goal projection."),
         TourStep(id: 5, anchorID: .planSummaryCard, targetTab: 1, title: "Your AI plan 💪", body: "Built around your scan, goal, and equipment. Updates as you progress."),
         TourStep(id: 6, anchorID: .planTodayWorkout, targetTab: 1, title: "Or build your own", body: "Switch to Routines for Hevy-style logging. Pick exercises, set rest, save and reuse."),
-        TourStep(id: 7, anchorID: .competeRankBadge, targetTab: 2, title: "Compete 🥊", body: "1v1 battles vs friends — physique, volume, streaks. Trash talk encouraged."),
-        TourStep(id: 8, anchorID: .competeRankBadge, targetTab: 2, title: "Add your gym crew 👥", body: "Tap a friend's bubble for their head-to-head record vs you. Send a challenge straight from there."),
-        TourStep(id: 9, anchorID: .competeRankBadge, targetTab: 2, title: "Streaks beat motivation 🔥", body: "Daily activity locks in pair streaks with friends. Don't break the chain."),
-        TourStep(id: 10, anchorID: .profileUserCard, targetTab: 3, title: "Your profile 👤", body: "Edit info, track scans, manage Pro, change settings."),
-        TourStep(id: 11, anchorID: .profileSettings, targetTab: 3, title: "Customize 🎛️", body: "Units, notifications, Apple Health, language."),
-        TourStep(id: 12, anchorID: .profileRestartTour, targetTab: 3, title: "Replay anytime 🔁", body: "Tap here later to run the tour again."),
-        TourStep(id: 13, anchorID: .profileRestartTour, targetTab: 3, title: "You're set ✅", body: "Start with a scan. Everything builds from there.", isFinal: true),
+        TourStep(id: 7, anchorID: .competeBattleCard, targetTab: 2, title: "1v1 battles 🥊", body: "Pick a friend, pick a category (physique, volume, streak), and settle it. Winner takes XP — and bragging rights."),
+        TourStep(id: 8, anchorID: .competeFriends, targetTab: 2, title: "Your gym crew 👥", body: "Friends show online presence and head-to-head records. Tap any bubble to see their profile or fire off a challenge."),
+        TourStep(id: 9, anchorID: .profileUserCard, targetTab: 3, title: "Your profile 👤", body: "Edit info, track scans, manage Pro, change settings."),
+        TourStep(id: 10, anchorID: .profileSettings, targetTab: 3, title: "Customize 🎛️", body: "Units, notifications, Apple Health, language."),
+        TourStep(id: 11, anchorID: .profileRestartTour, targetTab: 3, title: "You're set ✅", body: "Start with a scan — everything builds from there. Tap Restart Tour here anytime to replay this.", isFinal: true),
     ]
 }

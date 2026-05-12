@@ -235,17 +235,30 @@ class PhotoUploadService: @unchecked Sendable {
         path: String,
         signedURLTTL: Int
     ) async -> String? {
-        guard let jpegData = sanitizedJPEG(image: image, quality: 0.85) else { return nil }
+
+        guard let jpegData = sanitizedJPEG(image: image, quality: 0.85) else {
+            return nil
+        }
+
+        // Refuse early if the device has no real Supabase session — the
+        // storage RLS policy is `to authenticated`, so anonKey-only
+        // requests get rejected with a generic 403/401 that's hard to
+        // interpret. Better to fail fast with a clear reason.
+        let session = await SupabaseAuthService.shared.currentSession()
+        guard let session else {
+            return nil
+        }
 
         // POST with x-upsert: true so re-submitting overwrites cleanly.
-        guard let url = URL(string: "\(storageURL)/\(bucket)/\(path)") else { return nil }
+        guard let url = URL(string: "\(storageURL)/\(bucket)/\(path)") else {
+            return nil
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 60
 
-        let token = await authToken()
         request.setValue(anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.setValue("3600", forHTTPHeaderField: "Cache-Control")
         request.setValue("true", forHTTPHeaderField: "x-upsert")
@@ -254,9 +267,10 @@ class PhotoUploadService: @unchecked Sendable {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-                #if DEBUG
                 let body = String(data: data, encoding: .utf8) ?? "[unreadable]"
-                print("[PhotoUpload/\(bucket)] \(http.statusCode): \(body)")
+                let detail = "HTTP \(http.statusCode) bucket=\(bucket) path=\(path) bodyLen=\(jpegData.count) — \(body.prefix(300))"
+                #if DEBUG
+                print("[PhotoUpload/\(bucket)] \(detail)")
                 #endif
                 return nil
             }
@@ -286,9 +300,10 @@ class PhotoUploadService: @unchecked Sendable {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
-                #if DEBUG
                 let body = String(data: data, encoding: .utf8) ?? "[unreadable]"
-                print("[PhotoUpload/sign \(bucket)] \(http.statusCode): \(body)")
+                let detail = "Sign HTTP \(http.statusCode) bucket=\(bucket) — \(body.prefix(300))"
+                #if DEBUG
+                print("[PhotoUpload/sign \(bucket)] \(detail)")
                 #endif
                 return nil
             }
@@ -308,16 +323,56 @@ class PhotoUploadService: @unchecked Sendable {
         }
     }
 
-    /// Re-encode the image as JPEG **without** any metadata. Goes through
+    /// Re-encode the image as JPEG **without** any metadata, downscaled
+    /// to fit comfortably inside the bucket's 5 MB cap. Goes through
     /// ImageIO's `CGImageDestination` with no metadata source — output
     /// contains the bitmap and color profile only, no EXIF, no GPS, no
     /// device serial, no camera/lens identifiers. This is the GDPR
     /// special-category mitigation: location-tagged body photos auto-
     /// promote to "health data" + "biometric" categories under Art. 9.
+    ///
+    /// Two-stage sizing:
+    /// 1. Downscale to 1920px max on the longest side. iPhone JPEGs are
+    ///    3024×4032 by default, often 5–10 MB. We don't need that
+    ///    resolution for physique-comparison display, and the 5 MB
+    ///    bucket cap rejects oversize uploads (HTTP 413).
+    /// 2. If the first JPEG pass is still over a 4.5 MB safety
+    ///    threshold, drop quality and retry until we fit. Quality bottoms
+    ///    out at 0.4 — beyond that, blocky artifacts on skin start
+    ///    affecting the AI score.
     private func sanitizedJPEG(image: UIImage, quality: CGFloat) -> Data? {
+        let resized = downscaled(image, maxDimension: 1920)
+        let targetBytes = 4_500_000  // headroom under the 5 MB bucket cap
+
+        var q = quality
+        var data = encodeJPEG(resized, quality: q)
+        while let d = data, d.count > targetBytes, q > 0.4 {
+            q -= 0.15
+            data = encodeJPEG(resized, quality: q)
+        }
+        return data
+    }
+
+    /// Resize so the longest side is `maxDimension`. Preserves aspect
+    /// ratio; returns the original if it's already smaller. UIKit's
+    /// `UIGraphicsImageRenderer` honors the image's `imageOrientation`
+    /// so portrait shots stay portrait after the redraw.
+    private func downscaled(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+        let longSide = max(size.width, size.height)
+        guard longSide > maxDimension else { return image }
+        let scale = maxDimension / longSide
+        let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+        let renderer = UIGraphicsImageRenderer(size: newSize)
+        return renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+    }
+
+    /// Single JPEG encode pass via ImageIO with metadata stripped.
+    /// Falls back to UIKit's `jpegData` if ImageIO can't get a CGImage.
+    private func encodeJPEG(_ image: UIImage, quality: CGFloat) -> Data? {
         guard let cgImage = image.cgImage else {
-            // Fallback: UIImage's jpegData re-encodes via CGImage and drops
-            // the orientation but may keep some metadata. Better than nil.
             return image.jpegData(compressionQuality: quality)
         }
         let data = NSMutableData()

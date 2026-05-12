@@ -8,6 +8,10 @@ import AudioToolbox
 /// keypad is custom (StrongKeypad) — iOS's default keyboard is bypassed.
 struct ActiveSessionView: View {
     @Environment(AppState.self) private var appState
+    /// Used by the toolbar minimize button (chevron.down) — drops the sheet
+    /// without ending the session. The resume pill in MainTabView is keyed
+    /// off `session.isActive`, so it reappears automatically.
+    @Environment(\.dismiss) private var dismiss
 
     /// Initial exercises seeded from a template / empty workout. The session
     /// becomes the source of truth once started.
@@ -114,7 +118,25 @@ struct ActiveSessionView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 24)
             }
-            .background(Color(.systemBackground))
+            // Subtle indigo wash radiating from the top — matches the
+            // preview sheet's pageBackground and the RoutineCardGlass tint
+            // family, so the user sees the same color story across the
+            // routine list → preview → active session journey.
+            .background(
+                ZStack {
+                    Color(.systemBackground)
+                    LinearGradient(
+                        colors: [
+                            Color.indigo.opacity(0.08),
+                            Color.purple.opacity(0.03),
+                            .clear
+                        ],
+                        startPoint: .top,
+                        endPoint: .center
+                    )
+                }
+                .ignoresSafeArea()
+            )
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(spacing: 0) {
                     rpeHintBanner
@@ -145,12 +167,13 @@ struct ActiveSessionView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 8) {
-                        // Close / back. Empty session exits immediately;
-                        // anything logged hits the same cancel confirmation
-                        // as the "Cancel workout" menu item.
-                        sessionToolbarButton(icon: "xmark", tint: .primary) {
+                        // Minimize. Drops the sheet without ending the session
+                        // — the resume pill in MainTabView reappears off
+                        // `session.isActive`. Destructive "Cancel workout"
+                        // lives in the workout-name kebab menu (line ~617).
+                        sessionToolbarButton(icon: "chevron.down", tint: .primary) {
                             focusedField = nil
-                            handleCloseTapped()
+                            dismiss()
                         }
                         sessionToolbarButton(icon: "timer", tint: .primary) {
                             // Manual rest timer — Strong's small clock icon.
@@ -310,7 +333,10 @@ struct ActiveSessionView: View {
                 }
             }
         }
-        .interactiveDismissDisabled(true)
+        // Swipe-down on the sheet just minimizes — the session keeps running
+        // and the resume pill in MainTabView appears automatically (driven by
+        // `session.isActive`). Discard / Finish remain the only paths that
+        // actually end the workout, so accidental dismiss is harmless.
         .onAppear { startIfNeeded() }
     }
 
@@ -934,17 +960,6 @@ struct ActiveSessionView: View {
 
     // MARK: - Finish / cancel
 
-    /// Close-button entry point in the leading toolbar. Empty sessions
-    /// exit immediately (no data to lose); anything beyond that hits the
-    /// existing cancel confirmation so the user can't dismiss work by
-    /// accident.
-    private func handleCloseTapped() {
-        if sessionExercises.isEmpty {
-            discardWorkout()
-        } else {
-            showCancelConfirm = true
-        }
-    }
 
     /// Tap-Finish entry point. Decides whether to show the save-as-template
     /// prompt, then hands off to the parent (which owns the post-workout

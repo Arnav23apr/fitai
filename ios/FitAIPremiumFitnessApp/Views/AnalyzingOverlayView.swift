@@ -3,6 +3,11 @@ import SwiftUI
 nonisolated enum AnalyzingMode {
     case scan
     case battle
+    /// 90-day "future you" image generation. Slower than scan/battle
+    /// (Gemini Flash Image runs ~20-40s), so the phrase list is longer and
+    /// the tone shifts from judgment ("did you skip legs?") to aspiration
+    /// ("this is you, locked in").
+    case transformation
 }
 
 /// AI-analyzing overlay shown during scan + battle photo analysis.
@@ -53,10 +58,32 @@ struct AnalyzingOverlayView: View {
         AnalyzingPhrase(text: "Judging the physique showdown", icon: "trophy.fill"),
     ]
 
+    /// 12-phrase lineup tuned for the 90-day transformation wait. Half
+    /// describe what the AI is doing, half describe who the user is being
+    /// shown ("this is you, locked in"). The "Targeting your weak points"
+    /// entry is personalized at render time when `weakPointsHint` is set.
+    /// Order is deliberately alternating (process / identity) so the
+    /// rhythm feels intentional rather than random.
+    private static let transformationPhrases: [AnalyzingPhrase] = [
+        AnalyzingPhrase(text: "Reading your scan", icon: "doc.text.magnifyingglass"),
+        AnalyzingPhrase(text: "This is you, locked in.", icon: "lock.fill"),
+        AnalyzingPhrase(text: "Targeting your weak points", icon: "scope"),
+        AnalyzingPhrase(text: "Future you, if you mean it.", icon: "sparkles"),
+        AnalyzingPhrase(text: "Layering on lean mass", icon: "square.stack.3d.up.fill"),
+        AnalyzingPhrase(text: "What no skip days looks like.", icon: "calendar.badge.checkmark"),
+        AnalyzingPhrase(text: "Adjusting for your frame", icon: "ruler.fill"),
+        AnalyzingPhrase(text: "Meet the version that didn't quit.", icon: "trophy.fill"),
+        AnalyzingPhrase(text: "Rendering twelve weeks ahead", icon: "wand.and.stars"),
+        AnalyzingPhrase(text: "36 workouts. This.", icon: "dumbbell.fill"),
+        AnalyzingPhrase(text: "Final pass", icon: "checkmark.seal.fill"),
+        AnalyzingPhrase(text: "90 days. No excuses.", icon: "flame.fill"),
+    ]
+
     private var phrases: [AnalyzingPhrase] {
         switch mode {
-        case .scan:   return Self.scanPhrases
-        case .battle: return Self.battlePhrases
+        case .scan:           return Self.scanPhrases
+        case .battle:         return Self.battlePhrases
+        case .transformation: return Self.transformationPhrases
         }
     }
 
@@ -143,10 +170,13 @@ struct AnalyzingOverlayView: View {
         withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
             glowPulse = 1.15
         }
-        // Phrase rotation every 1.5s — task-driven so we can cancel cleanly.
+        // Phrase rotation — 1.5s for scan/battle (5-10s waits), 2.2s for
+        // transformation (20-40s wait so the 12-phrase cycle fits one full
+        // pass in the expected window without visible repetition).
+        let interval: Duration = mode == .transformation ? .seconds(2.2) : .seconds(1.5)
         phraseTask = Task { @MainActor in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(1.5))
+                try? await Task.sleep(for: interval)
                 if Task.isCancelled { return }
                 // Slightly longer curve than a typical fade so the
                 // numericText character morphs are clearly visible.

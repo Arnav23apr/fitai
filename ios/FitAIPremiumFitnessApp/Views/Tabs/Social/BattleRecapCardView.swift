@@ -1,10 +1,16 @@
 import SwiftUI
 
-/// 9:16 (1080×1920) shareable recap card rendered after a 1v1 battle resolves.
-/// Diptych of both submission photos + AI scores + winner badge + brand mark.
-/// The structure (side-by-side faces with the central VS) is the brand
-/// asset; cropping kills the comparison so the design absorbs negative space
-/// rather than fitting more in.
+/// Shareable recap card rendered after a 1v1 Compete challenge resolves.
+/// Mirrors the visual language of `BattleShareCardView` (the local 1v1
+/// physique battle) so the brand-shareable image is consistent across
+/// both entry points: photo circles with gradient borders, MOGGED stamp
+/// on the loser, crown header, brand mark.
+///
+/// Difference vs `BattleShareCardView`: per-muscle scores aren't shown
+/// here because the challenge table only persists each side's *overall*
+/// score, not the full breakdown. If the schema grows to store the
+/// per-muscle JSON on submit, this card should grow the score grid back
+/// in to fully match `BattleShareCardView`.
 struct BattleRecapCardView: View {
     let myUsername: String
     let myPhoto: UIImage?
@@ -16,142 +22,183 @@ struct BattleRecapCardView: View {
 
     let iWon: Bool
 
+    /// Same render dimensions as the legacy version so callers don't have
+    /// to recompute layout. Kept for API parity; the inner card auto-
+    /// centers inside this canvas.
     static let renderSize = CGSize(width: 1080, height: 1920)
+
+    private let cardBg = Color(red: 0.07, green: 0.07, blue: 0.08)
+    private var scoreDifference: Double { abs(myScore - theirScore) }
+    private var winnerName: String { iWon ? "@\(myUsername)" : "@\(theirUsername)" }
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                header
-                    .padding(.top, 100)
-                    .padding(.bottom, 28)
+            VStack(spacing: 32) {
+                Spacer(minLength: 0)
 
-                photoStack
+                cardBody
 
-                Spacer(minLength: 24)
+                Spacer(minLength: 0)
 
-                resultBlock
-
-                Spacer(minLength: 24)
-
-                footer
-                    .padding(.bottom, 80)
+                Image("FitAILogoWhite")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 40)
+                    .opacity(0.55)
+                    .padding(.bottom, 60)
             }
-            .padding(.horizontal, 56)
         }
         .frame(width: Self.renderSize.width, height: Self.renderSize.height)
     }
 
-    // MARK: - Header
-
-    private var header: some View {
-        VStack(spacing: 18) {
-            Image("FitAILogoWhite")
-                .resizable()
-                .renderingMode(.template)
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 48)
+    /// The actual card. Scaled to fill most of the canvas width with
+    /// generous breathing room above and below.
+    private var cardBody: some View {
+        VStack(spacing: 0) {
+            Text("Physique Battle")
+                .font(.system(size: 42, weight: .bold))
                 .foregroundStyle(.white)
+                .padding(.top, 56)
+                .padding(.bottom, 14)
 
-            Text("1v1 PHYSIQUE BATTLE")
-                .font(.system(size: 24, weight: .black))
-                .tracking(4)
-                .foregroundStyle(.white.opacity(0.6))
-        }
-    }
-
-    // MARK: - Diptych
-
-    private var photoStack: some View {
-        HStack(spacing: 12) {
-            photoTile(label: "@\(myUsername)", image: myPhoto, score: myScore, isWinner: iWon)
-            photoTile(label: "@\(theirUsername)", image: theirPhoto, score: theirScore, isWinner: !iWon)
-        }
-        .overlay(alignment: .center) {
-            ZStack {
-                Circle().fill(.white).frame(width: 64, height: 64)
-                Text("VS")
-                    .font(.system(size: 22, weight: .black))
-                    .tracking(2)
-                    .foregroundStyle(.black)
+            HStack(spacing: 12) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.yellow)
+                Text("\(winnerName) wins by \(String(format: "%.1f", scoreDifference))!")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.62))
             }
+            .padding(.bottom, 48)
+
+            HStack(alignment: .top, spacing: 24) {
+                contestantBlock(
+                    label: "@\(myUsername)",
+                    photo: myPhoto,
+                    score: myScore,
+                    isWinner: iWon
+                )
+
+                Text("VS")
+                    .font(.system(size: 32, weight: .heavy, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.35))
+                    .padding(.top, 140)
+
+                contestantBlock(
+                    label: "@\(theirUsername)",
+                    photo: theirPhoto,
+                    score: theirScore,
+                    isWinner: !iWon
+                )
+            }
+            .padding(.horizontal, 36)
+            .padding(.bottom, 52)
         }
+        .frame(width: 920)
+        .background(cardBg)
+        .clipShape(.rect(cornerRadius: 44))
     }
 
-    private func photoTile(label: String, image: UIImage?, score: Double, isWinner: Bool) -> some View {
-        ZStack(alignment: .topLeading) {
+    private func contestantBlock(label: String, photo: UIImage?, score: Double, isWinner: Bool) -> some View {
+        let isMogged = !isWinner && scoreDifference >= 0.5
+
+        return VStack(spacing: 0) {
+            ZStack {
+                photoCircle(image: photo, isWinner: isWinner)
+
+                if isMogged {
+                    Text("MOGGED")
+                        .font(.system(size: 26, weight: .black, design: .rounded))
+                        .foregroundStyle(.red)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(.black.opacity(0.78))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(.red, lineWidth: 3)
+                        )
+                        .clipShape(.rect(cornerRadius: 6))
+                        .rotationEffect(.degrees(-12))
+                        .offset(y: 60)
+                }
+            }
+            .padding(.top, 36)
+            .padding(.bottom, isMogged ? 56 : 32)
+
+            Text(label)
+                .font(.system(size: 26, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.62))
+                .lineLimit(1)
+                .padding(.bottom, 24)
+
+            VStack(spacing: 6) {
+                Text("Overall")
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.45))
+                Text(String(format: "%.1f", score))
+                    .font(.system(size: 96, weight: .black, design: .rounded))
+                    .foregroundStyle(isWinner ? .green : .white)
+                    .shadow(color: isWinner ? .green.opacity(0.32) : .clear, radius: 24, y: 6)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 28)
+            .padding(.horizontal, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.white.opacity(0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .strokeBorder(
+                                isWinner ? Color.green.opacity(0.20) : Color.white.opacity(0.08),
+                                lineWidth: 2
+                            )
+                    )
+            )
+            .padding(.bottom, 12)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func photoCircle(image: UIImage?, isWinner: Bool) -> some View {
+        let size: CGFloat = 220
+        return Group {
             if let image {
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
             } else {
-                Color.white.opacity(0.04)
+                Circle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(width: size, height: size)
                     .overlay(
-                        Image(systemName: "person.crop.rectangle")
-                            .font(.system(size: 60))
-                            .foregroundStyle(.white.opacity(0.2))
+                        Image(systemName: "person.crop.circle")
+                            .font(.system(size: 80))
+                            .foregroundStyle(.white.opacity(0.25))
                     )
             }
-
-            // Score badge over the top
-            VStack(alignment: .leading, spacing: 4) {
-                Text(label)
-                    .font(.system(size: 14, weight: .black))
-                    .tracking(2)
-                    .foregroundStyle(.black)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(.white)
-                Text(String(format: "%.1f", score))
-                    .font(.system(size: 56, weight: .black, design: .rounded))
-                    .foregroundStyle(isWinner ? .yellow : .white)
-            }
-            .padding(16)
         }
-        .frame(width: 478, height: 720)
-        .clipShape(.rect(cornerRadius: 4))
         .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .strokeBorder(isWinner ? .yellow.opacity(0.7) : .white.opacity(0.10), lineWidth: 2)
+            Circle()
+                .strokeBorder(
+                    isWinner
+                        ? LinearGradient(
+                            colors: [.green.opacity(0.85), .mint.opacity(0.60), .green.opacity(0.35)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                          )
+                        : LinearGradient(
+                            colors: [.red.opacity(0.55), .red.opacity(0.30)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                          ),
+                    lineWidth: 6
+                )
         )
-    }
-
-    // MARK: - Result block
-
-    private var resultBlock: some View {
-        VStack(spacing: 8) {
-            Text(iWon ? "YOU WON" : "GG")
-                .font(.system(size: 80, weight: .black))
-                .tracking(2)
-                .foregroundStyle(.white)
-            Text(iWon
-                 ? "Beat @\(theirUsername) by \(scoreDelta)."
-                 : "@\(theirUsername) edged you by \(scoreDelta).")
-                .font(.system(size: 24, weight: .semibold))
-                .tracking(0.5)
-                .foregroundStyle(.white.opacity(0.6))
-                .multilineTextAlignment(.center)
-        }
-    }
-
-    private var scoreDelta: String {
-        String(format: "%.1f", abs(myScore - theirScore))
-    }
-
-    // MARK: - Footer
-
-    private var footer: some View {
-        VStack(spacing: 8) {
-            Text("AI-JUDGED · 1v1")
-                .font(.system(size: 14, weight: .heavy))
-                .tracking(3)
-                .foregroundStyle(.white.opacity(0.4))
-            Text("FITAI.HEALTH")
-                .font(.system(size: 20, weight: .black))
-                .tracking(5)
-                .foregroundStyle(.white)
-        }
+        .shadow(color: isWinner ? .green.opacity(0.30) : .clear, radius: 26, y: 8)
     }
 }
 

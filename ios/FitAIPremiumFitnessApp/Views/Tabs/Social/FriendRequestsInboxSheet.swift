@@ -106,6 +106,13 @@ struct FriendRequestsInboxSheet: View {
                     Button(L.t("done", lang)) { dismiss() }
                 }
             }
+            // Refresh on open so any requests that arrived since the last
+            // pull (or were pushed via a notification while the sheet was
+            // closed) surface immediately. The empty `viewModel.incomingRequests`
+            // state was the source of the "no incoming requests" bug.
+            .task {
+                await viewModel.refresh()
+            }
         }
     }
 

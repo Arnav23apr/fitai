@@ -83,6 +83,10 @@ const NOTIFICATION_COPY: Record<string, Copy> = {
                 p.workout_name ?? "a workout"
             }. Skip today and they're +${p.xp ?? 50} XP ahead.`,
     },
+    hype_received: {
+        title: "You got hype",
+        body: (p) => `@${p.from_username ?? "A friend"} sent you hype. Show up today.`,
+    },
 };
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

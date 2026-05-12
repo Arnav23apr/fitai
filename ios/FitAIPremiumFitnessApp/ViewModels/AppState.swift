@@ -20,6 +20,27 @@ class AppState {
     var isLoggedIn: Bool = false
     var scanHistory: [ScanHistoryEntry] = []
 
+    /// Currently-displayed in-app toast banner (e.g. "Mike sent you a friend
+    /// request"). Nil = no banner showing. Set via `showBanner` which also
+    /// schedules an auto-dismiss.
+    var currentBanner: InAppBanner? = nil
+
+    /// Surface a toast banner over the tab bar. Auto-dismisses after
+    /// `seconds`. Safe to call repeatedly — newer banners replace older.
+    func showBanner(_ banner: InAppBanner, autoDismissAfter seconds: Double = 4.5) {
+        withAnimation(.spring(duration: 0.4, bounce: 0.18)) {
+            currentBanner = banner
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(seconds))
+            if currentBanner?.id == banner.id {
+                withAnimation(.spring(duration: 0.35)) {
+                    currentBanner = nil
+                }
+            }
+        }
+    }
+
     /// The Supabase user ID for the current session (used for cloud sync).
     /// Mirrors to the local-first services so they know which user to push
     /// updates to. nil while signed-out — those services then operate

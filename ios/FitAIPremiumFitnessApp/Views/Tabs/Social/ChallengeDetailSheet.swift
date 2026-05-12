@@ -21,6 +21,14 @@ struct ChallengeDetailSheet: View {
     @State private var isRenderingRecap: Bool = false
     @State private var recapShareItem: ShareImage? = nil
 
+    // Rich battle-result state (post-021 challenges with full analyses).
+    // `viewableBattle` is non-nil once `PhysiqueBattle.fromChallenge`
+    // resolves; presenting `showBattleResult` triggers the
+    // `BattleResultView` fullScreenCover — identical UI to the local 1v1.
+    @State private var viewableBattle: PhysiqueBattle? = nil
+    @State private var isLoadingBattle: Bool = false
+    @State private var showBattleResult: Bool = false
+
     /// Read the latest version of this challenge from the view model so the
     /// sheet updates immediately after Accept/Decline/Submit instead of
     /// showing the stale snapshot it was opened with.
@@ -40,7 +48,7 @@ struct ChallengeDetailSheet: View {
                     headerCard
                     actionsCard
                     if liveChallenge.row.status == "completed" {
-                        resultCard
+                        resultSection
                     }
                     if let err = errorMessage {
                         Text(err)
@@ -318,6 +326,95 @@ struct ChallengeDetailSheet: View {
 
     // MARK: - Result
 
+    /// Decides which result UI to show:
+    /// - Post-021 completed challenges with full analyses on both sides
+    ///   render a "View battle" CTA → opens `BattleResultView`, identical
+    ///   to the local 1v1 result. Share button inside that view uses
+    ///   `BattleShareCardView`.
+    /// - Pre-021 / AI-failed challenges fall back to the legacy minimal
+    ///   trophy + Share-recap card.
+    @ViewBuilder
+    private var resultSection: some View {
+        if liveChallenge.row.challengerAnalysis != nil &&
+           liveChallenge.row.opponentAnalysis != nil {
+            richResultCard
+        } else {
+            resultCard
+        }
+    }
+
+    private var richResultCard: some View {
+        let won = liveChallenge.row.winnerUserId == myUserId
+        return VStack(spacing: 14) {
+            Image(systemName: won ? "trophy.fill" : "hand.thumbsup.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(won ? .yellow : .secondary)
+            Text(won ? "You won!" : "Better luck next time.")
+                .font(.title2.weight(.bold))
+            if won {
+                Text("Beat @\(liveChallenge.otherUser.username) — open the breakdown.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("@\(liveChallenge.otherUser.username) edged you out — see why.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Button {
+                Task { await openBattleResult() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "trophy.fill")
+                    Text(isLoadingBattle ? "Loading…" : "View battle")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(.systemBackground))
+                .frame(maxWidth: .infinity)
+                .frame(height: 44)
+                .background(Color.primary)
+                .clipShape(.rect(cornerRadius: 12))
+            }
+            .disabled(isLoadingBattle)
+            .padding(.horizontal, 16)
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 28)
+        .modifier(GradientCardBackground(
+            tintColor: won ? .yellow : .red,
+            cornerRadius: 16
+        ))
+        .fullScreenCover(isPresented: $showBattleResult) {
+            if let battle = viewableBattle {
+                BattleResultView(battle: battle) {
+                    showBattleResult = false
+                }
+            }
+        }
+    }
+
+    /// Download both photos, construct a PhysiqueBattle from the stored
+    /// per-side analyses, and present `BattleResultView`. Photos load in
+    /// parallel; if either fails, a 1x1 transparent placeholder fills
+    /// the slot so the layout doesn't collapse.
+    @MainActor
+    private func openBattleResult() async {
+        guard !isLoadingBattle else { return }
+        isLoadingBattle = true
+        defer { isLoadingBattle = false }
+
+        guard let me = myUserId else { return }
+        let battle = await PhysiqueBattle.fromChallenge(
+            row: liveChallenge.row,
+            meUserId: me,
+            meUsername: appState.profile.username,
+            theirUsername: liveChallenge.otherUser.username
+        )
+        guard let battle else { return }
+        viewableBattle = battle
+        showBattleResult = true
+    }
+
     private var resultCard: some View {
         let won = liveChallenge.row.winnerUserId == myUserId
         return VStack(spacing: 14) {
@@ -424,13 +521,24 @@ struct ChallengeDetailSheet: View {
             return
         }
 
-        // 2. Run AI on the photo to get the score
+        // 2. Run AI on the photo. Capture the FULL breakdown (overall,
+        //    muscle scores, potential, visible groups, strong/weak points)
+        //    so the resolved challenge can render `BattleResultView`
+        //    matching the local 1v1 battle. Fallback to overall=5.0 with
+        //    no analysis if the AI fails — the challenge still resolves.
         submitProgress = "AI is judging…"
-        let score = await analyzePhotoForScore(img)
+        let analysis = await analyzePhotoForResult(img)
+        let score = analysis?.overallScore ?? 5.0
 
-        // 3. Submit score + URL to the server
+        // 3. Submit score + URL + analysis JSON to the server. p_analysis
+        //    is nullable so a failed AI doesn't block the submission.
         submitProgress = "Submitting…"
-        await viewModel.submitChallengeScore(challenge, score: score, photoURL: photoURL)
+        await viewModel.submitChallengeScore(
+            challenge,
+            score: score,
+            photoURL: photoURL,
+            analysis: analysis
+        )
 
         // 4. Save as default battle photo for next time (one-tap reuse)
         if let data = img.jpegData(compressionQuality: 0.85) {
@@ -438,13 +546,76 @@ struct ChallengeDetailSheet: View {
         }
 
         await viewModel.refresh()
+
+        // 5. If both sides have now submitted and there's no verdict yet,
+        //    generate one and persist via set_challenge_verdict. The RPC
+        //    is idempotent (first writer wins), so the parallel case where
+        //    both clients realize this at the same time is safe.
+        await generateAndPersistVerdictIfNeeded()
+    }
+
+    /// Run the AI verdict prompt against both sides' analyses and write
+    /// the result via `set_challenge_verdict`. Runs only when:
+    ///   - challenge is completed (both sides submitted)
+    ///   - verdict isn't already set
+    ///   - both analyses are present (i.e. both sides submitted on a
+    ///     post-021 client)
+    private func generateAndPersistVerdictIfNeeded() async {
+        guard let updated = viewModel.challenges.first(where: { $0.row.id == liveChallenge.row.id }) else { return }
+        let row = updated.row
+        guard row.status == "completed" else { return }
+        guard row.verdict == nil || row.verdict?.isEmpty == true else { return }
+        guard let challengerA = row.challengerAnalysis,
+              let opponentA = row.opponentAnalysis else { return }
+
+        let myUsername = appState.profile.username.isEmpty ? "you" : appState.profile.username
+        let theirUsername = updated.otherUser.username
+        let myAnalysis: ChallengeAnalysis = updated.iAmChallenger ? challengerA : opponentA
+        let theirAnalysis: ChallengeAnalysis = updated.iAmChallenger ? opponentA : challengerA
+
+        let lang = appState.profile.selectedLanguage
+        let langInstr = lang.lowercased() == "english" ? "" : "Respond in \(lang)."
+        let system = "You are a physique battle commentator. Write a single sharp sentence (under 25 words) explaining who won and why. Cite the specific muscle group or quality that decided it. Tone: confident, neutral, factual, not mean. Never use em dashes; use commas, periods, or parentheses instead. \(langInstr)"
+
+        func fmt(_ d: Double) -> String { String(format: "%.1f", d) }
+        func scoreList(_ s: CodableMuscleScores) -> String {
+            "chest \(fmt(s.chest)), shoulders \(fmt(s.shoulders)), back \(fmt(s.back)), arms \(fmt(s.arms)), legs \(fmt(s.legs)), core \(fmt(s.core)), glutes \(fmt(s.glutes ?? 0))"
+        }
+        let user = """
+        @\(myUsername): overall \(fmt(myAnalysis.overallScore))/10, scores [\(scoreList(myAnalysis.muscleScores))], strong [\(myAnalysis.strongPoints.joined(separator: ", "))].
+        @\(theirUsername): overall \(fmt(theirAnalysis.overallScore))/10, scores [\(scoreList(theirAnalysis.muscleScores))], strong [\(theirAnalysis.strongPoints.joined(separator: ", "))].
+
+        Write the verdict in one sentence.
+        """
+
+        let aiService = AIService()
+        let messages: [ChatAPIMessage] = [
+            ChatAPIMessage(role: "system", text: system),
+            ChatAPIMessage(role: "user", text: user)
+        ]
+        do {
+            let verdict = try await aiService.chat(messages: messages)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !verdict.isEmpty else { return }
+            _ = await SocialService.shared.setChallengeVerdict(
+                challengeId: row.id,
+                verdict: verdict
+            )
+            await viewModel.refresh()
+        } catch {
+            // Verdict is optional — silent failure is fine.
+        }
     }
 
     /// Run the existing physique analyzer against the photo and return the
-    /// 1-10 overall score. Falls back to 5.0 if AI fails (so the challenge
-    /// still resolves rather than stalling).
-    private func analyzePhotoForScore(_ image: UIImage) async -> Double {
-        guard let base64 = AIService.imageToBase64(image) else { return 5.0 }
+    /// full breakdown — overall score plus per-muscle scores, potential,
+    /// visible muscle groups, and strong/weak points. Persisted server-
+    /// side via `submit_challenge_score(p_analysis:)` (migration 021) so
+    /// the resolved challenge can render `BattleResultView` with the same
+    /// rich data shape as the local 1v1 battle. Returns nil if the AI
+    /// fails so the caller can fall back to a default score.
+    private func analyzePhotoForResult(_ image: UIImage) async -> ChallengeAnalysis? {
+        guard let base64 = AIService.imageToBase64(image) else { return nil }
         let aiService = AIService()
         let systemPrompt = """
         You are a professional fitness physique analyzer. Analyze the user's \
@@ -452,7 +623,8 @@ struct ChallengeDetailSheet: View {
         score 4-6. Only elite physiques score 8+.
         For visibleMuscleGroups, use exactly: "chest", "shoulders", "back", "arms", "legs", "core", "glutes". \
         Set muscleScores to 0 for non-visible groups. \
-        For potentialRating, rate 1-10 (be generous, most people score 7+).
+        For potentialRating, rate 1-10 (be generous, most people score 7+). \
+        Also return strongPoints and weakPoints as short arrays of muscle group names.
         """
         let userPrompt = "Analyze this photo for a 1v1 physique battle. Be precise."
         do {
@@ -461,12 +633,52 @@ struct ChallengeDetailSheet: View {
                 systemPrompt: systemPrompt,
                 userPrompt: userPrompt
             )
+            return parseChallengeAnalysis(json)
+        } catch {
+            return nil
+        }
+    }
+
+    /// Maps the AI's JSON response onto a `ChallengeAnalysis`. Mirrors the
+    /// parsing in `BattleViewModel.parseAnalysis` so both flows produce
+    /// identically-shaped data — guarantees that a friends-challenge
+    /// `PhysiqueBattle` is indistinguishable from a local one.
+    private func parseChallengeAnalysis(_ json: [String: Any]) -> ChallengeAnalysis {
+        func parseDouble(_ v: Any?) -> Double {
+            if let d = v as? Double { return d }
+            if let i = v as? Int { return Double(i) }
+            return 0
+        }
+        let overall: Double = {
             if let s = json["overallScore"] as? Double { return s }
             if let s = json["overallScore"] as? Int { return Double(s) }
             return 5.0
-        } catch {
-            return 5.0
-        }
+        }()
+        let potential: Double = {
+            if let p = json["potentialRating"] as? Double { return p }
+            if let p = json["potentialRating"] as? Int { return Double(p) }
+            return 8.0
+        }()
+        let ms = json["muscleScores"] as? [String: Any] ?? [:]
+        let scores = CodableMuscleScores(
+            from: MuscleScores(
+                chest: parseDouble(ms["chest"]),
+                shoulders: parseDouble(ms["shoulders"]),
+                back: parseDouble(ms["back"]),
+                arms: parseDouble(ms["arms"]),
+                legs: parseDouble(ms["legs"]),
+                core: parseDouble(ms["core"]),
+                glutes: parseDouble(ms["glutes"])
+            )
+        )
+        return ChallengeAnalysis(
+            overallScore: overall,
+            muscleScores: scores,
+            potentialRating: potential,
+            visibleMuscleGroups: (json["visibleMuscleGroups"] as? [String]) ?? [],
+            strongPoints: (json["strongPoints"] as? [String]) ?? [],
+            weakPoints: (json["weakPoints"] as? [String]) ?? []
+        )
     }
 
     // MARK: - Helpers

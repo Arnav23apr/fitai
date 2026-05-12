@@ -77,7 +77,7 @@ nonisolated struct ScanHistoryEntry: Codable, Sendable, Identifiable {
     }
 }
 
-nonisolated struct CodableMuscleScores: Codable, Sendable {
+nonisolated struct CodableMuscleScores: Codable, Sendable, Hashable {
     let chest: Double
     let shoulders: Double
     let back: Double

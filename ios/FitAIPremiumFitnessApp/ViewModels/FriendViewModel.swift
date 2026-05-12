@@ -45,6 +45,14 @@ final class FriendViewModel {
     private weak var appState: AppState?
     private var myUserId: String? { appState?.currentUserIdPublic }
 
+    /// Notifications already surfaced as a banner this session — prevents
+    /// the same row from firing twice when a refresh re-pulls it.
+    private var bannerSeenNotifIds: Set<String> = []
+    /// Cutoff: only fire banners for notifications newer than this. Set
+    /// to "now" on the very first refresh so the user doesn't get spammed
+    /// with backlog banners for every unread notification on cold launch.
+    private var bannerCutoff: Date? = nil
+
     /// Active Realtime channel for the Compete tab. Lifecycle is owned by
     /// CompeteView via startRealtime / stopRealtime — we don't auto-start
     /// in `attach` because the channel should only run while the tab is
@@ -91,6 +99,70 @@ final class FriendViewModel {
     var pendingIncomingChallenges: [PopulatedChallenge] {
         guard let me = myUserId else { return [] }
         return challenges.filter { $0.row.opponentId == me && $0.row.status == "pending" }
+    }
+
+    // MARK: - Head-to-head + turn state (UI helpers)
+
+    /// Lifetime W-L record vs a specific friend, counted from completed
+    /// challenges only. Draws (winner_user_id == nil) are dropped from both
+    /// counts since the UI only shows W-L.
+    func headToHead(with friend: SocialProfileSummary) -> (wins: Int, losses: Int) {
+        guard let me = myUserId else { return (0, 0) }
+        let theirs = friend.id
+        var wins = 0
+        var losses = 0
+        for ch in challenges where ch.row.status == "completed" {
+            let isPairMatch = (ch.row.challengerId == me && ch.row.opponentId == theirs)
+                           || (ch.row.challengerId == theirs && ch.row.opponentId == me)
+            guard isPairMatch, let winner = ch.row.winnerUserId else { continue }
+            if winner == me { wins += 1 } else if winner == theirs { losses += 1 }
+        }
+        return (wins, losses)
+    }
+
+    /// Whose move it is on an active challenge. Used by the challenge row to
+    /// show "Your turn" vs "Waiting for @opp" instead of generic "In progress".
+    enum ChallengeTurn { case mine, theirs, both }
+    func turn(for ch: PopulatedChallenge) -> ChallengeTurn? {
+        guard ["accepted", "in_progress"].contains(ch.row.status) else { return nil }
+        let myScore = ch.iAmChallenger ? ch.row.challengerScore : ch.row.opponentScore
+        let theirScore = ch.iAmChallenger ? ch.row.opponentScore : ch.row.challengerScore
+        if myScore == nil && theirScore == nil { return .both }
+        if myScore == nil { return .mine }
+        if theirScore == nil { return .theirs }
+        return .both
+    }
+
+    // MARK: - Hype
+
+    /// Friend IDs that the user has just successfully hyped — used by the row
+    /// to swap the button into a confirmed/cooldown state for the rest of the
+    /// session. Server enforces the real 24h throttle; this is purely visual.
+    var recentlyHypedFriendIds: Set<String> = []
+    /// Friend IDs whose hype request is currently in flight. Disables the
+    /// button + shows a spinner so the user can't tap-spam.
+    var hypingFriendIds: Set<String> = []
+
+    func sendHype(to friend: SocialProfileSummary) async {
+        guard !hypingFriendIds.contains(friend.id) else { return }
+        hypingFriendIds.insert(friend.id)
+        defer { hypingFriendIds.remove(friend.id) }
+        let result = await social.sendHype(toUserId: friend.id)
+        switch result {
+        case .success:
+            recentlyHypedFriendIds.insert(friend.id)
+            successMessage = "Hype sent to @\(friend.username)"
+        case .softFailure(let reason, _):
+            if reason == "throttled" {
+                recentlyHypedFriendIds.insert(friend.id)
+                successMessage = "Already hyped @\(friend.username) today"
+            } else {
+                lastError = friendlyReason(reason)
+            }
+        case .failure(let msg):
+            lastError = msg
+        }
+        clearTransientMessagesSoon()
     }
 
     // MARK: - Refresh
@@ -152,6 +224,84 @@ final class FriendViewModel {
 
         notifications = notifs
         unreadNotificationCount = notifs.filter { !$0.read }.count
+
+        surfaceNewNotificationBanners(notifs, profiles: profiles)
+    }
+
+    /// Drops a toast banner via `AppState.showBanner` for any notification
+    /// row that arrived since the last refresh (or since app launch on the
+    /// first call). On the very first refresh of a session we set the
+    /// cutoff to "now" and fire nothing — that way the user doesn't get
+    /// spammed with backlog banners for old unread items.
+    private func surfaceNewNotificationBanners(
+        _ notifs: [NotificationRow],
+        profiles: [String: SocialProfileSummary]
+    ) {
+        guard let appState else { return }
+        // First-ever refresh of this session — set cutoff and skip.
+        guard let cutoff = bannerCutoff else {
+            bannerCutoff = Date()
+            return
+        }
+
+        let newRows = notifs.filter { n in
+            n.createdAt > cutoff && !bannerSeenNotifIds.contains(n.id)
+        }
+        guard !newRows.isEmpty else { return }
+
+        // Advance the cutoff so we don't re-evaluate these rows next time.
+        let newestSeen = newRows.map(\.createdAt).max() ?? cutoff
+        bannerCutoff = max(cutoff, newestSeen)
+
+        // Fire one banner per kind we know how to render. Limit to one
+        // per refresh so a burst of notifications doesn't queue 5 toasts.
+        for row in newRows.prefix(1) {
+            bannerSeenNotifIds.insert(row.id)
+            if let banner = bannerForNotification(row, profiles: profiles) {
+                appState.showBanner(banner)
+            }
+        }
+    }
+
+    private func bannerForNotification(
+        _ row: NotificationRow,
+        profiles: [String: SocialProfileSummary]
+    ) -> InAppBanner? {
+        switch row.kind {
+        case "friend_request_received":
+            let fromUserId = row.payload["from_user_id"]?.stringValue
+            let senderName: String = {
+                if let id = fromUserId, let p = profiles[id] { return p.displayName }
+                return "Someone"
+            }()
+            return InAppBanner(
+                title: "New friend request",
+                subtitle: "\(senderName) wants to connect",
+                icon: "person.crop.circle.badge.plus",
+                iconTint: .blue
+            )
+        case "friend_request_accepted":
+            let fromUserId = row.payload["from_user_id"]?.stringValue
+            let senderName: String = {
+                if let id = fromUserId, let p = profiles[id] { return p.displayName }
+                return "Someone"
+            }()
+            return InAppBanner(
+                title: "Friend request accepted",
+                subtitle: "You and \(senderName) are now friends",
+                icon: "checkmark.circle.fill",
+                iconTint: .green
+            )
+        case "challenge_received", "challenge_invite":
+            return InAppBanner(
+                title: "New challenge",
+                subtitle: "Someone challenged you",
+                icon: "trophy.fill",
+                iconTint: .orange
+            )
+        default:
+            return nil
+        }
     }
 
     /// Lightweight refresh that only re-pulls the friend profile rows
@@ -283,7 +433,8 @@ final class FriendViewModel {
                 currentStreak: leaderboard.streak,
                 latestScore: nil,
                 privacyMode: nil,
-                lastSeenAt: nil
+                lastSeenAt: nil,
+                isPremium: nil
             )
         } else {
             searchError = "User @\(normalized) not found."
@@ -414,8 +565,18 @@ final class FriendViewModel {
         await refresh()
     }
 
-    func submitChallengeScore(_ ch: PopulatedChallenge, score: Double, photoURL: String) async {
-        _ = await social.submitChallengeScore(challengeId: ch.row.id, score: score, photoURL: photoURL)
+    func submitChallengeScore(
+        _ ch: PopulatedChallenge,
+        score: Double,
+        photoURL: String,
+        analysis: ChallengeAnalysis? = nil
+    ) async {
+        _ = await social.submitChallengeScore(
+            challengeId: ch.row.id,
+            score: score,
+            photoURL: photoURL,
+            analysis: analysis
+        )
         await refresh()
 
         // If after refresh the challenge is completed and we won, post to activity feed.

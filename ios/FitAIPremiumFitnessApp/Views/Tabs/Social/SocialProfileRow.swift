@@ -28,10 +28,15 @@ struct SocialProfileRow: View {
                     .frame(width: 40, height: 40)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(profile.displayName)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(profile.displayName)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                    if profile.isPremium == true {
+                        proCrown
+                    }
+                }
                 HStack(spacing: 6) {
                     Text("@\(profile.username)")
                         .font(.caption)
@@ -65,6 +70,25 @@ struct SocialProfileRow: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.95))
         }
+    }
+
+    /// Pro crown — gold→amber gradient SF Symbol next to the name when
+    /// the user has an active Fit AI Pro entitlement.
+    private var proCrown: some View {
+        Image(systemName: "crown.fill")
+            .font(.system(size: 11, weight: .bold))
+            .foregroundStyle(
+                LinearGradient(
+                    colors: [
+                        Color(red: 1.00, green: 0.85, blue: 0.30),
+                        Color(red: 1.00, green: 0.62, blue: 0.20)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .shadow(color: Color.orange.opacity(0.45), radius: 3)
+            .accessibilityLabel("Pro member")
     }
 
     /// Neutral avatar gradient — ranks aren't shipping in v1, so all
