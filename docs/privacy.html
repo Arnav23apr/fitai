@@ -15,14 +15,23 @@
     nav a.back:hover { color: var(--text); }
     .container { max-width: 720px; margin: 0 auto; padding: 60px 24px 100px; }
     .meta { color: var(--muted); font-size: 14px; margin-bottom: 48px; }
+    .meta strong { color: var(--text); font-weight: 600; }
     h1 { font-size: 40px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
     h2 { font-size: 20px; font-weight: 700; margin: 48px 0 12px; color: var(--text); }
+    h3 { font-size: 16px; font-weight: 700; margin: 24px 0 8px; color: var(--text); }
     p { font-size: 15px; color: #ccc; margin-bottom: 16px; }
-    ul { padding-left: 20px; margin-bottom: 16px; }
+    ul, ol { padding-left: 20px; margin-bottom: 16px; }
     li { font-size: 15px; color: #ccc; margin-bottom: 8px; }
+    li > ul, li > ol { margin: 8px 0; }
     a { color: var(--green); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    .divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    hr { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+    strong { color: var(--text); font-weight: 600; }
+    em { color: #ddd; font-style: italic; }
+    blockquote { border-left: 3px solid var(--green); padding: 12px 16px; margin: 16px 0; background: rgba(0,230,118,0.04); color: #ddd; font-size: 14px; }
+    blockquote p { font-size: 14px; margin-bottom: 8px; color: #ddd; }
+    blockquote p:last-child { margin-bottom: 0; }
+    code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: ui-monospace, SFMono-Regular, monospace; }
     footer { border-top: 1px solid var(--border); padding: 32px 40px; text-align: center; color: var(--muted); font-size: 13px; }
   </style>
 </head>
@@ -35,76 +44,382 @@
 
 <div class="container">
   <h1>Privacy Policy</h1>
-  <p class="meta">Last updated: March 18, 2026</p>
+  <p class="meta">Last updated: May 5, 2026</p>
 
-  <p>FitAI ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard your information when you use the FitAI mobile application.</p>
-
-  <h2>1. Information We Collect</h2>
-  <p>We collect the following types of information:</p>
-  <ul>
-    <li><strong>Account information:</strong> Email address, name, and authentication credentials when you create an account via email, Apple, or Google Sign-In.</li>
-    <li><strong>Profile data:</strong> Gender, date of birth, height, weight, fitness goals, training experience, and training preferences you provide during onboarding.</li>
-    <li><strong>Workout data:</strong> Exercise logs, sets, reps, weights, workout duration, and completion history.</li>
-    <li><strong>Body photos:</strong> Photos you voluntarily upload for AI body analysis. These are processed to provide physique feedback and are not shared with third parties.</li>
-    <li><strong>Nutrition data:</strong> Meals, food entries, and calorie/macro logs you record in the app.</li>
-    <li><strong>Health data:</strong> With your explicit permission, we access Apple HealthKit data including body weight, heart rate, active energy, and workout records.</li>
-    <li><strong>Usage data:</strong> App interactions, feature usage, and crash reports to improve the app.</li>
-  </ul>
-
-  <h2>2. How We Use Your Information</h2>
-  <ul>
-    <li>To generate personalised AI workout plans and nutrition targets</li>
-    <li>To perform AI-powered body composition analysis on photos you submit</li>
-    <li>To display your stats, progress, and leaderboard rankings</li>
-    <li>To sync data with Apple Health (only with your explicit permission)</li>
-    <li>To send workout reminders and notifications (only with your explicit permission)</li>
-    <li>To improve and debug the app</li>
-    <li>To process subscription payments via RevenueCat</li>
-  </ul>
-
-  <h2>3. Apple HealthKit</h2>
-  <p>If you grant permission, FitAI reads and writes the following HealthKit data: body weight, heart rate, active energy burned, and workouts. This data is used solely to provide fitness insights within the app. We do not share HealthKit data with third parties, and we do not use HealthKit data for advertising or marketing purposes.</p>
-
-  <h2>4. Data Sharing</h2>
-  <p>We do not sell your personal data. We share data only with the following service providers who help us operate the app:</p>
-  <ul>
-    <li><strong>Supabase</strong> — database and authentication (data stored in the EU/US)</li>
-    <li><strong>RevenueCat</strong> — subscription and payment management</li>
-    <li><strong>Apple</strong> — Sign in with Apple authentication</li>
-    <li><strong>Google</strong> — Google Sign-In authentication</li>
-    <li><strong>Rork</strong> — AI backend for workout generation and image analysis</li>
-  </ul>
-  <p>All third-party providers are contractually obligated to handle your data securely and only for the purpose of providing their services to us.</p>
-
-  <h2>5. Body Photos</h2>
-  <p>Photos you upload for body analysis are processed by our AI systems to generate feedback. Photos are not publicly displayed, not shared with other users, and not used to train AI models without your separate consent. You can delete your photos at any time from within the app.</p>
-
-  <h2>6. Data Retention</h2>
-  <p>We retain your data for as long as your account is active. You can request deletion of your account and all associated data at any time by contacting us at <a href="mailto:team@fitai.health">team@fitai.health</a>. Upon deletion, your data will be permanently removed within 30 days.</p>
-
-  <h2>7. Security</h2>
-  <p>We use industry-standard security measures including encrypted connections (HTTPS/TLS), secure authentication (PKCE flow), and access controls to protect your data. No method of transmission over the internet is 100% secure, but we take reasonable steps to protect your information.</p>
-
-  <h2>8. Children's Privacy</h2>
-  <p>FitAI is not directed at children under the age of 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected such information, please contact us immediately.</p>
-
-  <h2>9. Your Rights</h2>
-  <p>Depending on your location, you may have the right to:</p>
-  <ul>
-    <li>Access the personal data we hold about you</li>
-    <li>Request correction of inaccurate data</li>
-    <li>Request deletion of your data</li>
-    <li>Object to or restrict certain processing</li>
-    <li>Data portability</li>
-  </ul>
-  <p>To exercise any of these rights, contact us at <a href="mailto:team@fitai.health">team@fitai.health</a>.</p>
-
-  <h2>10. Changes to This Policy</h2>
-  <p>We may update this Privacy Policy from time to time. We will notify you of significant changes by updating the date at the top of this page. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
-
-  <h2>11. Contact Us</h2>
-  <p>If you have any questions about this Privacy Policy, please contact us at:<br>
-  <a href="mailto:team@fitai.health">team@fitai.health</a></p>
+<p><strong>Effective date:</strong> May 5, 2026
+<strong>Last updated:</strong> May 5, 2026
+<strong>Photo consent version:</strong> 1</p>
+<blockquote>
+<p>⚠️ <strong>Important:</strong> This document is a starting template tailored to FitAI's
+actual data practices. It is <strong>not legal advice</strong>. Have a qualified attorney
+in your jurisdiction review it before publishing. Apple App Review will
+reject your submission if the policy URL is missing or the policy is
+materially incomplete.</p>
+<p><strong>Current operator status:</strong> This version is written for the launch period
+during which the App is operated by an individual freelancer / sole trader.
+Once the planned legal entity is incorporated, this Policy must be reissued
+naming the entity as the data controller, and users must be notified of the
+change in-app and at the URL where this Policy is hosted.</p>
+</blockquote>
+<p>This Privacy Policy describes how <strong>George Nourescu</strong> ("FitAI", "we",
+"us") collects, uses, and shares your personal information when you use the
+FitAI iOS application (the "App") and related services.</p>
+<hr>
+<h2>1. Who we are</h2>
+<p>FitAI is operated by <strong>George Nourescu</strong>, an individual freelancer /
+sole trader trading under the brand "FitAI", with a registered place of
+business at Strada Țepeș Vodă 7, Unit #370, Pitești 110036, Arges, Romania.</p>
+<p>For privacy questions or to exercise your rights, contact us at
+<strong>team@fitai.health</strong>.</p>
+<p>If you are in the European Economic Area, George Nourescu (acting as a
+natural person under their own name) is the <strong>data controller</strong> for your
+personal data. We will update this section if and when the operating entity
+changes (e.g. incorporation of a limited company).</p>
+<hr>
+<h2>2. What we collect</h2>
+<p>We only collect data needed to operate the App. The categories below reflect
+what FitAI actually collects today.</p>
+<h3>2.1 Account information</h3>
+<ul>
+<li>Email address (for sign-in via Supabase Auth)</li>
+<li>Display name and username</li>
+<li>Account creation timestamp</li>
+<li>Authentication tokens (managed by Supabase)</li>
+</ul>
+<h3>2.2 Profile and onboarding answers</h3>
+<p>Information you provide during onboarding or in the profile screen, including:</p>
+<ul>
+<li>Gender</li>
+<li>Date of birth (used to derive age)</li>
+<li>Height and weight</li>
+<li>Primary fitness goal, secondary goals, training experience, training
+  location, workouts per week, self-rated training confidence, perceived
+  obstacles ("holding back")</li>
+<li>Selected app language</li>
+<li>Optional avatar and bio</li>
+</ul>
+<h3>2.3 Body scan photos and analysis results</h3>
+<p>When you take a body scan or upload a photo for analysis, <strong>the image is sent
+over TLS 1.3 to Google Gemini for inference, then to our servers (Supabase,
+US-East) only when used to generate your "Future You" projection or a 1v1
+battle.</strong></p>
+<ul>
+<li><strong>Body-scan photos used purely for the score</strong> are processed in memory and
+  <strong>not stored persistently</strong>. They are sent to Gemini, the assessment is
+  returned, and the photo is discarded when the scan completes.</li>
+<li><strong>"Future You" goal-projection source photos</strong> are stored in our
+  <code>goal_projections</code> bucket and <strong>deleted within 30 days</strong>.</li>
+<li><strong>1v1 battle photos</strong> are stored in our <code>challenge_photos</code> bucket and
+  <strong>deleted within 7 days</strong> of the battle ending (or 30 days, whichever
+  is sooner).</li>
+<li>AI-generated assessment data (overall score, strong/weak points,
+  per-muscle scores) is retained until you delete your account.</li>
+<li>Photos are encrypted at rest (AES-256) and accessed only via short-lived
+  signed URLs (max 7 days for challenges, 1 hour for projections).</li>
+<li><strong>EXIF metadata</strong> (location, device serial, camera info) is stripped on
+  your device before upload.</li>
+</ul>
+<p><strong>We do not sell your photos. We do not use your photos to train any AI
+model.</strong> Photos are shared only with Google Gemini under their API terms,
+which prohibit training on customer data. Google does not retain photos
+beyond the short window they require for abuse detection.</p>
+<h3>2.4 Workout and activity data</h3>
+<ul>
+<li>Workouts you log (exercises, sets, reps, weights, duration)</li>
+<li>Workout streaks, total workouts, points, tier</li>
+<li>Personal records (PRs)</li>
+</ul>
+<h3>2.5 Subscription and purchase data</h3>
+<ul>
+<li>Subscription status, plan tier, premium flag</li>
+<li>Purchase receipts and renewal events (handled by Apple and RevenueCat;
+  we do not see or store payment card details)</li>
+</ul>
+<h3>2.6 Referral data</h3>
+<ul>
+<li>Your unique outbound referral code</li>
+<li>Codes you entered during onboarding (<code>referredByCode</code>)</li>
+<li>Attribution records connecting referrer to referred user</li>
+<li>Count of friends who joined using your code</li>
+</ul>
+<h3>2.7 Device and technical data</h3>
+<ul>
+<li>Device model, iOS version, app version</li>
+<li>Crash logs and diagnostic data (only if you opt in via iOS Settings)</li>
+<li>Anonymous in-app analytics events (e.g., screen views, feature usage)</li>
+</ul>
+<h3>2.8 Apple Health data (optional, if you grant permission)</h3>
+<p>If you connect Apple Health, we may <strong>read</strong> body weight, workouts, heart rate,
+and active energy from Health, and <strong>write</strong> your completed workouts and body
+weight back to Health. Health data is processed on your device and is not
+transmitted to our servers without your explicit action.</p>
+<h3>2.9 What we do not collect</h3>
+<ul>
+<li>Payment card numbers (Apple handles this)</li>
+<li>Precise location</li>
+<li>Browser cookies (the App is native iOS; this Policy does not apply to a
+  website unless one is added later)</li>
+<li>Contacts, microphone audio, or camera footage outside of explicit photo
+  capture for scans</li>
+</ul>
+<hr>
+<h2>3. How we use your data</h2>
+<p>We use the data above for the following purposes:</p>
+<table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Categories used</th>
+<th>Legal basis (GDPR)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Provide AI scan analysis (body photos)</td>
+<td>Photos, profile data</td>
+<td><strong>Art. 6(1)(b) Contract</strong> + <strong>Art. 9(2)(a) Explicit consent</strong> for special-category data</td>
+</tr>
+<tr>
+<td>Generate "Future You" goal-projection image</td>
+<td>Front body photo, profile data</td>
+<td><strong>Art. 9(2)(a) Explicit consent</strong></td>
+</tr>
+<tr>
+<td>1v1 battle photo comparisons</td>
+<td>Photos submitted for that battle</td>
+<td><strong>Art. 9(2)(a) Explicit consent</strong></td>
+</tr>
+<tr>
+<td>Generate personalized workout plans, meal plans, coach responses</td>
+<td>Profile data, scan results, workout logs</td>
+<td>Art. 6(1)(b) Contract</td>
+</tr>
+<tr>
+<td>Sync your data across reinstalls and devices</td>
+<td>All account data</td>
+<td>Art. 6(1)(b) Contract</td>
+</tr>
+<tr>
+<td>Process subscriptions and manage entitlements</td>
+<td>Account, subscription data</td>
+<td>Art. 6(1)(b) Contract</td>
+</tr>
+<tr>
+<td>Operate the referral program</td>
+<td>Referral codes, attribution data</td>
+<td>Art. 6(1)(b) Contract / 6(1)(f) Legitimate interests</td>
+</tr>
+<tr>
+<td>Detect abuse, fraud, and policy violations</td>
+<td>All categories</td>
+<td>Art. 6(1)(f) Legitimate interests</td>
+</tr>
+<tr>
+<td>Improve product quality (aggregate analytics)</td>
+<td>Anonymous usage events</td>
+<td>Art. 6(1)(f) Legitimate interests</td>
+</tr>
+<tr>
+<td>Send service announcements (rare)</td>
+<td>Email</td>
+<td>Art. 6(1)(f) Legitimate interests</td>
+</tr>
+<tr>
+<td>Comply with legal obligations</td>
+<td>All categories as needed</td>
+<td>Art. 6(1)(c) Legal obligation</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Withdrawing consent.</strong> You can withdraw photo-related consent at any
+time from <strong>Profile → Privacy</strong> without affecting prior processing.
+Withdrawal blocks all future scans and battle photo uploads.</p>
+<p>We <strong>do not</strong> sell your personal data, and we <strong>do not</strong> use it to train
+foundation AI models that benefit third parties.</p>
+<hr>
+<h2>4. How AI processing works</h2>
+<p>When you submit a body scan photo for analysis, the photo and a context block
+derived from your profile (gender, age, height/weight, training goals, prior
+weak points) are sent to our AI provider, <strong>Google (Gemini API)</strong>, for
+inference. Google processes the request, returns the assessment, and we store
+the result on our backend.</p>
+<ul>
+<li>We use the Gemini API in <strong>non-training</strong> mode: per Google's API terms, your
+  prompts and photos are not used to train Google's foundation models.</li>
+<li>Photos are sent over TLS and are not retained by Google beyond the
+  short windows necessary for abuse detection per Google's API terms.</li>
+<li>We do not share your photos with any other AI vendor.</li>
+</ul>
+<p>The AI analysis is informational and is <strong>not a medical diagnosis</strong>. See
+Section 11 (Health and Medical Disclaimer) of our Terms of Service.</p>
+<hr>
+<h2>5. Third parties we share data with</h2>
+<p>We share the minimum data necessary with the following service providers, all
+of whom are bound by data-processing agreements:</p>
+<table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Purpose</th>
+<th>Data shared</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Supabase (PostgreSQL hosting)</td>
+<td>User database, auth, storage</td>
+<td>All account data</td>
+</tr>
+<tr>
+<td>Google (Gemini API)</td>
+<td>AI scan analysis, plan generation, coach chat</td>
+<td>Photos and profile context per request; not retained by Google for training</td>
+</tr>
+<tr>
+<td>Apple (App Store, StoreKit)</td>
+<td>Sign-in with Apple, payments, push notifications</td>
+<td>Apple-managed identifiers</td>
+</tr>
+<tr>
+<td>RevenueCat</td>
+<td>Subscription state management</td>
+<td>Apple receipt data, anonymous user ID</td>
+</tr>
+<tr>
+<td>Apple HealthKit</td>
+<td>(Optional) sync workouts and weight</td>
+<td>Stays on your device by default</td>
+</tr>
+</tbody>
+</table>
+<p>We do not share data with advertisers or data brokers.</p>
+<p>If we ever change AI providers, payment processors, or backend hosts, we will
+update this list and notify users in-app.</p>
+<hr>
+<h2>6. International data transfers</h2>
+<p>Our backend (Supabase) is hosted in <strong>US East (N. Virginia, us-east-1)</strong>. AI requests are
+processed by Google in regions disclosed by Google. If you are in the EEA, UK,
+or Switzerland, your data may be transferred to the United States or other
+regions. Where required, we rely on the <strong>European Commission's Standard
+Contractual Clauses</strong> or equivalent safeguards.</p>
+<hr>
+<h2>7. Data retention</h2>
+<table>
+<thead>
+<tr>
+<th>Data</th>
+<th>Retention period</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Account profile</td>
+<td>Until you delete your account</td>
+</tr>
+<tr>
+<td>Body-scan photos used for scoring</td>
+<td><strong>Not stored</strong> — processed in memory and discarded</td>
+</tr>
+<tr>
+<td>"Future You" source photos</td>
+<td><strong>30 days max</strong>, then auto-deleted from storage and backups</td>
+</tr>
+<tr>
+<td>1v1 battle photos</td>
+<td><strong>7 days post-battle</strong> (max 30), then auto-deleted</td>
+</tr>
+<tr>
+<td>Scan analysis results (scores, weak points, etc.)</td>
+<td>Until you delete your account</td>
+</tr>
+<tr>
+<td>Workout logs</td>
+<td>Until you delete your account</td>
+</tr>
+<tr>
+<td>Subscription receipts</td>
+<td>7 years (tax / accounting requirement)</td>
+</tr>
+<tr>
+<td>Referral attribution rows</td>
+<td>Until either user deletes their account</td>
+</tr>
+<tr>
+<td>Crash and diagnostic logs</td>
+<td>90 days</td>
+</tr>
+<tr>
+<td>Backups</td>
+<td>Up to 30 days after primary deletion</td>
+</tr>
+</tbody>
+</table>
+<p>You can delete your account at any time from <strong>Profile → Settings → Delete
+Account</strong>, which permanently removes your profile, scans, workouts, and
+referral attributions from our backend within 30 days.</p>
+<hr>
+<h2>8. Your rights</h2>
+<p>Depending on where you live, you have some or all of the following rights:</p>
+<ul>
+<li><strong>Access</strong> — request a copy of the personal data we hold about you</li>
+<li><strong>Rectification</strong> — correct inaccurate data</li>
+<li><strong>Erasure ("right to be forgotten")</strong> — delete your data</li>
+<li><strong>Restriction / objection</strong> — limit how we process your data</li>
+<li><strong>Portability</strong> — receive your data in a structured, machine-readable format</li>
+<li><strong>Withdraw consent</strong> — where processing is based on consent</li>
+<li><strong>Lodge a complaint</strong> with your local data protection authority</li>
+</ul>
+<p>To exercise any right, email <strong>team@fitai.health</strong>. We respond within
+30 days (60 in complex cases).</p>
+<h3>California (CCPA / CPRA)</h3>
+<p>California residents have the right to know what personal information we
+collect, request deletion, correct inaccurate information, and opt out of any
+sale or sharing of personal data. <strong>We do not sell or share personal data as
+those terms are defined under the CCPA.</strong></p>
+<h3>Children</h3>
+<p><strong>FitAI is for users aged 16 and over.</strong> We block account creation under
+this age via verified date-of-birth at sign-up (not a self-declared
+checkbox). The 16+ floor reflects GDPR Art. 8 consent rules and the
+special-category nature of body-photo data; some EU member states permit
+13+ with parental consent for non-special categories, but we apply 16+
+uniformly because all FitAI core flows involve photos.</p>
+<p>If you believe an under-16 user has bypassed the gate, email us at
+team@fitai.health and we will delete the account within 7 days.</p>
+<hr>
+<h2>9. Security</h2>
+<p>We protect your data using:</p>
+<ul>
+<li>TLS 1.2+ in transit for all client-server traffic</li>
+<li>Encryption at rest for the database (managed by Supabase)</li>
+<li>Encryption at rest for body photos stored locally on your device
+  (<code>completeFileProtection</code>)</li>
+<li>Row-level security (RLS) policies on user-owned tables</li>
+<li>Limited employee access on a need-to-know basis</li>
+</ul>
+<p>No system is perfectly secure. If we discover a breach affecting your personal
+data, we will notify affected users and applicable authorities as required by
+law.</p>
+<hr>
+<h2>10. Push notifications</h2>
+<p>If you grant notification permission, we send service-related notifications
+(workout reminders, streak nudges, friend referrals). You can disable any
+category in <strong>Settings → Notifications → FitAI</strong> at any time.</p>
+<hr>
+<h2>11. Changes to this Policy</h2>
+<p>We may update this Privacy Policy from time to time. If changes are material,
+we will notify you in-app and/or by email at least 14 days before the new
+version takes effect. The "Last updated" date at the top reflects the most
+recent revision.</p>
+<hr>
+<h2>12. Contact</h2>
+<p>For privacy questions, requests, or complaints, contact:</p>
+<p><strong>George Nourescu</strong>
+Trading as "FitAI"
+Strada Țepeș Vodă 7, Unit #370, Pitești 110036, Arges
+Romania
+Email: <strong>team@fitai.health</strong></p>
+<hr>
+<p><em>Document version: 1.0 (sole trader / freelancer launch)</em></p>
 </div>
 
 <footer>© 2026 FitAI. All rights reserved. · <a href="terms.html">Terms of Service</a></footer>
