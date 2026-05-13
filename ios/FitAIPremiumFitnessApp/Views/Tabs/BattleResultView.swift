@@ -104,22 +104,26 @@ struct BattleResultView: View {
                         name: battle.player.name,
                         score: battle.player.overallScore,
                         isWinner: battle.playerWins,
-                        showMogged: !battle.playerWins && showStamp,
+                        showMogged: battle.outcome == .opponent && showStamp,
+                        isTie: battle.isTie,
+                        showDraw: battle.isTie && showStamp,
                         scoreAlignment: .leading,
                         half: half,
                         corners: RectangleCornerRadii(topLeading: 16, bottomLeading: 16, bottomTrailing: 0, topTrailing: 0)
                     )
 
                     Rectangle()
-                        .fill(Color.red)
+                        .fill(battle.isTie ? Color.yellow : Color.red)
                         .frame(width: 2, height: 280)
 
                     photoTile(
                         photo: battle.opponent.photo,
                         name: battle.opponent.name,
                         score: battle.opponent.overallScore,
-                        isWinner: !battle.playerWins,
+                        isWinner: battle.outcome == .opponent,
                         showMogged: battle.playerWins && showStamp,
+                        isTie: battle.isTie,
+                        showDraw: battle.isTie && showStamp,
                         scoreAlignment: .trailing,
                         half: half,
                         corners: RectangleCornerRadii(topLeading: 0, bottomLeading: 0, bottomTrailing: 16, topTrailing: 16)
@@ -156,20 +160,34 @@ struct BattleResultView: View {
         score: Double,
         isWinner: Bool,
         showMogged: Bool,
+        isTie: Bool = false,
+        showDraw: Bool = false,
         scoreAlignment: HorizontalAlignment,
         half: CGFloat,
         corners: RectangleCornerRadii
     ) -> some View {
-        ZStack {
+        // Tie state: both tiles look "alive" (full saturation, no
+        // mogged stamp, yellow score), with a "DRAW" stamp on each.
+        // Non-tie: winner stays vivid + green, loser desaturated +
+        // red + MOGGED.
+        let baseSaturation: Double = isTie ? 1.0 : (isWinner ? 1.0 : 0.4)
+        let baseBrightness: Double = isTie ? 0 : (isWinner ? 0 : -0.05)
+        let scoreColor: Color = isTie ? .yellow : (isWinner ? .green : .red)
+        let borderColor: Color = isTie ? Color.yellow.opacity(0.55)
+                                       : (isWinner ? Color.green.opacity(0.55) : Color.clear)
+
+        return ZStack {
             Image(uiImage: photo)
                 .resizable()
                 .scaledToFill()
                 .frame(width: half, height: 280)
                 .clipped()
-                .saturation(isWinner ? 1.0 : 0.4)
-                .brightness(isWinner ? 0 : -0.05)
+                .saturation(baseSaturation)
+                .brightness(baseBrightness)
 
-            if showMogged {
+            if showDraw {
+                drawStamp
+            } else if showMogged {
                 moggedStamp
             }
 
@@ -184,7 +202,7 @@ struct BattleResultView: View {
                             .lineLimit(1)
                         Text(scoreText(score))
                             .font(.system(.title, design: .rounded, weight: .black))
-                            .foregroundStyle(isWinner ? .green : .red)
+                            .foregroundStyle(scoreColor)
                     }
                     .padding(10)
                     .background(.ultraThinMaterial.opacity(0.9))
@@ -198,8 +216,26 @@ struct BattleResultView: View {
         .clipShape(.rect(cornerRadii: corners))
         .overlay(
             UnevenRoundedRectangle(cornerRadii: corners)
-                .strokeBorder(isWinner ? Color.green.opacity(0.55) : Color.clear, lineWidth: 2)
+                .strokeBorder(borderColor, lineWidth: 2)
         )
+    }
+
+    /// Yellow "DRAW" stamp, mirrored visual rhythm of `moggedStamp`.
+    /// Slightly rotated like a real ink stamp; sits centered on both
+    /// tiles when the battle ends in a tie.
+    private var drawStamp: some View {
+        Text("DRAW")
+            .font(.system(size: 30, weight: .black, design: .rounded))
+            .tracking(2)
+            .foregroundStyle(.yellow)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(Color.yellow, lineWidth: 3)
+            )
+            .rotationEffect(.degrees(-8))
+            .shadow(color: .black.opacity(0.45), radius: 6, y: 2)
     }
 
     private var moggedStamp: some View {
@@ -652,6 +688,10 @@ struct BattleResultView: View {
     // MARK: - Strings
 
     private var winnerLine: String {
+        if battle.isTie {
+            let pts = String(format: "%.1f", battle.player.overallScore)
+            return "It's a draw. \(pts) points each."
+        }
         let pts = String(format: "%.1f", battle.scoreDifference)
         let name = battle.winner.name
         let isSelf = name.lowercased() == "you" || name.isEmpty

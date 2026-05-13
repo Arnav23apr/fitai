@@ -270,22 +270,23 @@ private struct PaywallContent: View {
     private var heroSection: some View {
         VStack(spacing: 14) {
             ZStack {
-                // Pulsing glow halo behind the crown — gives life without
-                // animating the crown itself (which would make the icon
-                // feel toy-like at 46pt).
+                // Pulsing gold halo behind the dumbbell. Slightly
+                // wider than before so the larger silhouette of the
+                // 3D dumbbell has room to breathe inside the bloom.
                 Circle()
                     .fill(RadialGradient(
                         colors: [
-                            Color(red: 1, green: 0.78, blue: 0.20).opacity(0.28),
-                            Color(red: 1, green: 0.55, blue: 0.10).opacity(0.10),
+                            Color(red: 1, green: 0.78, blue: 0.20).opacity(0.32),
+                            Color(red: 1, green: 0.55, blue: 0.10).opacity(0.12),
                             .clear,
                         ],
-                        center: .center, startRadius: 0, endRadius: 70))
-                    .frame(width: 140, height: 140)
+                        center: .center, startRadius: 0, endRadius: 90))
+                    .frame(width: 170, height: 170)
                     .scaleEffect(heroPulse)
                     .blur(radius: 4)
 
-                // Thin gold ring for definition.
+                // Thin gold ring for definition — sits behind the
+                // dumbbell to frame it as a "badge".
                 Circle()
                     .strokeBorder(
                         LinearGradient(
@@ -298,17 +299,17 @@ private struct PaywallContent: View {
                         ),
                         lineWidth: 1
                     )
-                    .frame(width: 96, height: 96)
+                    .frame(width: 116, height: 116)
 
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(LinearGradient(
-                        colors: [
-                            Color(red: 1, green: 0.88, blue: 0.28),
-                            Color(red: 1, green: 0.55, blue: 0.10),
-                        ],
-                        startPoint: .top, endPoint: .bottom))
-                    .shadow(color: .yellow.opacity(0.35), radius: 16, y: 4)
+                // 3D polished-gold dumbbell — same SceneKit asset
+                // that opens the app on WelcomeView, returning as
+                // its premium upgrade variant. Sized to sit inside
+                // the gold ring with the bar comfortably visible.
+                DumbbellSceneView(transparent: true, goldChrome: true)
+                    .frame(width: 132, height: 100)
+                    .shadow(color: Color(red: 1, green: 0.62, blue: 0.10).opacity(0.45), radius: 18, y: 4)
+                    .shadow(color: .yellow.opacity(0.25), radius: 8)
+                    .scaleEffect(heroPulse)
             }
             VStack(spacing: 6) {
                 Text("FitAI Pro")

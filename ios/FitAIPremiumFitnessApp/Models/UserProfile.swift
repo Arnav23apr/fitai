@@ -127,13 +127,36 @@ nonisolated struct UserProfile: Codable, Sendable {
     /// wasteful and noisy. Nil = never checked.
     var lastProgressionCheckAt: Date? = nil
 
-    /// Whether the user can trigger a scan without hitting the paywall.
-    /// First scan ever is free; after that, only premium or earned-scan users.
+    /// Whether the user can see an unblurred scan result. Umax
+    /// pattern: every free user's scan result is locked at reveal,
+    /// the dopamine of "show me my score" is the conversion hook.
+    /// Premium unlocks all scans; sharing with 3 friends earns one
+    /// `freeScansEarned` credit that unlocks the next scan.
     var canScanFree: Bool {
         if isPremium { return true }
-        if totalScans == 0 { return true }    // lifetime first-scan freebie
         if freeScansEarned > 0 { return true } // referral-unlocked scans
         return false
+    }
+
+    /// Number of days of workout/log history a user can see in
+    /// charts, lists, and insights. Free tier = 30 days; Pro =
+    /// effectively unlimited. Underlying storage and PR detection
+    /// always operate on the full log — this only filters what the
+    /// user sees in history-rendering UI.
+    var visibleHistoryWindowDays: Int {
+        isPremium ? .max : 30
+    }
+
+    /// Cutoff date for history views. Anything before this is
+    /// hidden behind the Pro paywall on the surfaces that display
+    /// it. Premium returns `.distantPast` (effectively no cutoff).
+    var historyCutoffDate: Date {
+        guard !isPremium else { return .distantPast }
+        return Calendar.current.date(
+            byAdding: .day,
+            value: -visibleHistoryWindowDays,
+            to: Date()
+        ) ?? .distantPast
     }
 
     // MARK: - Entitlements

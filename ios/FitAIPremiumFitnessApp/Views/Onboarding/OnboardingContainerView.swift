@@ -4,22 +4,17 @@ struct OnboardingContainerView: View {
     @Environment(AppState.self) private var appState
     var startAtLogin: Bool = false
     @State private var currentStep: OnboardingStep = .gender
-    @State private var paywallSkipped: Bool = false
-    @State private var spinCompleted: Bool = false
     @State private var isGoingBack: Bool = false
 
-    // Steps that show progress in the onboarding header.
-    // calculatingPlan/paywall/welcomePro/spinWheel/enableNotifications/appleHealth
-    // are deliberately excluded — those are post-personalization moments.
-    // Progress bar order matches the *user-visible* flow. Paywall, welcomePro,
-    // and spinWheel are intentionally excluded — they're conversion moments,
-    // not progress moments, and showing the bar there would imply more steps
-    // than there really are.
+    // Steps that show progress in the onboarding header. The
+    // post-personalization screens (enableNotifications, appleHealth)
+    // are deliberately excluded so the bar doesn't imply more steps
+    // than the user actually sees.
     private let progressSteps: [OnboardingStep] = [
         .name, .gender, .workoutsPerWeek, .preferredTrainingDays, .trainingExperience, .trainingLocation,
         .primaryGoal, .hardTruth, .trustUs, .dateOfBirth, .heightWeight,
         .holdingBack, .physiqueReward, .goals, .confidence,
-        .onePercent, .resultsGraph, .commitment, .planLoading,
+        .onePercent, .resultsGraph, .commitment,
         .planPreview, .referralCode, .signUp, .username
     ]
 
@@ -83,8 +78,6 @@ struct OnboardingContainerView: View {
                     PlanPreviewView(onContinue: { advance() })
                 case .commitment:
                     CommitmentView(onContinue: { advance() })
-                case .planLoading:
-                    PlanLoadingView(onContinue: { advance() })
                 case .referralCode:
                     ReferralCodeView(onContinue: { advance() })
                 case .signUp:
@@ -105,54 +98,13 @@ struct OnboardingContainerView: View {
                             await MainActor.run { advance() }
                         }
                     )
-                case .paywall:
-                    PaywallView(
-                        context: .onboarding,
-                        onSubscribe: {
-                            appState.profile.isPremium = true
-                            isGoingBack = false
-                            currentStep = .welcomePro
-                        },
-                        onSkip: {
-                            paywallSkipped = true
-                            // First skip → spin wheel (one-shot recovery).
-                            // Second skip (after spin already happened) →
-                            // reveal planPreview anyway and let the user
-                            // continue; the discount stays on profile so
-                            // they can claim it from the Limited Offer card
-                            // on Profile. We do NOT gate planPreview behind
-                            // payment — the Umax pattern lets the user see
-                            // their results, just with a friend-invite or
-                            // future paywall surface as the upgrade path.
-                            if spinCompleted {
-                                currentStep = .planPreview
-                            } else {
-                                currentStep = .spinWheel
-                            }
-                        },
-                        onUnlockedViaInvite: {
-                            // User invited 3 friends → unlock results
-                            // immediately. Skip the spin-wheel cycle.
-                            paywallSkipped = true
-                            isGoingBack = false
-                            currentStep = .planPreview
-                        }
-                    )
-                case .welcomePro:
-                    WelcomeProView(onContinue: {
-                        isGoingBack = false
-                        // Post-purchase: go reveal the plan we promised.
-                        currentStep = .planPreview
-                    })
-                case .spinWheel:
-                    SpinWheelView(onContinue: {
-                        isGoingBack = false
-                        spinCompleted = true
-                        // Loop back to paywall so the discount the user
-                        // just won is presented immediately, not saved
-                        // for a later visit. Captures intent at peak.
-                        currentStep = .paywall
-                    })
+                // .paywall / .welcomePro / .spinWheel were removed from
+                // the linear onboarding sequence. FitAI now follows the
+                // Umax pattern: paywall fires at the scan-result reveal
+                // in the main app instead of during onboarding. The
+                // PaywallView / WelcomeProView / SpinWheelView struct
+                // files are still imported elsewhere and presented as
+                // sheets — they're just no longer onboarding steps.
                 case .enableNotifications:
                     EnableNotificationsView(onContinue: { advance() })
                 case .appleHealth:
@@ -219,11 +171,10 @@ struct OnboardingContainerView: View {
             }
             nextStep = allSteps[currentIndex + 2]
         }
-        if nextStep == .spinWheel || nextStep == .welcomePro {
-            currentStep = .paywall
-        } else {
-            currentStep = nextStep
-        }
+        // No more paywall / welcomePro / spinWheel redirects — those
+        // steps were pulled out of the onboarding flow. advance()
+        // just moves linearly through the remaining onboarding steps.
+        currentStep = nextStep
     }
 
     private func goBack() {

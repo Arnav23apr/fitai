@@ -40,16 +40,40 @@ struct PhysiqueBattle: Identifiable {
     /// AI call failed or timed out — the view simply omits the verdict block.
     var verdict: String? = nil
 
+    /// Tie threshold. AI-scored physiques are floats so an exact
+    /// equality check would almost never fire in practice; a
+    /// fractional gap of < 0.05 points is treated as a draw so
+    /// scores like 73.0 vs 73.04 are correctly called as tied. Bump
+    /// this if we ever want a wider "essentially tied" band.
+    static let tieMargin: Double = 0.05
+
+    /// Overall battle outcome. Use this instead of `playerWins` /
+    /// `winner` whenever the UI needs to handle ties (badges, copy,
+    /// share cards). `winner` / `loser` still return a contestant
+    /// for legacy callers — on a tie they fall back to `player`.
+    var outcome: BattleSide {
+        if scoreDifference < Self.tieMargin { return .tie }
+        return player.overallScore > opponent.overallScore ? .player : .opponent
+    }
+
+    var isTie: Bool { outcome == .tie }
+
     var winner: BattleContestant {
-        player.overallScore >= opponent.overallScore ? player : opponent
+        // Legacy convenience — collapses tie to player to avoid
+        // crashing the existing call sites that string-format
+        // `winner.name`. New code should check `isTie` first.
+        outcome == .opponent ? opponent : player
     }
 
     var loser: BattleContestant {
-        player.overallScore >= opponent.overallScore ? opponent : player
+        outcome == .opponent ? player : opponent
     }
 
+    /// Strict win for the player — false on a tie. Now that
+    /// `outcome` exists, prefer it; this is kept for the existing
+    /// `isWinner: battle.playerWins` callers.
     var playerWins: Bool {
-        player.overallScore >= opponent.overallScore
+        outcome == .player
     }
 
     var scoreDifference: Double {

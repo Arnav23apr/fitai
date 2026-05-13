@@ -268,9 +268,10 @@ nonisolated struct PlanModificationService: Sendable {
     func generate(
         routine: Routine?,
         userPrompt: String,
-        profile: UserProfile? = nil
+        profile: UserProfile? = nil,
+        latestScan: ScanHistoryEntry? = nil
     ) async throws -> GenerateResponse {
-        let system = systemPrompt(routinePresent: routine != nil, profile: profile)
+        let system = systemPrompt(routinePresent: routine != nil, profile: profile, latestScan: latestScan)
         let user = userMessage(routine: routine, prompt: userPrompt, profile: profile)
         let schema = responseSchema()
 
@@ -332,7 +333,7 @@ nonisolated struct PlanModificationService: Sendable {
 
     // MARK: - Prompt construction
 
-    private func systemPrompt(routinePresent: Bool, profile: UserProfile?) -> String {
+    private func systemPrompt(routinePresent: Bool, profile: UserProfile?, latestScan: ScanHistoryEntry? = nil) -> String {
         let profileBlock: String = {
             guard let p = profile else { return "" }
             var lines: [String] = ["User profile:"]
@@ -341,6 +342,44 @@ nonisolated struct PlanModificationService: Sendable {
             if !p.trainingLocation.isEmpty { lines.append("  - Trains at: \(p.trainingLocation)") }
             if p.workoutsPerWeek > 0 { lines.append("  - Workouts/week: \(p.workoutsPerWeek)") }
             if !p.weakPoints.isEmpty { lines.append("  - Weak points: \(p.weakPoints.joined(separator: ", "))") }
+            return lines.joined(separator: "\n")
+        }()
+
+        // Optional body-composition block from the latest scan. This is
+        // the AI-physique-scan layer Pro users pay for: it lets the LLM
+        // tune volume distribution to actual muscle balance instead of
+        // just profile aspirations. The per-muscle scores are 0-100;
+        // anything below ~55 reads as "underdeveloped vs the rest of
+        // the physique" and warrants extra volume.
+        let scanBlock: String = {
+            guard let s = latestScan else { return "" }
+            var lines: [String] = ["Latest body scan (use this to balance volume and target weak areas):"]
+            lines.append("  - Overall physique score: \(Int(s.overallScore.rounded()))/100")
+            lines.append("  - Potential rating: \(Int(s.potentialRating.rounded()))/100")
+            if !s.muscleMassRating.isEmpty {
+                lines.append("  - Muscle mass rating: \(s.muscleMassRating)")
+            }
+            let m = s.muscleScores
+            var perMuscle: [String] = [
+                "Chest \(Int(m.chest.rounded()))",
+                "Shoulders \(Int(m.shoulders.rounded()))",
+                "Back \(Int(m.back.rounded()))",
+                "Arms \(Int(m.arms.rounded()))",
+                "Legs \(Int(m.legs.rounded()))",
+                "Core \(Int(m.core.rounded()))",
+            ]
+            if let g = m.glutes { perMuscle.append("Glutes \(Int(g.rounded()))") }
+            lines.append("  - Per-muscle scores (0-100): \(perMuscle.joined(separator: ", "))")
+            if !s.strongPoints.isEmpty {
+                lines.append("  - Strong points: \(s.strongPoints.joined(separator: ", "))")
+            }
+            if !s.weakPoints.isEmpty {
+                lines.append("  - Scan weak points: \(s.weakPoints.joined(separator: ", "))")
+            }
+            if !s.recommendations.isEmpty {
+                let trimmed = s.recommendations.prefix(3).joined(separator: "; ")
+                lines.append("  - Scan recommendations: \(trimmed)")
+            }
             return lines.joined(separator: "\n")
         }()
 
@@ -385,6 +424,7 @@ nonisolated struct PlanModificationService: Sendable {
 
         var pieces: [String] = []
         if !profileBlock.isEmpty { pieces.append(profileBlock) }
+        if !scanBlock.isEmpty { pieces.append(scanBlock) }
         pieces.append("""
         You are FitAI's workout coach. The user wants help with their workout
         templates. Output a strict JSON object with these top-level keys:

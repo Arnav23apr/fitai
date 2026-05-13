@@ -1,5 +1,13 @@
 import SwiftUI
 
+/// Privacy/trust beat. Hero is a chrome-haloed lock with three
+/// outward pulse rings. The bullet titles arrive as scrambled glyphs
+/// that "decrypt" into readable text — a literal visualization of
+/// the "your data stays yours" promise.
+///
+/// Background is the shared `PremiumBackdrop` (breathing top
+/// spotlight, FBM noise, vignette, film grain) so this screen sits
+/// on the same canvas as WelcomeView and PlanPreview.
 struct TrustUsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
@@ -10,7 +18,12 @@ struct TrustUsView: View {
     @State private var lockBounce: CGFloat = 1.0
     @State private var bulletsRevealed: Int = 0
     @State private var ctaTapCount: Int = 0
-    @State private var ringPulse: Bool = false
+    /// Drives the breathing halation rim around the lock. Climbs to
+    /// 1.0 on appear, then breathes 0.7 ↔ 1.0 forever.
+    @State private var lockHalation: Double = 0
+    /// Per-bullet decryption trigger. We flip each index on as its
+    /// row reveals so `EncryptionShimmerText` can fire its scramble.
+    @State private var decryptTriggers: [Bool] = [false, false, false]
 
     private var lang: String { appState.profile.selectedLanguage }
     private var isDark: Bool { colorScheme == .dark }
@@ -19,7 +32,6 @@ struct TrustUsView: View {
         let icon: String
         let title: String
         let body: String
-        let tint: Color
     }
 
     private var bullets: [Bullet] {
@@ -27,36 +39,24 @@ struct TrustUsView: View {
             Bullet(
                 icon: "lock.shield.fill",
                 title: L.t("trustUsBullet1Title", lang),
-                body:  L.t("trustUsBullet1Body",  lang),
-                tint:  Color(red: 0.20, green: 0.55, blue: 1.00)
+                body:  L.t("trustUsBullet1Body",  lang)
             ),
             Bullet(
                 icon: "trash.slash.fill",
                 title: L.t("trustUsBullet2Title", lang),
-                body:  L.t("trustUsBullet2Body",  lang),
-                tint:  Color(red: 1.00, green: 0.32, blue: 0.40)
+                body:  L.t("trustUsBullet2Body",  lang)
             ),
             Bullet(
                 icon: "dumbbell.fill",
                 title: L.t("trustUsBullet3Title", lang),
-                body:  L.t("trustUsBullet3Body",  lang),
-                tint:  Color(red: 1.00, green: 0.62, blue: 0.10)
+                body:  L.t("trustUsBullet3Body",  lang)
             ),
         ]
     }
 
     var body: some View {
         ZStack {
-            AuroraBackground(
-                colors: [
-                    Color.blue.opacity(isDark ? 0.10 : 0.06),
-                    Color.indigo.opacity(isDark ? 0.08 : 0.04),
-                    Color.cyan.opacity(isDark ? 0.06 : 0.03),
-                    Color.clear,
-                    Color.clear,
-                ],
-                speed: 0.10
-            )
+            PremiumBackdrop()
 
             VStack(spacing: 0) {
                 heroSection
@@ -66,7 +66,7 @@ struct TrustUsView: View {
 
                 VStack(spacing: 18) {
                     ForEach(Array(bullets.enumerated()), id: \.offset) { idx, b in
-                        bulletRow(b, revealed: idx < bulletsRevealed)
+                        bulletRow(b, index: idx, revealed: idx < bulletsRevealed)
                     }
                 }
                 .padding(.horizontal, 24)
@@ -79,10 +79,11 @@ struct TrustUsView: View {
                     .padding(.bottom, 16)
             }
         }
+        .preferredColorScheme(.dark)
         .onAppear { runAppearChoreography() }
     }
 
-    // MARK: - Hero (lock + concentric rings)
+    // MARK: - Hero (haloed lock + ambient pulse rings)
 
     private var heroSection: some View {
         VStack(spacing: 16) {
@@ -91,30 +92,34 @@ struct TrustUsView: View {
                 pulseRing(diameter: 180, delay: 0.4)
                 pulseRing(diameter: 220, delay: 0.8)
 
-                Circle()
-                    .fill(.regularMaterial)
-                    .frame(width: 84, height: 84)
-                    .overlay(
-                        Circle()
-                            .strokeBorder(Color.primary.opacity(0.06), lineWidth: 0.5)
-                    )
-                    .shadow(color: .black.opacity(isDark ? 0.30 : 0.08), radius: 14, y: 6)
-
-                Image(systemName: lockClosed ? "lock.fill" : "lock.open.fill")
-                    .font(.system(size: 34, weight: .semibold))
-                    .foregroundStyle(.primary)
-                    .contentTransition(.symbolEffect(.replace.downUp))
-                    .scaleEffect(lockBounce)
+                // Frosted-glass lock chip with the lock symbol inside.
+                // The chromatic-rim halation glow wraps the entire chip
+                // and breathes on a 2s loop — the screen's "AI premium"
+                // signature.
+                ZStack {
+                    Circle()
+                        .fill(Color.white.opacity(0.05))
+                        .frame(width: 84, height: 84)
+                    Circle()
+                        .strokeBorder(Color.white.opacity(0.18), lineWidth: 0.75)
+                        .frame(width: 84, height: 84)
+                    Image(systemName: lockClosed ? "lock.fill" : "lock.open.fill")
+                        .font(.system(size: 34, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .contentTransition(.symbolEffect(.replace.downUp))
+                }
+                .halationGlow(intensity: lockHalation)
+                .scaleEffect(lockBounce)
             }
             .frame(height: 220)
 
             VStack(spacing: 6) {
                 Text(L.t("trustUsTitle", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(OnboardingTheme.headlineCompact())
+                    .foregroundStyle(.white)
                 Text(L.t("trustUsSubtitle", lang))
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.65))
             }
             .opacity(headerAppeared ? 1 : 0)
             .blur(radius: headerAppeared ? 0 : 6)
@@ -122,17 +127,19 @@ struct TrustUsView: View {
         }
     }
 
-    /// Apple Privacy / FaceID-style outward pulse ring. Three of these
-    /// stacked on different delays gives the "trust circle" radiate effect.
+    /// Apple Privacy / FaceID-style outward pulse ring. Three of
+    /// these stacked at staggered delays. Tinted white so they read
+    /// as ambient light radiating from the lock against the dark
+    /// `PremiumBackdrop`.
     private func pulseRing(diameter: CGFloat, delay: Double) -> some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { ctx in
             let t = ctx.date.timeIntervalSinceReferenceDate + delay
             let cycle = t.truncatingRemainder(dividingBy: 3.0) / 3.0
             let scale = 0.85 + cycle * 0.55
-            let opacity = max(0, 0.22 * (1.0 - cycle))
+            let opacity = max(0, 0.32 * (1.0 - cycle))
 
             Circle()
-                .strokeBorder(Color.primary.opacity(opacity), lineWidth: 0.75)
+                .strokeBorder(Color.white.opacity(opacity), lineWidth: 0.75)
                 .frame(width: diameter, height: diameter)
                 .scaleEffect(scale)
         }
@@ -140,28 +147,40 @@ struct TrustUsView: View {
 
     // MARK: - Bullets
 
-    private func bulletRow(_ b: Bullet, revealed: Bool) -> some View {
+    private func bulletRow(_ b: Bullet, index: Int, revealed: Bool) -> some View {
         HStack(alignment: .top, spacing: 14) {
+            // Monochrome icon chip — frosted glass surface with a
+            // hairline stroke. The icon itself is the only signal
+            // per bullet; no per-bullet color tints (which were the
+            // designer's flag on the original).
             ZStack {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(b.tint.opacity(0.12))
+                    .fill(Color.white.opacity(0.05))
                     .frame(width: 40, height: 40)
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .strokeBorder(b.tint.opacity(0.18), lineWidth: 0.5)
+                    .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.75)
                     .frame(width: 40, height: 40)
                 Image(systemName: b.icon)
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(b.tint)
+                    .foregroundStyle(.white)
             }
-            .shadow(color: b.tint.opacity(isDark ? 0.20 : 0.12), radius: 6, y: 2)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(b.title)
-                    .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(.primary)
+                // Title gets the encryption shimmer — the hero FX of
+                // this screen. As each row reveals, its title briefly
+                // renders as scrambled glyphs that decrypt into the
+                // real text. Pairs with "your numbers stay yours".
+                EncryptionShimmerText(
+                    text: b.title,
+                    duration: 0.7,
+                    trigger: decryptTriggers[safe: index] ?? false
+                )
+                .font(.system(.subheadline, weight: .semibold))
+                .foregroundStyle(.white)
+
                 Text(b.body)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.65))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -180,12 +199,12 @@ struct TrustUsView: View {
         } label: {
             Text(L.t("trustUsCTA", lang))
                 .font(.system(.headline, weight: .bold))
-                .foregroundStyle(Color(.systemBackground))
+                .foregroundStyle(.black)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color.primary)
+                .background(Color.white)
                 .clipShape(.rect(cornerRadius: 28))
-                .shadow(color: .black.opacity(isDark ? 0 : 0.18), radius: 14, y: 6)
+                .shadow(color: .white.opacity(0.08), radius: 36)
         }
         .opacity(headerAppeared ? 1 : 0)
         .scaleEffect(headerAppeared ? 1 : 0.94)
@@ -202,8 +221,8 @@ struct TrustUsView: View {
             headerAppeared = true
         }
 
-        // Lock "thunk": pops to 1.18, settles back to 1.0, then closes
-        // with the symbol-replace transition while a success haptic fires.
+        // Lock "thunk": pops to 1.18, settles back to 1.0, then
+        // closes with the symbol-replace transition.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) {
                 lockBounce = 1.18
@@ -216,12 +235,33 @@ struct TrustUsView: View {
             }
         }
 
+        // Bring up the halation ring with the lock close, then loop
+        // a 2s breathing modulation between 0.7 and 1.0.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            withAnimation(.easeOut(duration: 0.6)) {
+                lockHalation = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true)) {
+                    lockHalation = 0.7
+                }
+            }
+        }
+
         for i in 1...bullets.count {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.65 + Double(i) * 0.18) {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.82)) {
                     bulletsRevealed = i
                 }
+                // Fire the decryption shimmer for this bullet's title
+                // immediately after it slides in. Each row decrypts
+                // independently for a staggered cascade.
+                if decryptTriggers.indices.contains(i - 1) {
+                    decryptTriggers[i - 1] = true
+                }
             }
         }
     }
 }
+
+// Array.subscript(safe:) is defined module-wide in PlanView.swift.

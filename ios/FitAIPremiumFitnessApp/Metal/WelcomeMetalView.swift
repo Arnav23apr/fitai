@@ -13,6 +13,11 @@ struct DumbbellSceneView: UIViewRepresentable {
     var transparent: Bool = false
     /// When true (light mode), use near-black chrome so it pops on white background
     var darkChrome:  Bool = false
+    /// When true, render the dumbbell in polished gold PBR — bar in
+    /// bright gold, plates in amber, edges in champagne. Used on the
+    /// paywall hero so the same chrome dumbbell that opens the app
+    /// returns as a "luxury upgrade" version of itself.
+    var goldChrome:  Bool = false
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -31,7 +36,7 @@ struct DumbbellSceneView: UIViewRepresentable {
         // against the dark background). Honoring the caller keeps the
         // dumbbell matte-black in both themes — silhouette on dark, pop on
         // light — and matches the design feedback.
-        let result = buildScene(transparent: transparent, darkChrome: darkChrome)
+        let result = buildScene(transparent: transparent, darkChrome: darkChrome, goldChrome: goldChrome)
         v.scene    = result.scene
         v.delegate = context.coordinator
 
@@ -212,7 +217,7 @@ struct DumbbellSceneView: UIViewRepresentable {
 
     // MARK: - Scene construction
 
-    func buildScene(transparent: Bool, darkChrome: Bool = false) -> SceneResult {
+    func buildScene(transparent: Bool, darkChrome: Bool = false, goldChrome: Bool = false) -> SceneResult {
         let scene = SCNScene()
         scene.background.contents = transparent ? UIColor.clear : UIColor.black
 
@@ -257,7 +262,18 @@ struct DumbbellSceneView: UIViewRepresentable {
         let gripMat: SCNMaterial
         let edgeMat: SCNMaterial
 
-        if darkChrome {
+        if goldChrome {
+            // Polished gold PBR — matches the warm palette used on
+            // the paywall hero (Color(red:1, green:0.78, blue:0.20)
+            // and the amber/champagne band). Plates lean a touch
+            // warmer than the bar so the eye reads tonal depth even
+            // at small render sizes.
+            barMat    = Self.pbr(UIColor(red:1.00, green:0.82, blue:0.32, alpha:1), 0.92, 0.10)
+            plateMat  = Self.pbr(UIColor(red:1.00, green:0.68, blue:0.22, alpha:1), 0.85, 0.18)
+            plateDark = Self.pbr(UIColor(red:0.78, green:0.45, blue:0.10, alpha:1), 0.78, 0.30)
+            gripMat   = Self.pbr(UIColor(red:0.28, green:0.18, blue:0.05, alpha:1), 0.18, 0.78)
+            edgeMat   = Self.pbr(UIColor(red:1.00, green:0.92, blue:0.58, alpha:1), 0.95, 0.06)
+        } else if darkChrome {
             // Matte black-iron look — high roughness kills specular blow-out so the silhouette
             // stays legible against pure white. Diffuse stays low; metalness slight for depth.
             barMat    = Self.pbr(UIColor(white:0.10,alpha:1), 0.10, 0.86)

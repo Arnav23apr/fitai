@@ -105,10 +105,10 @@ struct LossAversionView: View {
 
             VStack(spacing: 2) {
                 Text(L.t("lossTitle", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
+                    .font(OnboardingTheme.headlineCompact())
                     .foregroundStyle(.primary)
                 Text(L.t("lossTitle2", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
+                    .font(OnboardingTheme.headlineCompact())
                     .foregroundStyle(.primary)
             }
             .opacity(headerAppeared ? 1 : 0)

@@ -96,6 +96,17 @@ struct BattleShareCardView: View {
         return rows
     }
 
+    /// Headline copy under the title. Switches to a tie message
+    /// when the battle ended in a draw.
+    private var headlineCopy: String {
+        if battle.isTie {
+            let pts = String(format: "%.1f", battle.player.overallScore)
+            return "Tied at \(pts) points!"
+        }
+        let diff = String(format: "%.1f", battle.scoreDifference)
+        return "\(battle.winner.name) wins by \(diff)!"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Text("Physique Battle")
@@ -105,10 +116,10 @@ struct BattleShareCardView: View {
                 .padding(.bottom, 6)
 
             HStack(spacing: 6) {
-                Image(systemName: "crown.fill")
+                Image(systemName: battle.isTie ? "equal.circle.fill" : "crown.fill")
                     .font(.system(size: 11))
                     .foregroundStyle(.yellow)
-                Text("\(battle.winner.name) wins by \(String(format: "%.1f", battle.scoreDifference))!")
+                Text(headlineCopy)
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.55))
             }
@@ -118,17 +129,17 @@ struct BattleShareCardView: View {
                 contestantBlock(
                     contestant: battle.player,
                     isWinner: battle.playerWins,
-                    isMogged: !battle.playerWins
+                    isMogged: battle.outcome == .opponent
                 )
 
-                Text("VS")
+                Text(battle.isTie ? "DRAW" : "VS")
                     .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(.white.opacity(0.35))
+                    .foregroundStyle(battle.isTie ? Color.yellow.opacity(0.85) : .white.opacity(0.35))
                     .padding(.top, 70)
 
                 contestantBlock(
                     contestant: battle.opponent,
-                    isWinner: !battle.playerWins,
+                    isWinner: battle.outcome == .opponent,
                     isMogged: battle.playerWins
                 )
             }

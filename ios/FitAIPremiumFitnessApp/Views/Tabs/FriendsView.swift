@@ -432,11 +432,9 @@ struct FriendsView: View {
             .buttonStyle(.plain)
             .sensoryFeedback(.selection, trigger: profileFriend?.id == friend.id)
 
-            // Action row: Hype + Battle on the left, ellipsis menu on the right.
-            // Hype is intentionally low-friction (one tap, no follow-up sheet);
+            // Action row: Battle on the left, ellipsis menu on the right.
             // Battle is the high-stakes path that opens ChallengeSetupSheet.
             HStack(spacing: 8) {
-                hypeButton(friend)
                 battleButton(friend)
                 Spacer()
                 rowMenu(friend)
@@ -526,34 +524,6 @@ struct FriendsView: View {
                 }
             )
         }
-    }
-
-    private func hypeButton(_ friend: SocialProfileSummary) -> some View {
-        let inFlight = viewModel.hypingFriendIds.contains(friend.id)
-        let done = viewModel.recentlyHypedFriendIds.contains(friend.id)
-        return Button {
-            Task { await viewModel.sendHype(to: friend) }
-        } label: {
-            HStack(spacing: 4) {
-                if inFlight {
-                    ProgressView().controlSize(.mini)
-                        .tint(.orange)
-                } else {
-                    Image(systemName: done ? "checkmark" : "bolt.fill")
-                        .font(.system(size: 11, weight: .heavy))
-                }
-                Text(done ? L.t("hypedBtn", lang) : L.t("hypeBtn", lang))
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(done ? .green : .orange)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background((done ? Color.green : Color.orange).opacity(0.12))
-            .clipShape(.capsule)
-        }
-        .buttonStyle(.plain)
-        .disabled(inFlight || done)
-        .sensoryFeedback(.impact(weight: .light), trigger: done)
     }
 
     private func battleButton(_ friend: SocialProfileSummary) -> some View {

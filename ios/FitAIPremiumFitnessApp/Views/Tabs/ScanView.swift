@@ -112,18 +112,7 @@ struct ScanView: View {
             .sheet(isPresented: $showLatestResult) {
                 if let entry = appState.scanHistory.first {
                     ScanResultsSheet(
-                        result: ScanResult(
-                            date: entry.date,
-                            overallScore: entry.overallScore,
-                            strongPoints: entry.strongPoints,
-                            weakPoints: entry.weakPoints,
-                            summary: entry.summary,
-                            recommendations: entry.recommendations,
-                            potentialRating: entry.potentialRating,
-                            muscleMassRating: entry.muscleMassRating,
-                            muscleScores: entry.muscleScores.toMuscleScores(),
-                            visibleMuscleGroups: entry.strongPoints + entry.weakPoints
-                        ),
+                        result: rebuildScanResult(from: entry),
                         onDismiss: { showLatestResult = false }
                     )
                 }
@@ -164,6 +153,7 @@ struct ScanView: View {
                     if let photo = result.frontPhoto,
                        let data = photo.jpegData(compressionQuality: 0.85) {
                         appState.saveBattlePhoto(data)
+                        appState.saveLatestScanPhoto(data)
                     }
                 }
             }
@@ -632,12 +622,62 @@ struct ScanView: View {
         }
     }
 
+    /// Reconstruct a full `ScanResult` from a persisted history entry so the
+    /// latest-scan sheet can render the same UI as the post-analysis sheet:
+    /// the user's actual scan photo plus the full muscle-rating breakdown.
+    ///
+    /// `visibleMuscleGroups` fallback: legacy entries (saved before this
+    /// field existed in storage) have an empty list. We derive it from
+    /// `muscleScores` — any muscle with a non-zero score was graded, since
+    /// the AI never assigns 0 to a muscle it could actually see. Using
+    /// strong+weak text wouldn't work because those are free-form strings,
+    /// not canonical keys the "Not graded" disclosure logic checks against.
+    private func rebuildScanResult(from entry: ScanHistoryEntry) -> ScanResult {
+        let savedPhoto: UIImage? = {
+            guard let data = appState.loadLatestScanPhoto() else { return nil }
+            return UIImage(data: data)
+        }()
+        let scores = entry.muscleScores
+        let derivedVisible: [String] = {
+            var keys: [String] = []
+            if scores.chest > 0 { keys.append("chest") }
+            if scores.shoulders > 0 { keys.append("shoulders") }
+            if scores.back > 0 { keys.append("back") }
+            if scores.arms > 0 { keys.append("arms") }
+            if scores.legs > 0 { keys.append("legs") }
+            if scores.core > 0 { keys.append("core") }
+            if (scores.glutes ?? 0) > 0 { keys.append("glutes") }
+            return keys
+        }()
+        let visible = entry.visibleMuscleGroups.isEmpty
+            ? derivedVisible
+            : entry.visibleMuscleGroups
+        var result = ScanResult(
+            date: entry.date,
+            overallScore: entry.overallScore,
+            strongPoints: entry.strongPoints,
+            weakPoints: entry.weakPoints,
+            summary: entry.summary,
+            recommendations: entry.recommendations,
+            potentialRating: entry.potentialRating,
+            muscleMassRating: entry.muscleMassRating,
+            muscleScores: scores.toMuscleScores(),
+            visibleMuscleGroups: visible
+        )
+        result.frontPhoto = savedPhoto
+        return result
+    }
+
     private func performAnalysis() async {
-        // Free users get the animation but no AI call. We show a locked
-        // placeholder that the results sheet renders blurred behind a paywall.
-        // Premium users get the real analysis.
+        // Umax-pattern scan gate:
+        // • Premium users → real analysis.
+        // • Users with a referral-earned free scan credit → real
+        //   analysis (the credit is decremented elsewhere when the
+        //   scan completes).
+        // • Everyone else → locked placeholder that the results sheet
+        //   renders blurred behind the paywall.
         let result: ScanResult?
-        if appState.profile.isPremium {
+        if appState.profile.canScanFree {
             result = await viewModel.analyzeScan(profile: appState.profile)
         } else {
             result = await viewModel.analyzeScanLocked(profile: appState.profile)
@@ -650,9 +690,12 @@ struct ScanView: View {
             appState.saveScanResult(result)
             // Stash the front photo as the battle default so when the user
             // opens compete, their scan photo is already there. No need to
-            // upload a separate photo for battles.
+            // upload a separate photo for battles. Also persist it as the
+            // "latest scan photo" so the latest-scan sheet on the Scan tab
+            // can render the same image the user just analyzed.
             if let photo = result.frontPhoto, let data = photo.jpegData(compressionQuality: 0.85) {
                 appState.saveBattlePhoto(data)
+                appState.saveLatestScanPhoto(data)
             }
             requestReviewAfterFirstScan()
         }

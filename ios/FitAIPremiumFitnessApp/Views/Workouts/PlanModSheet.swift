@@ -414,10 +414,18 @@ struct PlanModSheet: View {
         errorMessage = nil
         response = nil
         do {
+            // Pass the most recent unlocked scan so the AI can tune
+            // volume distribution against the user's actual muscle
+            // balance. nil for users who haven't scanned yet — the
+            // LLM falls back to profile-only personalization.
+            let latestScan = appState.scanHistory
+                .sorted { $0.date > $1.date }
+                .first
             let result = try await service.generate(
                 routine: routine,
                 userPrompt: prompt,
-                profile: appState.profile
+                profile: appState.profile,
+                latestScan: latestScan
             )
             await MainActor.run {
                 response = result

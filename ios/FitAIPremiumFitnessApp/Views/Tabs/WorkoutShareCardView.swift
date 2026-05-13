@@ -149,13 +149,24 @@ struct WorkoutStoriesCardView: View {
                     .padding(.bottom, 28)
             }
 
-            // Branding — always shown
-            Image("FitAILogoWhite")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 22)
-                .opacity(0.4)
-                .padding(.bottom, 24)
+            // Branding + scan CTA — always shown. The tagline turns
+            // every shared workout into a piece of inbound
+            // acquisition: the viewer's eye lands on "Scan your
+            // physique in FitAI" right under the logo. Strava's
+            // viral playbook ("if it's not on Strava, it didn't
+            // happen") adapted to FitAI's AI-scan differentiator.
+            VStack(spacing: 6) {
+                Image("FitAILogoWhite")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 22)
+                    .opacity(0.55)
+                Text("Scan your physique in FitAI")
+                    .font(.system(size: 10, weight: .medium))
+                    .tracking(0.4)
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            .padding(.bottom, 24)
         }
         .frame(width: 360)
     }
@@ -337,13 +348,24 @@ struct PRShareCardView: View {
                 Spacer().frame(height: 20)
             }
 
-            // Branding — always shown
-            Image("FitAILogoWhite")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(height: 22)
-                .opacity(0.4)
-                .padding(.bottom, 24)
+            // Branding + scan CTA — always shown. The tagline turns
+            // every shared workout into a piece of inbound
+            // acquisition: the viewer's eye lands on "Scan your
+            // physique in FitAI" right under the logo. Strava's
+            // viral playbook ("if it's not on Strava, it didn't
+            // happen") adapted to FitAI's AI-scan differentiator.
+            VStack(spacing: 6) {
+                Image("FitAILogoWhite")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(height: 22)
+                    .opacity(0.55)
+                Text("Scan your physique in FitAI")
+                    .font(.system(size: 10, weight: .medium))
+                    .tracking(0.4)
+                    .foregroundStyle(.white.opacity(0.45))
+            }
+            .padding(.bottom, 24)
         }
         .frame(width: 360)
     }

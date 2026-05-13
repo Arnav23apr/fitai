@@ -49,6 +49,36 @@ nonisolated struct ScanHistoryEntry: Codable, Sendable, Identifiable {
     let summary: String
     let recommendations: [String]
     let muscleScores: CodableMuscleScores
+    /// Canonical muscle keys the AI could actually see in the photo
+    /// (e.g. ["chest", "shoulders", "arms"]). The original ScanResult
+    /// returns this as a separate field; without it, the latest-result
+    /// re-render in ScanView falls back to strongPoints+weakPoints,
+    /// which produces "Not graded this scan: <every muscle>" because
+    /// the strong/weak lists are free-form text, not the canonical keys
+    /// the disclosure logic expects. Optional in the Codable shape so
+    /// old persisted entries decode cleanly with an empty list.
+    let visibleMuscleGroups: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case id, date, overallScore, potentialRating, muscleMassRating
+        case strongPoints, weakPoints, summary, recommendations
+        case muscleScores, visibleMuscleGroups
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(String.self, forKey: .id)
+        self.date = try c.decode(Date.self, forKey: .date)
+        self.overallScore = try c.decode(Double.self, forKey: .overallScore)
+        self.potentialRating = try c.decode(Double.self, forKey: .potentialRating)
+        self.muscleMassRating = try c.decode(String.self, forKey: .muscleMassRating)
+        self.strongPoints = try c.decode([String].self, forKey: .strongPoints)
+        self.weakPoints = try c.decode([String].self, forKey: .weakPoints)
+        self.summary = try c.decode(String.self, forKey: .summary)
+        self.recommendations = try c.decode([String].self, forKey: .recommendations)
+        self.muscleScores = try c.decode(CodableMuscleScores.self, forKey: .muscleScores)
+        self.visibleMuscleGroups = try c.decodeIfPresent([String].self, forKey: .visibleMuscleGroups) ?? []
+    }
 
     init(from result: ScanResult) {
         self.id = result.id
@@ -61,9 +91,10 @@ nonisolated struct ScanHistoryEntry: Codable, Sendable, Identifiable {
         self.summary = result.summary
         self.recommendations = result.recommendations
         self.muscleScores = CodableMuscleScores(from: result.muscleScores)
+        self.visibleMuscleGroups = result.visibleMuscleGroups
     }
 
-    init(id: String, date: Date, overallScore: Double, potentialRating: Double, muscleMassRating: String, strongPoints: [String], weakPoints: [String], summary: String, recommendations: [String], muscleScores: CodableMuscleScores) {
+    init(id: String, date: Date, overallScore: Double, potentialRating: Double, muscleMassRating: String, strongPoints: [String], weakPoints: [String], summary: String, recommendations: [String], muscleScores: CodableMuscleScores, visibleMuscleGroups: [String] = []) {
         self.id = id
         self.date = date
         self.overallScore = overallScore
@@ -74,6 +105,7 @@ nonisolated struct ScanHistoryEntry: Codable, Sendable, Identifiable {
         self.summary = summary
         self.recommendations = recommendations
         self.muscleScores = muscleScores
+        self.visibleMuscleGroups = visibleMuscleGroups
     }
 }
 

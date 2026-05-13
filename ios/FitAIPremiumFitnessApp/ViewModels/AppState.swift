@@ -212,6 +212,31 @@ class AppState {
         FileManager.default.fileExists(atPath: AppState.battlePhotoURL.path)
     }
 
+    /// On-disk path for the most recent scan's front photo, so the Scan
+    /// tab's "Latest score" tap can show the user the image they
+    /// scanned (the full result sheet expects `ScanResult.frontPhoto`,
+    /// which is a UIImage and therefore not Codable into history rows).
+    /// Mirrors the battle-photo pattern intentionally.
+    nonisolated static var latestScanPhotoURL: URL {
+        guard let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("latest_scan_photo.jpg")
+        }
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        return support.appendingPathComponent("latest_scan_photo.jpg")
+    }
+
+    func saveLatestScanPhoto(_ imageData: Data) {
+        try? imageData.write(to: AppState.latestScanPhotoURL, options: .completeFileProtection)
+    }
+
+    func loadLatestScanPhoto() -> Data? {
+        try? Data(contentsOf: AppState.latestScanPhotoURL)
+    }
+
+    func clearLatestScanPhoto() {
+        try? FileManager.default.removeItem(at: AppState.latestScanPhotoURL)
+    }
+
     nonisolated private static func loadProfile() -> UserProfile {
         guard let data = UserDefaults.standard.data(forKey: "userProfile"),
               var profile = try? JSONDecoder().decode(UserProfile.self, from: data) else {

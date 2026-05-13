@@ -8,8 +8,23 @@ struct WorkoutHistorySheet: View {
 
     private var lang: String { appState.profile.selectedLanguage }
 
-    private var logs: [WorkoutLog] {
+    /// Full history (used for the stats row totals so free users
+    /// still see the truthful "X total workouts" number) AND to
+    /// compute how many sessions sit behind the paywall.
+    private var allLogs: [WorkoutLog] {
         appState.profile.workoutLogs.sorted { $0.date > $1.date }
+    }
+
+    /// Logs the user is allowed to see in the list. Free tier is
+    /// capped to `historyCutoffDate` (30 days); Pro returns
+    /// everything.
+    private var logs: [WorkoutLog] {
+        let cutoff = appState.profile.historyCutoffDate
+        return allLogs.filter { $0.date >= cutoff }
+    }
+
+    private var lockedHistoryCount: Int {
+        allLogs.count - logs.count
     }
 
     private var groupedLogs: [(String, [WorkoutLog])] {
@@ -23,11 +38,14 @@ struct WorkoutHistorySheet: View {
     }
 
     private var totalMinutes: Int {
-        logs.reduce(0) { $0 + $1.durationMinutes }
+        // Stats row shows truthful all-time totals so free users
+        // know what they've actually done — the paywall hides the
+        // *list* of older sessions, not the summary numbers.
+        allLogs.reduce(0) { $0 + $1.durationMinutes }
     }
 
     private var totalExercises: Int {
-        logs.reduce(0) { $0 + $1.exercisesCompleted }
+        allLogs.reduce(0) { $0 + $1.exercisesCompleted }
     }
 
     var body: some View {
@@ -40,6 +58,9 @@ struct WorkoutHistorySheet: View {
                         VStack(spacing: 20) {
                             statsRow
                             logsList
+                            if lockedHistoryCount > 0 {
+                                LockedHistoryCard(hiddenCount: lockedHistoryCount)
+                            }
                         }
                         .padding(.horizontal, 20)
                         .padding(.top, 8)

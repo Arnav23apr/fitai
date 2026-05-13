@@ -58,6 +58,10 @@ struct ActiveSessionView: View {
     /// Drives the ExercisePickerSheet presentation; on selection we
     /// swap the exercise in place, preserving order and the set count.
     @State private var replaceTargetId: String? = nil
+    /// True when a free user has tapped "replace exercise" — drives
+    /// the paywall sheet that intercepts the swap action. Premium
+    /// users skip this entirely and go straight to the picker.
+    @State private var showSwapPaywall: Bool = false
     /// Plate calculator sheet trigger. Surfaced as a chip above the
     /// keypad when a weight cell is focused on a barbell-loadable
     /// exercise. Saves the lifter from doing 225 / 2 / 45 in their head.
@@ -108,7 +112,15 @@ struct ActiveSessionView: View {
                             onTapSuperset: { supersetTargetId = sx.id },
                             onReplaceExercise: {
                                 focusedField = nil
-                                replaceTargetId = sx.id
+                                // Exercise swap is a Pro feature — Plan
+                                // tab logging stays free, but the AI-
+                                // assisted "swap this for something
+                                // easier" lives behind the paywall.
+                                if appState.profile.isPremium {
+                                    replaceTargetId = sx.id
+                                } else {
+                                    showSwapPaywall = true
+                                }
                             }
                         )
                     }
@@ -208,6 +220,9 @@ struct ActiveSessionView: View {
                         replaceTargetId = nil
                     }
                 }
+            }
+            .sheet(isPresented: $showSwapPaywall) {
+                PaywallSheet(context: .profile)
             }
             .sheet(item: $setTagSheet) { target in
                 SetTagPicker(

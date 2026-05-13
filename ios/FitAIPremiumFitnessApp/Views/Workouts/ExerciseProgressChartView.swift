@@ -7,6 +7,7 @@ import Charts
 /// and aggregates to one data point per session. Empty-state handles
 /// new exercises with zero history. Uses SwiftUI Charts (iOS 16+).
 struct ExerciseProgressChartView: View {
+    @Environment(AppState.self) private var appState
     let exerciseName: String
     let usesMetric: Bool
 
@@ -81,8 +82,21 @@ struct ExerciseProgressChartView: View {
         return allLogs.filter { $0.date >= cutoff }
     }
 
+    /// Free tier sees only the last 30 days of history. Pro pulls
+    /// the full filteredLogs unchanged. Locked logs surface in the
+    /// `lockedHistoryCount` so the lock-card upsell can name a
+    /// concrete number ("12 older sessions locked").
+    private var visibleLogs: [ExerciseLog] {
+        let paywallCutoff = appState.profile.historyCutoffDate
+        return filteredLogs.filter { $0.date >= paywallCutoff }
+    }
+
+    private var lockedHistoryCount: Int {
+        filteredLogs.count - visibleLogs.count
+    }
+
     private var dataPoints: [ChartPoint] {
-        filteredLogs.map { log in
+        visibleLogs.map { log in
             ChartPoint(
                 date: log.date,
                 value: metricValue(for: log)
@@ -111,6 +125,9 @@ struct ExerciseProgressChartView: View {
                 rangePicker
                 chartCard
                 summaryStats
+                if lockedHistoryCount > 0 {
+                    LockedHistoryCard(hiddenCount: lockedHistoryCount)
+                }
             }
             .padding(20)
         }

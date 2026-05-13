@@ -22,10 +22,10 @@ struct NameView: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 Text(L.t("nameTitle", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
+                    .font(OnboardingTheme.headlineCompact())
                     .foregroundStyle(.primary)
                 Text(L.t("nameTitle2", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
+                    .font(OnboardingTheme.headlineCompact())
                     .foregroundStyle(.primary)
                 Text(L.t("nameSubtitle", lang))
                     .font(.subheadline)

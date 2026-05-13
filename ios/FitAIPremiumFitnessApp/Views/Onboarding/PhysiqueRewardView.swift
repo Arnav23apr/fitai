@@ -20,7 +20,6 @@ struct PhysiqueRewardView: View {
         let body: String
         let source: String
         let icon: String
-        let tint: Color
     }
 
     private var cards: [RewardCard] {
@@ -29,44 +28,31 @@ struct PhysiqueRewardView: View {
                 stat:   L.t("rewardCard1Stat", lang),
                 body:   L.t("rewardCard1Body", lang),
                 source: L.t("rewardCard1Source", lang),
-                icon:   "heart.fill",
-                tint:   Color(red: 1.00, green: 0.30, blue: 0.45)
+                icon:   "heart.fill"
             ),
             RewardCard(
                 stat:   L.t("rewardCard2Stat", lang),
                 body:   L.t("rewardCard2Body", lang),
                 source: L.t("rewardCard2Source", lang),
-                icon:   "person.fill.checkmark",
-                tint:   Color(red: 0.20, green: 0.55, blue: 1.00)
+                icon:   "person.fill.checkmark"
             ),
             RewardCard(
                 stat:   L.t("rewardCard3Stat", lang),
                 body:   L.t("rewardCard3Body", lang),
                 source: L.t("rewardCard3Source", lang),
-                icon:   "bolt.fill",
-                tint:   Color(red: 1.00, green: 0.62, blue: 0.10)
+                icon:   "bolt.fill"
             ),
         ]
     }
 
     var body: some View {
         ZStack {
-            // Stronger aurora + parallax. Higher alpha lets the colors come
-            // through the glass cards. Without parallax the screen reads as
-            // static — Apple's onboarding pages all do gravity-driven drift.
-            ParallaxBackground(amount: 10) {
-                AuroraBackground(
-                    colors: [
-                        Color(red: 1.00, green: 0.30, blue: 0.45).opacity(isDark ? 0.18 : 0.12),
-                        Color(red: 0.20, green: 0.55, blue: 1.00).opacity(isDark ? 0.16 : 0.10),
-                        Color(red: 1.00, green: 0.62, blue: 0.10).opacity(isDark ? 0.14 : 0.09),
-                        Color(red: 0.85, green: 0.40, blue: 1.00).opacity(isDark ? 0.10 : 0.06),
-                        Color.clear,
-                    ],
-                    speed: 0.10
-                )
-            }
-            .ignoresSafeArea()
+            // Shared PremiumBackdrop puts this screen on the same
+            // canvas as WelcomeView and PlanPreview — breathing top
+            // spotlight, FBM noise, vignette, film grain. That's all
+            // the ambient color this screen needs; the previous
+            // caustic underlay overpowered the cards and was removed.
+            PremiumBackdrop()
 
             VStack(spacing: 0) {
                 headerSection
@@ -89,6 +75,7 @@ struct PhysiqueRewardView: View {
                     .padding(.bottom, 16)
             }
         }
+        .preferredColorScheme(.dark)
         .onAppear { runAppearChoreography() }
     }
 
@@ -99,23 +86,23 @@ struct PhysiqueRewardView: View {
             Text("RESEARCH BACKED")
                 .font(.system(size: 11, weight: .semibold))
                 .tracking(2.5)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.65))
                 .opacity(headerAppeared ? 1 : 0)
 
             VStack(spacing: 2) {
                 Text(L.t("rewardTitle", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(OnboardingTheme.headlineCompact())
+                    .foregroundStyle(.white)
                 Text(L.t("rewardTitle2", lang))
-                    .font(.system(.largeTitle, design: .serif, weight: .bold))
-                    .foregroundStyle(.primary)
+                    .font(OnboardingTheme.headlineCompact())
+                    .foregroundStyle(.white)
             }
             .opacity(headerAppeared ? 1 : 0)
             .offset(y: headerAppeared ? 0 : 12)
 
             Text(L.t("rewardSubtitle", lang))
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.white.opacity(0.65))
                 .padding(.top, 4)
                 .opacity(headerAppeared ? 1 : 0)
         }
@@ -124,42 +111,45 @@ struct PhysiqueRewardView: View {
     // MARK: - Card
 
     private func cardView(_ c: RewardCard, index: Int, revealed: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let statActive = statPunch[safeIdx: index] ?? false
+        return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .center, spacing: 12) {
+                // Monochrome icon chip — frosted glass surface with
+                // hairline stroke. One material everywhere, no per-card
+                // tint.
                 ZStack {
-                    Circle()
-                        .fill(c.tint.opacity(0.14))
-                    Circle()
-                        .strokeBorder(c.tint.opacity(0.18), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(Color.white.opacity(0.05))
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .strokeBorder(Color.white.opacity(0.15), lineWidth: 0.75)
                     Image(systemName: c.icon)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(c.tint)
+                        .foregroundStyle(.white)
                 }
                 .frame(width: 32, height: 32)
 
-                Text(c.stat)
+                CountUpStat(stat: c.stat, trigger: statActive)
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
-                    .foregroundStyle(c.tint)
-                    .modifier(SpecularSweep(active: statPunch[safeIdx: index] ?? false, tint: c.tint))
-                    .scaleEffect(statPunch[safeIdx: index] ?? false ? 1.0 : 0.85)
-                    .opacity(statPunch[safeIdx: index] ?? false ? 1 : 0)
+                    .foregroundStyle(.white)
+                    .scaleEffect(statActive ? 1.0 : 0.85)
+                    .opacity(statActive ? 1 : 0)
 
                 Spacer(minLength: 0)
             }
 
             Text(c.body)
                 .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(.primary.opacity(0.85))
+                .foregroundStyle(.white.opacity(0.85))
                 .lineSpacing(2.5)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(spacing: 6) {
                 Image(systemName: "checkmark.seal.fill")
                     .font(.system(size: 9))
-                    .foregroundStyle(c.tint.opacity(0.7))
+                    .foregroundStyle(.white.opacity(0.55))
                 Text(c.source)
                     .font(.system(size: 10.5))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.white.opacity(0.45))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -167,35 +157,23 @@ struct PhysiqueRewardView: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            // Liquid-glass card — material backdrop + soft tint wash so the
-            // aurora behind colors through the glass like the iOS 26 system
-            // look. Without the wash the cards read as flat white.
-            ZStack {
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(.ultraThinMaterial)
-                RoundedRectangle(cornerRadius: 22)
-                    .fill(c.tint.opacity(isDark ? 0.06 : 0.035))
-            }
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.white.opacity(0.04))
         )
         .overlay(
-            // Top-edge highlight: thin gradient stroke that fakes a light
-            // source from above. Apple's signature for premium cards.
-            RoundedRectangle(cornerRadius: 22)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(isDark ? 0.18 : 0.55),
-                            c.tint.opacity(revealed ? 0.18 : 0),
-                            Color.white.opacity(isDark ? 0.04 : 0.10)
-                        ],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.7
-                )
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.75)
         )
-        .shadow(color: c.tint.opacity(isDark ? 0.18 : 0.10), radius: 18, y: 8)
-        .shadow(color: Color.black.opacity(isDark ? 0 : 0.04), radius: 2, y: 1)
+        // God-ray sweep — fires once when this card's stat lands.
+        // Emanates from the stat number's position (leading edge of
+        // the card, just inside the icon chip) outward across the card.
+        .godRaySweep(
+            active: statActive,
+            duration: 0.55,
+            origin: UnitPoint(x: 0.15, y: 0.30)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.black.opacity(0.20), radius: 12, y: 6)
         .opacity(revealed ? 1 : 0)
         .offset(y: revealed ? 0 : 26)
         .scaleEffect(revealed ? 1 : 0.96)
@@ -269,14 +247,84 @@ private extension Array {
     }
 }
 
+// MARK: - Count-up stat
+
+/// Stat headline that parses a string like "+20%", "2×", or "Free"
+/// and rolls the numeric portion from 0 to target with an ease-out
+/// curve when `trigger` flips true. Non-numeric strings fall back to
+/// a static Text so "Free" still works inside the same call site.
+///
+/// Foreground style is left to the caller — this is just the
+/// animating glyph, not the styling.
+private struct CountUpStat: View {
+    let stat: String
+    var duration: Double = 0.85
+    let trigger: Bool
+
+    @State private var value: Int = 0
+
+    var body: some View {
+        Group {
+            if let parts = Self.parse(stat) {
+                Text("\(parts.prefix)\(value)\(parts.suffix)")
+                    .contentTransition(.numericText())
+            } else {
+                Text(stat)
+            }
+        }
+        .onChange(of: trigger) { _, newValue in
+            guard newValue, let parts = Self.parse(stat) else { return }
+            runCountUp(target: parts.value)
+        }
+    }
+
+    private func runCountUp(target: Int) {
+        // Two frames per integer unit gives a smooth roll; floor at
+        // 8 frames so small numbers ("2×") still feel rolled, not
+        // snapped.
+        let frames = max(target * 2, 8)
+        let step = duration / Double(frames)
+        for i in 0...frames {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * step) {
+                let progress = Double(i) / Double(frames)
+                let eased = 1 - pow(1 - progress, 3)
+                withAnimation(.linear(duration: step * 0.9)) {
+                    value = Int(Double(target) * eased)
+                }
+            }
+        }
+    }
+
+    private static func parse(_ s: String) -> (prefix: String, value: Int, suffix: String)? {
+        // Leading sign, digits, then anything as a suffix. Integer
+        // only — onboarding stats are always whole numbers.
+        let pattern = #"^([+\-]?)(\d+)(.*)$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+        let range = NSRange(s.startIndex..<s.endIndex, in: s)
+        guard let match = regex.firstMatch(in: s, range: range), match.numberOfRanges >= 4 else { return nil }
+        let extract: (Int) -> String = { idx in
+            if let r = Range(match.range(at: idx), in: s) { return String(s[r]) }
+            return ""
+        }
+        guard let value = Int(extract(2)) else { return nil }
+        return (extract(1), value, extract(3))
+    }
+}
+
 // MARK: - Specular sweep
 
 /// Single pass of a glossy highlight wiping diagonally across the text once
 /// `active` flips true. Implemented as a TimelineView-driven mask so it runs
 /// on the SwiftUI renderer (which targets Metal) without a custom .metal file.
+/// Single pass of a glossy highlight wiping diagonally across the
+/// content once `active` flips true — then re-fires every `loopPeriod`
+/// seconds so the metal surface continuously catches light. Each
+/// SpecularSweep runs on its own offset, so three stacked cards never
+/// flash in lockstep.
 private struct SpecularSweep: ViewModifier {
     let active: Bool
-    let tint: Color
+    var sweepDuration: Double = 0.85
+    var loopPeriod: Double = 6.0
     @State private var t: CGFloat = -1.0
 
     func body(content: Content) -> some View {
@@ -288,7 +336,7 @@ private struct SpecularSweep: ViewModifier {
                         LinearGradient(
                             stops: [
                                 Gradient.Stop(color: .clear,               location: 0.0),
-                                Gradient.Stop(color: .white.opacity(0.85), location: 0.5),
+                                Gradient.Stop(color: .white.opacity(0.65), location: 0.5),
                                 Gradient.Stop(color: .clear,               location: 1.0),
                             ],
                             startPoint: .leading,
@@ -304,9 +352,20 @@ private struct SpecularSweep: ViewModifier {
             }
             .onChange(of: active) { _, newValue in
                 guard newValue else { return }
-                t = -1.0
-                withAnimation(.easeOut(duration: 0.85)) { t = 1.2 }
+                runSweepLoop()
             }
+    }
+
+    private func runSweepLoop() {
+        // Reset offscreen, then wipe across.
+        t = -1.0
+        withAnimation(.easeOut(duration: sweepDuration)) { t = 1.2 }
+        // Schedule the next pass. We only re-arm while still active —
+        // when the parent view disappears, `active` won't flip back to
+        // true, so this chain quietly stops.
+        DispatchQueue.main.asyncAfter(deadline: .now() + loopPeriod) {
+            if active { runSweepLoop() }
+        }
     }
 }
 

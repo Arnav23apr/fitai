@@ -3,6 +3,7 @@ import MuscleMap
 
 struct PlanView: View {
     @Environment(AppState.self) private var appState
+    @Environment(TourManager.self) private var tourManager
 
     private var lang: String { appState.profile.selectedLanguage }
     @State private var showCoach: Bool = false
@@ -129,6 +130,10 @@ struct PlanView: View {
                                 todayGoalHero
                                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                 planSummaryCard
+                                if appState.profile.totalScans == 0 {
+                                    superchargeWithScanCard
+                                        .transition(.opacity.combined(with: .move(edge: .top)))
+                                }
                                 if let suggestion = appState.pendingProgression {
                                     progressionSuggestionCard(suggestion)
                                         .transition(.move(edge: .top).combined(with: .opacity))
@@ -1294,6 +1299,87 @@ struct PlanView: View {
     }
 
     // MARK: - Plan Builder Summary
+
+    /// Gold-trimmed inline card that nudges the user toward the Scan
+    /// tab. Only renders for users who haven't completed an unlocked
+    /// scan yet (`totalScans == 0`). Tapping switches to the Scan tab.
+    /// This is the second conversion bridge after the Umax-style scan
+    /// paywall — Plan tab earns trust (free logging, AI plan), then
+    /// nudges "take a scan to make this plan even better".
+    private var superchargeWithScanCard: some View {
+        Button {
+            tourManager.selectedTab = 0
+        } label: {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.00, green: 0.78, blue: 0.20).opacity(0.18),
+                                    Color(red: 1.00, green: 0.55, blue: 0.10).opacity(0.06),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 1.00, green: 0.88, blue: 0.28),
+                                    Color(red: 1.00, green: 0.55, blue: 0.10),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+                .frame(width: 40, height: 40)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Supercharge your plan")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.primary)
+                    Text("Scan your physique to target your weak muscles")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.primary.opacity(0.04))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 1.00, green: 0.88, blue: 0.28).opacity(0.45),
+                                Color(red: 1.00, green: 0.55, blue: 0.10).opacity(0.12),
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 0.8
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Supercharge your plan with a body scan")
+        .accessibilityHint("Opens the Scan tab")
+    }
 
     private var planSummaryCard: some View {
         VStack(alignment: .leading, spacing: 12) {

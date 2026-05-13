@@ -6,6 +6,11 @@ struct CompeteView: View {
 
     private var lang: String { appState.profile.selectedLanguage }
     @State private var showBattleSetup: Bool = false
+    /// True when a free user has tapped the battle card. Free users
+    /// can view leaderboards + be ranked + receive challenges, but
+    /// *initiating* a 1v1 battle is Pro-only (preserves the viral
+    /// loop via inbound challenges while gating high-intent actions).
+    @State private var showBattlePaywall: Bool = false
     /// Set when a push notification deep-links into a specific challenge.
     /// CompeteView watches tourManager.pendingChallengeId, resolves the
     /// matching PopulatedChallenge, and presents ChallengeDetailSheet.
@@ -114,6 +119,9 @@ struct CompeteView: View {
             .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $showBattleSetup) {
                 BattleSetupView()
+            }
+            .sheet(isPresented: $showBattlePaywall) {
+                PaywallSheet(context: .battle)
             }
             .sheet(isPresented: $showFriends) {
                 FriendsView()
@@ -405,7 +413,13 @@ struct CompeteView: View {
 
     private var battleCard: some View {
         Button {
-            showBattleSetup = true
+            // Initiating a 1v1 is Pro. Free users see the paywall
+            // here instead of jumping straight into BattleSetup.
+            if appState.profile.isPremium {
+                showBattleSetup = true
+            } else {
+                showBattlePaywall = true
+            }
         } label: {
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
