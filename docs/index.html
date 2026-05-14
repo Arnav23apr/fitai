@@ -423,7 +423,10 @@ scene.background=new THREE.Color(0x000000);
 scene.fog=new THREE.FogExp2(0x000000,0.036);
 
 const camera=new THREE.PerspectiveCamera(38,window.innerWidth/window.innerHeight,0.1,100);
-camera.position.set(0,0.3,9);
+// Mobile sits the camera farther back so the dumbbell + orbital plates
+// occupy a smaller portion of the portrait viewport. Desktop keeps z=9
+// for the cinematic close-up.
+camera.position.set(0,0.3,window.innerWidth<700?13:9);
 
 const pmrem=new THREE.PMREMGenerator(renderer);
 scene.environment=pmrem.fromScene(new RoomEnvironment(0.04)).texture;
@@ -646,7 +649,10 @@ const clock=new THREE.Clock();
   // mid-scroll on phones.
   const orbX = isMobile ? 1.2 : 2.8;
   const orbY = isMobile ? 0.6 : 1.4;
-  const orbZ = isMobile ? 9.0 : (9 - p*.8);
+  // On mobile we sit the camera 4 units further back than desktop (13
+  // vs 9) and freeze it there so scrolling doesn't change the dumbbell's
+  // apparent size.
+  const orbZ = isMobile ? 13.0 : (9 - p*.8);
   camera.position.x+=(Math.sin(p*Math.PI*.38)*orbX-camera.position.x)*.04;
   camera.position.y+=((0.3-p*orbY)-camera.position.y)*.04;
   camera.position.z+=(orbZ-camera.position.z)*.04;
