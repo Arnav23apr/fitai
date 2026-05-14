@@ -196,12 +196,31 @@
     .foot-copy { color:var(--muted); font-size:12px; }
 
     @media (max-width:700px) {
-      nav { padding:18px 24px; }
-      .hero h1 { letter-spacing:-2.5px; }
+      nav { padding:16px 20px; }
+      .nav-logo { height:22px; }
+      .nav-dl { padding:8px 16px; font-size:12px; }
+      .hero { padding:96px 20px 64px; }
+      .app-icon-badge { width:60px; height:60px; border-radius:15px; margin-bottom:22px; }
+      .hero-tag { font-size:10px; padding:4px 12px; margin-bottom:24px; }
+      .hero h1 { font-size:clamp(40px,12vw,58px); letter-spacing:-2px; margin-bottom:24px; }
+      .hero-sub { font-size:15px; line-height:1.6; margin-bottom:36px; max-width:300px; }
+      .hero-dl { padding:14px 26px; font-size:15px; }
       .feat-grid { grid-template-columns:1fr; gap:10px; }
-      .features { padding:0 16px 100px; }
-      footer { padding:24px; }
+      .feat-card { padding:28px 22px; }
+      .feat-card h3 { font-size:19px; }
+      .feat-card p { font-size:13.5px; }
+      .feat-num { margin-bottom:24px; }
+      .feat-icon { width:34px; height:34px; margin-bottom:16px; }
+      .feat-icon svg { width:34px; height:34px; }
+      .features { padding:0 16px 96px; }
+      .features-label { margin-bottom:28px; }
+      footer { padding:20px; flex-direction:column; align-items:center; gap:14px; }
       #cur-ring,#cur-dot { display:none; }
+      /* The orbs are huge on mobile (45-55vw); they overpower the small screen */
+      .orb { filter:blur(80px); }
+      .o1 { width:75vw; height:75vw; opacity:.045; }
+      .o2 { width:60vw; height:60vw; opacity:.032; }
+      .o3 { width:55vw; height:55vw; opacity:.028; }
     }
   </style>
 </head>
@@ -444,6 +463,13 @@ function buildSide(s){
 }
 buildSide(1);buildSide(-1);
 db.rotation.z=-.10;db.rotation.y=.22;
+// Scale the dumbbell down on narrow viewports so it doesn't dominate
+// the phone screen. The base geometry was tuned for desktop; on mobile
+// (< 700px) we shrink to ~55% and the floaters proportionally read as
+// smaller too because they share the same camera frame.
+const MOBILE_BP = 700;
+const dbScaleFor = w => (w < MOBILE_BP ? 0.55 : 1);
+db.scale.setScalar(dbScaleFor(window.innerWidth));
 scene.add(db);
 
 // Ghost wireframe
@@ -455,7 +481,7 @@ db.traverse(c=>{
     g.position.copy(c.position);g.rotation.copy(c.rotation);g.scale.copy(c.scale);ghostDb.add(g);
   }
 });
-ghostDb.scale.setScalar(1.018);scene.add(ghostDb);
+ghostDb.scale.setScalar(dbScaleFor(window.innerWidth)*1.018);scene.add(ghostDb);
 
 // Plate with hole helper
 function makePlateHoled(outerR,innerR,thick,faceMat,edgM){
@@ -583,6 +609,11 @@ window.addEventListener('resize',()=>{
   renderer.setSize(window.innerWidth,window.innerHeight);
   composer.setSize(window.innerWidth,window.innerHeight);
   bloom.resolution.set(window.innerWidth,window.innerHeight);
+  // Re-apply mobile scaling so device rotation (portrait <-> landscape)
+  // and devtools resizes stay consistent.
+  const s = dbScaleFor(window.innerWidth);
+  db.scale.setScalar(s);
+  ghostDb.scale.setScalar(s*1.018);
 });
 
 // ── RENDER LOOP ──
