@@ -604,7 +604,12 @@ window.addEventListener('deviceorientation',e=>{
   if(e.gamma!=null){mx=Math.max(-1,Math.min(1,e.gamma/28));my=Math.max(-1,Math.min(1,(e.beta-30)/38));}
 });
 window.addEventListener('scroll',()=>{scrollY=window.scrollY;},{passive:true});
+// Mobile breakpoint flag. Updated on resize so the animate loop can
+// branch on the latest value without re-checking window.innerWidth
+// every frame.
+let isMobile = window.innerWidth < MOBILE_BP;
 window.addEventListener('resize',()=>{
+  isMobile = window.innerWidth < MOBILE_BP;
   camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth,window.innerHeight);
   composer.setSize(window.innerWidth,window.innerHeight);
@@ -635,10 +640,16 @@ const clock=new THREE.Clock();
   distortPass.uniforms.velocity.value=THREE.MathUtils.clamp(scrollVel,-1.5,1.5);
   distortPass.uniforms.time.value=t;
 
-  // Camera orbit
-  camera.position.x+=(Math.sin(p*Math.PI*.38)*2.8-camera.position.x)*.04;
-  camera.position.y+=((0.3-p*1.4)-camera.position.y)*.04;
-  camera.position.z+=((9-p*.8)-camera.position.z)*.04;
+  // Camera orbit. On mobile the dumbbell sits in a portrait frame, so
+  // we dampen the sideways/vertical drift and freeze Z entirely. The
+  // original z=9-p*.8 zoom-in was the reason the dumbbell ballooned
+  // mid-scroll on phones.
+  const orbX = isMobile ? 1.2 : 2.8;
+  const orbY = isMobile ? 0.6 : 1.4;
+  const orbZ = isMobile ? 9.0 : (9 - p*.8);
+  camera.position.x+=(Math.sin(p*Math.PI*.38)*orbX-camera.position.x)*.04;
+  camera.position.y+=((0.3-p*orbY)-camera.position.y)*.04;
+  camera.position.z+=(orbZ-camera.position.z)*.04;
   camera.lookAt(0,0,0);
 
   // Main dumbbell
